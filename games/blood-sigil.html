@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blood Sigil: Five Spirits(五つの魂) — あおの</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff; --ink:#16171a; --ink-dim:#6b6f76; --line:#e7e7e9;
+    --accent:#a02940;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Inter','Noto Sans JP',sans-serif; -webkit-font-smoothing:antialiased; }
+  a{color:inherit;}
+  .jp{font-family:'Noto Sans JP','Inter',sans-serif;}
+  .wrap{max-width:640px; margin:0 auto; padding:0 24px 100px;}
+
+  header.nav{ display:flex; align-items:center; justify-content:space-between; padding:36px 0 30px; }
+  .back-link{ font-size:15px; text-decoration:none; color:var(--ink-dim); transition:color .15s; }
+  .back-link:hover{ color:var(--ink); }
+  .nav-name{ font-size:19px; font-weight:700; text-decoration:underline; text-underline-offset:4px; }
+
+  .thumb{ width:100%; aspect-ratio:1/1; border-radius:12px; overflow:hidden; margin-bottom:28px; }
+  .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  .status-tag{
+    display:inline-block; font-size:12.5px; font-weight:500; color:var(--accent);
+    border:1px solid var(--accent); padding:5px 12px; border-radius:999px; margin-bottom:20px;
+  }
+  h1{ font-size:clamp(26px,5vw,34px); font-weight:700; margin:0 0 6px; letter-spacing:-0.01em; }
+  .subtitle{ font-size:14.5px; color:var(--ink-dim); margin-bottom:26px; }
+  .lede{ font-size:16px; line-height:1.9; color:var(--ink); margin:0 0 26px; }
+
+  .tension{
+    font-size:17px; line-height:1.8; font-weight:500;
+    padding:18px 20px; margin:0 0 36px;
+    border-left:3px solid var(--accent);
+    background:#faf5f6;
+  }
+
+  .spec-list{ border-top:1px solid var(--line); margin-top:30px; }
+  .spec-row{
+    display:flex; justify-content:space-between; gap:20px;
+    padding:16px 0; border-bottom:1px solid var(--line);
+    font-size:14.5px;
+  }
+  .spec-row .k{ color:var(--ink-dim); flex:0 0 130px; }
+  .spec-row .v{ text-align:right; }
+
+  .note{
+    margin-top:36px; padding:18px 20px; background:#f7f7f8; border-radius:10px;
+    font-size:14px; line-height:1.8; color:var(--ink-dim);
+  }
+
+  footer{ padding-top:50px; font-size:13.5px; color:var(--ink-dim); }
+
+  .t-en{ display:none; }
+  body.en-mode .t-ja{ display:none; }
+  body.en-mode .t-en{ display:inline; }
+
+  .lang-toggle{
+    font-size:13px; font-weight:600;
+    border:1px solid var(--line); background:#fff;
+    border-radius:999px; padding:7px 16px;
+    cursor:pointer; color:var(--ink);
+    font-family:inherit; transition:background .15s;
+  }
+  .lang-toggle:hover{ background:#f3f3f4; }
+
+  .nav-right{ display:flex; align-items:center; gap:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="nav">
+    <a class="back-link" href="../index.html">
+      <span class="t-ja">← 一覧に戻る</span>
+      <span class="t-en">← Back to list</span>
+    </a>
+    <div class="nav-right">
+      <button class="lang-toggle" type="button">EN</button>
+      <span class="nav-name">あおの</span>
+    </div>
+  </header>
+
+  <div class="thumb"><img src="../images/thumb-bloodsigil.png" alt="Blood Sigil: Five Spirits サムネイル"></div>
+
+  <span class="status-tag jp">
+    <span class="t-ja">リリース準備中</span>
+    <span class="t-en">Preparing for Release</span>
+  </span>
+  <h1 class="jp">
+    <span class="t-ja">Blood Sigil(五つの魂)</span>
+    <span class="t-en">Blood Sigil: Five Spirits</span>
+  </h1>
+  <div class="subtitle">Blood Sigil: Five Spirits</div>
+
+  <p class="lede jp">
+    <span class="t-ja">
+      5体の非対称なAIと対峙する、ダークファンタジーのカード対戦。
+      勝敗の先に、それぞれ異なる代償が待っている。
+    </span>
+    <span class="t-en">
+      A dark fantasy card duel against five asymmetric AI opponents.
+      Beyond victory or defeat, a different price awaits each outcome.
+    </span>
+  </p>
+
+  <p class="tension jp">
+    <span class="t-ja">
+      勝てば、刻印(Blood Sigil)が刻まれる。<br>
+      負ければ、眠っていた能力が覚醒する。
+    </span>
+    <span class="t-en">
+      Win, and a Blood Sigil is carved into you.<br>
+      Lose, and a dormant power awakens.
+    </span>
+  </p>
+
+  <div class="spec-list">
+    <div class="spec-row">
+      <span class="k jp"><span class="t-ja">対戦相手</span><span class="t-en">Opponents</span></span>
+      <span class="v jp"><span class="t-ja">5体の非対称なAI</span><span class="t-en">5 asymmetric AI opponents</span></span>
+    </div>
+    <div class="spec-row">
+      <span class="k jp"><span class="t-ja">言語対応</span><span class="t-en">Languages</span></span>
+      <span class="v jp"><span class="t-ja">日本語 / 英語</span><span class="t-en">Japanese / English</span></span>
+    </div>
+    <div class="spec-row">
+      <span class="k jp"><span class="t-ja">サウンド</span><span class="t-en">Sound</span></span>
+      <span class="v jp"><span class="t-ja">Web Audioによるプロシージャル生成BGM</span><span class="t-en">Procedurally generated BGM via Web Audio</span></span>
+    </div>
+  </div>
+
+  <div class="note jp">
+    <span class="t-ja">
+      itch.io / BOOTH向けのリリースパッケージは準備が整っています。
+      公開が完了次第、このページからプレイ・購入リンクを追加します。
+    </span>
+    <span class="t-en">
+      The release package for itch.io and BOOTH is ready. Once published,
+      play and purchase links will be added to this page.
+    </span>
+  </div>
+
+  <footer class="jp">
+    <p>
+      <span class="t-ja">あおの © 2026</span>
+      <span class="t-en">Aono © 2026</span>
+    </p>
+  </footer>
+</div>
+<script src="../js/lang.js"></script>
+</body>
+</html>
