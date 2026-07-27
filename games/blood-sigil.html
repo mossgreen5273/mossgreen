@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blood Sigil: Five Spirits — あおの</title>
+<meta name="description" content="勝てば血印を、負ければ刻まれし呪いが目覚める。5体の非対称なAIと対峙する、ダークファンタジーのカード対戦。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#16171a;
+    --ink-dim:#6b6f76;
+    --line:#e7e7e9;
+    --pill-bg:#e4e9ee;
+    --pill-bg-hover:#d3dbe3;
+    --dark-0:#0a0809;
+    --dark-1:#150f16;
+    --dark-2:#1d151f;
+    --blood:#8e2430;
+    --blood-soft:#c5555a;
+    --bone-soft:#d9c9a0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter','Noto Sans JP',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  .jp{font-family:'Noto Sans JP','Inter',sans-serif;}
+  .wrap{max-width:760px; margin:0 auto; padding:0 24px 100px;}
+
+  header.nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:36px 0 30px;
+  }
+  .nav-name{
+    font-size:19px; font-weight:700;
+    text-decoration:underline; text-underline-offset:4px; text-decoration-color:var(--ink);
+  }
+  .nav-links{ display:flex; align-items:center; gap:26px; font-size:16px; }
+  .nav-links a{ text-decoration:none; color:var(--ink-dim); transition:color .15s;}
+  .nav-links a:hover{ color:var(--ink); }
+
+  .breadcrumb{ font-size:13.5px; color:var(--ink-dim); margin:0 0 18px; }
+  .breadcrumb a{ text-decoration:underline; }
+
+  .lang-toggle{
+    font-size:13px; font-weight:600;
+    border:1px solid var(--line); background:#fff;
+    border-radius:999px; padding:7px 16px;
+    cursor:pointer; color:var(--ink);
+    font-family:inherit; transition:background .15s;
+  }
+  .lang-toggle:hover{ background:#f3f3f4; }
+
+  .t-en{ display:none; }
+  body.en-mode .t-ja{ display:none; }
+  body.en-mode .t-en{ display:inline; }
+  body.en-mode .t-en-block{ display:block; }
+  .t-en-block{ display:none; }
+
+  /* ---- hero ---- */
+  .hero-eyebrow{
+    font-size:12.5px; letter-spacing:0.16em; text-transform:uppercase;
+    color:var(--ink-dim); margin:0 0 10px; font-weight:600;
+  }
+  .hero h1{
+    font-size:clamp(28px,5.6vw,40px); font-weight:700; margin:0 0 14px; letter-spacing:-0.01em;
+  }
+  .hero .tagline{
+    font-size:16.5px; line-height:1.8; color:var(--ink-dim); margin:0 0 26px; max-width:540px;
+  }
+
+  /* ---- dark preview window: a contained glimpse of the game's own world ---- */
+  .preview{
+    background:
+      radial-gradient(ellipse at 15% -10%, #2a1420 0%, transparent 55%),
+      radial-gradient(ellipse at 95% 105%, #1a1024 0%, transparent 55%),
+      var(--dark-0);
+    border-radius:14px;
+    padding:38px 28px;
+    text-align:center;
+    margin-bottom:30px;
+    position:relative;
+    overflow:hidden;
+  }
+  .preview::before{
+    content:''; position:absolute; inset:14px; border:1px solid rgba(217,201,160,0.22);
+    border-radius:6px; pointer-events:none;
+  }
+  .preview .glyph{ font-size:38px; margin-bottom:6px; }
+  .preview .logo{
+    font-family:'Cinzel',serif; font-weight:700; letter-spacing:0.05em;
+    font-size:30px; color:var(--bone-soft); margin:0 0 6px;
+    text-shadow:0 0 20px rgba(142,36,48,0.5);
+  }
+  .preview .edition{
+    font-family:'Cinzel',serif; letter-spacing:0.3em; font-size:11px;
+    color:var(--blood-soft); text-transform:uppercase; margin:0 0 22px;
+  }
+  .cta-row{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+  .cta{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:14px; font-weight:600; text-decoration:none;
+    padding:11px 22px; border-radius:999px; transition:transform .12s ease, background .15s;
+  }
+  .cta.primary{ background:var(--blood-soft); color:#1a0e10; }
+  .cta.primary:hover{ background:#d9787c; transform:translateY(-1px); }
+  .cta.ghost{
+    background:transparent; color:var(--bone-soft); border:1px solid rgba(217,201,160,0.35);
+  }
+  .cta.ghost:hover{ border-color:var(--bone-soft); transform:translateY(-1px); }
+
+  /* ---- sections ---- */
+  section.block{ padding:34px 0; border-top:1px solid var(--line); }
+  section.block h2{ font-size:20px; font-weight:700; margin:0 0 16px; }
+  section.block p{ font-size:15.5px; line-height:1.85; color:var(--ink-dim); margin:0 0 14px; }
+
+  .feature-list{ list-style:none; margin:0; padding:0; }
+  .feature-list li{
+    display:flex; gap:12px; padding:14px 0; border-top:1px solid var(--line);
+    font-size:15px; line-height:1.7;
+  }
+  .feature-list li:first-child{ border-top:none; }
+  .feature-list .f-icon{ flex:0 0 auto; font-size:20px; width:28px; text-align:center; }
+  .feature-list .f-body b{ display:block; font-size:15px; margin-bottom:2px; }
+  .feature-list .f-body span{ color:var(--ink-dim); font-size:14px; }
+
+  .ai-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .ai-card{ border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .ai-card .icon{ font-size:24px; display:block; margin-bottom:8px; }
+  .ai-card .name{ font-size:14.5px; font-weight:700; margin:0 0 4px; }
+  .ai-card .desc{ font-size:13px; color:var(--ink-dim); line-height:1.6; margin:0; }
+
+  @media (max-width:560px){
+    .ai-grid{ grid-template-columns:1fr; }
+  }
+
+  footer{ padding-top:50px; font-size:13.5px; color:var(--ink-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="nav">
+    <a class="nav-name" href="../index.html">あおの</a>
+    <nav class="nav-links">
+      <a href="../index.html#about">about</a>
+      <button class="lang-toggle" type="button">EN</button>
+    </nav>
+  </header>
+
+  <p class="breadcrumb jp">
+    <span class="t-ja"><a href="../index.html">games</a> / Blood Sigil</span>
+    <span class="t-en"><a href="../index.html">games</a> / Blood Sigil</span>
+  </p>
+
+  <section class="hero">
+    <p class="hero-eyebrow jp">
+      <span class="t-ja">ダークファンタジー・カードデュエル</span>
+      <span class="t-en">Dark Fantasy Card Duel</span>
+    </p>
+    <h1 class="jp">
+      <span class="t-ja">Blood Sigil(五つの魂)</span>
+      <span class="t-en">Blood Sigil: Five Spirits</span>
+    </h1>
+    <p class="tagline jp">
+      <span class="t-ja">勝てば血印を得る。だが負ければ、そのカードに眠る呪いが目覚める――時には勝利より価値がある。20枚の呪われたカードプールから12枚をドラフトし、5体の性格の異なるAIと対峙する、一人用のカードデュエルです。</span>
+      <span class="t-en">Win, and claim a Blood Sigil. Lose, and the fallen card's curse awakens — often worth more than the win itself. Draft a 12-card deck from a cursed pool of 20, and face one of five very different AI spirits in this single-player card duel.</span>
+    </p>
+  </section>
+
+  <div class="preview">
+    <div class="glyph">🩸</div>
+    <p class="logo">BLOODSIGIL</p>
+    <p class="edition jp"><span class="t-ja">五つの魂</span><span class="t-en">Five Spirits</span></p>
+    <div class="cta-row">
+      <a class="cta primary jp" href="blood-sigil-play.html">
+        <span class="t-ja">ブラウザで遊ぶ（日英対応）</span>
+        <span class="t-en">Play in Browser (EN/JP)</span>
+      </a>
+      <a class="cta ghost jp" href="#" target="_blank" rel="noopener">
+        <span class="t-ja">itch.io で見る</span>
+        <span class="t-en">View on itch.io</span>
+      </a>
+      <a class="cta ghost jp" href="#" target="_blank" rel="noopener">
+        <span class="t-ja">BOOTH で見る</span>
+        <span class="t-en">View on BOOTH</span>
+      </a>
+    </div>
+  </div>
+
+  <section class="block">
+    <h2 class="jp"><span class="t-ja">特徴</span><span class="t-en">Features</span></h2>
+    <ul class="feature-list jp">
+      <li>
+        <span class="f-icon">🃏</span>
+        <span class="f-body">
+          <b class="t-ja">構築の楽しさ</b><b class="t-en">Draft your deck</b>
+          <span class="t-ja">20枚の呪われたカードプールから、自分だけの12枚デッキをドラフト。相手のAIも、その性格に応じて秘密裏にデッキを組んでいます。</span>
+          <span class="t-en">Draft a 12-card deck from a pool of 20 cursed cards. Your AI opponent drafts their own in secret, shaped by their own personality.</span>
+        </span>
+      </li>
+      <li>
+        <span class="f-icon">⚔️</span>
+        <span class="f-body">
+          <b class="t-ja">8種類の戦場</b><b class="t-en">8 cursed battlefields</b>
+          <span class="t-ja">力、知、その合計、逆転、均衡、あるいは何も決めない嵐――毎ラウンド戦場が勝敗の基準を変えます。</span>
+          <span class="t-en">Might, Lore, their sum, cursed reversals, perfect balance, or a storm that decides nothing — the battlefield changes what's being compared every round.</span>
+        </span>
+      </li>
+      <li>
+        <span class="f-icon">👻</span>
+        <span class="f-body">
+          <b class="t-ja">負けた方が得なことも</b><b class="t-en">Losing can be the smarter move</b>
+          <span class="t-ja">勝てば血印を獲得。だが負ければ、そのカード固有の呪いが目覚めます――時には勝利よりも価値があります。</span>
+          <span class="t-en">Win, and claim a Blood Sigil. Lose, and the fallen card's curse awakens — sometimes worth more than the win itself.</span>
+        </span>
+      </li>
+      <li>
+        <span class="f-icon">🎧</span>
+        <span class="f-body">
+          <b class="t-ja">音も演出も、外部ファイル無し</b><b class="t-en">Fully scored, zero external assets</b>
+          <span class="t-ja">ダークアンビエントなBGMと効果音は、すべてWeb Audio APIでその場生成。カード公開時のアニメーションや、強力な呪いが発動する瞬間の演出も搭載しています。</span>
+          <span class="t-en">A generative dark-ambient score and curse-triggered sound effects, built entirely with the Web Audio API — plus card-flip animations and effects when a powerful curse awakens.</span>
+        </span>
+      </li>
+      <li>
+        <span class="f-icon">🌐</span>
+        <span class="f-body">
+          <b class="t-ja">日英両対応</b><b class="t-en">English &amp; Japanese</b>
+          <span class="t-ja">起動時に言語を選択できます。ルール・カードテキスト・AIのセリフまで、すべて両言語で作られています。</span>
+          <span class="t-en">Choose your language on launch. Rules, card text, and every AI's dialogue are fully written in both languages.</span>
+        </span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="block">
+    <h2 class="jp"><span class="t-ja">対峙する5つの魂</span><span class="t-en">Five Spirits to Face</span></h2>
+    <p class="jp">
+      <span class="t-ja">同じ相手でも、対戦のたびにデッキも駆け引きの質感も変わります。</span>
+      <span class="t-en">Even against the same opponent, the deck they bring and the way they play changes every duel.</span>
+    </p>
+    <div class="ai-grid">
+      <div class="ai-card">
+        <span class="icon">🌑</span>
+        <p class="name jp"><span class="t-ja">虚ろの魔導士</span><span class="t-en">The Hollow Mage</span></p>
+        <p class="desc jp">
+          <span class="t-ja">冷徹で計算高い。滅多に賭けには出ない。</span>
+          <span class="t-en">Cold, patient, and precise. It rarely gambles — only calculates.</span>
+        </p>
+      </div>
+      <div class="ai-card">
+        <span class="icon">⛓️</span>
+        <p class="name jp"><span class="t-ja">鎖の賭博師</span><span class="t-en">The Gambler in Chains</span></p>
+        <p class="desc jp">
+          <span class="t-ja">負けるたびに笑みを深める、読めない賭博師。</span>
+          <span class="t-en">It smiles wider with every card it loses. The curse feeds it well.</span>
+        </p>
+      </div>
+      <div class="ai-card">
+        <span class="icon">👑</span>
+        <p class="name jp"><span class="t-ja">不屈の公爵夫人</span><span class="t-en">The Unbroken Duchess</span></p>
+        <p class="desc jp">
+          <span class="t-ja">誇り高く、決して「わざと負ける」戦略を取らない。</span>
+          <span class="t-en">She has never accepted defeat, and never will.</span>
+        </p>
+      </div>
+      <div class="ai-card">
+        <span class="icon">🕴️</span>
+        <p class="name jp"><span class="t-ja">傀儡師</span><span class="t-en">The Puppeteer</span></p>
+        <p class="desc jp">
+          <span class="t-ja">勝ち負けなど気にしない。お前に何を出させるか、それだけが問題だ。</span>
+          <span class="t-en">It doesn't care to win or lose — only to decide what you're allowed to play.</span>
+        </p>
+      </div>
+      <div class="ai-card">
+        <span class="icon">🧿</span>
+        <p class="name jp"><span class="t-ja">灰の予言者</span><span class="t-en">The Oracle of Ash</span></p>
+        <p class="desc jp">
+          <span class="t-ja">血印のためではなく、常に先を知るために戦う。</span>
+          <span class="t-en">It doesn't fight for sigils. It fights to always know what comes next.</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="jp"><span class="t-ja">遊び方</span><span class="t-en">How to Play</span></h2>
+    <p class="jp">
+      <span class="t-ja">インストール不要。ブラウザで開くだけで遊べます。対応ブラウザは最新の Chrome / Edge / Safari を推奨しています。</span>
+      <span class="t-en">No install required — just open it in your browser. Best experienced in a recent version of Chrome, Edge, or Safari.</span>
+    </p>
+    <div class="cta-row" style="justify-content:flex-start;">
+      <a class="cta primary jp" href="blood-sigil-play.html" style="background:var(--ink); color:#fff;">
+        <span class="t-ja">今すぐ遊ぶ</span>
+        <span class="t-en">Play Now</span>
+      </a>
+    </div>
+  </section>
+
+  <footer id="about" class="jp">
+    <p>
+      <span class="t-ja">あおの — 個人でカード・ボードゲームを作っています。© 2026</span>
+      <span class="t-en">Aono — an independent card and board game maker. © 2026</span>
+    </p>
+  </footer>
+
+</div>
+<script src="../js/lang.js"></script>
+</body>
+</html>
