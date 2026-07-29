@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Chaturanga — The Dawn of Chess</title>
+<meta name="description" content="A playable arrangement of the ancient, dice-driven ancestor of chess and shogi. Two-player and four-player Chaturanga, vs AI, in your browser.">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%91%91%3C/text%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Chaturanga — The Dawn of Chess">
+<meta property="og:description" content="A playable arrangement of the ancient, dice-driven ancestor of chess and shogi. Two-player and four-player Chaturanga, vs AI, in your browser.">
+<meta property="og:image" content="../images/thumb-chaturanga.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Chaturanga — The Dawn of Chess">
+<meta name="twitter:description" content="A playable arrangement of the ancient, dice-driven ancestor of chess and shogi. Two-player and four-player Chaturanga, vs AI, in your browser.">
+<meta name="twitter:image" content="../images/thumb-chaturanga.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Poppins:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sandstone:#e9dcc0;
+  --sandstone-dark:#a9885a;
+  --bg-deep:#1c150f;
+  --bg-panel:#261d15;
+  --bg-panel-2:#2f2418;
+  --brass:#c99a48;
+  --brass-bright:#e6c179;
+  --vermilion:#b23a2e;
+  --ink-light:#f3e9d2;
+  --ink-dim:#c9b899;
+  --ink-dark:#241c12;
+  --stone-line:rgba(201,154,72,.35);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(ellipse at 20% -10%, #3a2c1c 0%, transparent 55%),
+    radial-gradient(ellipse at 90% 110%, #2a1f14 0%, transparent 55%),
+    var(--bg-deep);
+  color:var(--ink-light);
+  font-family:'Poppins',sans-serif;
+  min-height:100vh;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:28px 14px 60px;
+}
+.wrap{width:100%;max-width:1040px;}
+h1,h2,h3{font-family:'Yatra One','Noto Serif JP',serif;font-weight:400;margin:0;}
+.brand{
+  text-align:center;margin-bottom:22px;
+}
+.brand h1{
+  font-size:clamp(28px,4.5vw,42px);
+  color:var(--brass-bright);
+  letter-spacing:.04em;
+  text-shadow:0 2px 0 rgba(0,0,0,.4);
+}
+.brand p{
+  margin:6px 0 0;color:var(--ink-dim);font-size:13px;letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.brand .rule-src{
+  display:block;margin-top:4px;font-size:11px;
+  color:#8f7c5c;letter-spacing:.02em;text-transform:none;
+}
+
+/* ---------- setup screen ---------- */
+.card{
+  background:linear-gradient(180deg,var(--bg-panel),var(--bg-panel-2));
+  border:1px solid var(--stone-line);
+  border-radius:14px;
+  box-shadow:0 20px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.03);
+  padding:28px clamp(16px,4vw,40px);
+}
+.step{margin-bottom:26px;}
+.step:last-child{margin-bottom:0;}
+.step-label{
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--brass);margin-bottom:12px;display:flex;align-items:center;gap:10px;
+}
+.step-label .num{
+  width:22px;height:22px;border-radius:50%;border:1px solid var(--brass);
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;
+  font-family:'Poppins';color:var(--brass-bright);
+}
+.choice-row{display:flex;flex-wrap:wrap;gap:10px;}
+.choice{
+  flex:1 1 150px;
+  background:rgba(0,0,0,.18);
+  border:1px solid var(--stone-line);
+  border-radius:10px;
+  padding:14px 12px;
+  cursor:pointer;
+  text-align:center;
+  transition:.15s;
+  user-select:none;
+}
+.choice:hover{border-color:var(--brass);background:rgba(201,154,72,.08);}
+.choice.active{
+  border-color:var(--brass-bright);
+  background:rgba(201,154,72,.16);
+  box-shadow:0 0 0 1px var(--brass-bright) inset;
+}
+.choice .ttl{font-size:14.5px;font-weight:600;color:var(--ink-light);}
+.choice .sub{font-size:11.5px;color:var(--ink-dim);margin-top:3px;line-height:1.4;}
+.swatch{
+  width:20px;height:20px;border-radius:50%;margin:0 auto 8px;
+  border:2px solid rgba(255,255,255,.25);
+}
+.ally-note{
+  margin-top:10px;font-size:12px;color:var(--ink-dim);
+  border-left:2px solid var(--brass);padding-left:10px;
+}
+.start-btn{
+  margin-top:30px;width:100%;
+  background:linear-gradient(180deg,var(--brass-bright),var(--brass));
+  color:var(--ink-dark);border:none;border-radius:10px;
+  padding:15px;font-size:16px;font-weight:600;letter-spacing:.03em;
+  cursor:pointer;font-family:'Poppins';
+  box-shadow:0 6px 18px rgba(201,154,72,.25);
+  transition:.15s;
+}
+.start-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(201,154,72,.35);}
+.start-btn:active{transform:translateY(0);}
+
+/* ---------- game screen ---------- */
+#gameScreen{display:none;}
+.game-layout{
+  display:grid;grid-template-columns:1fr 300px;gap:22px;align-items:start;
+}
+@media (max-width:820px){.game-layout{grid-template-columns:1fr;}}
+
+.board-outer{
+  background:linear-gradient(180deg,#4a3620,#372714);
+  border-radius:16px;padding:18px;
+  box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 0 0 1px rgba(201,154,72,.3);
+}
+.board{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  grid-template-rows:repeat(8,1fr);
+  aspect-ratio:1/1;
+  width:100%;
+  border-radius:6px;
+  overflow:hidden;
+  box-shadow:0 0 0 3px var(--brass), 0 0 0 5px rgba(0,0,0,.4);
+  position:relative;
+}
+.cell{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.cell.light{background:var(--sandstone);}
+.cell.dark{background:var(--sandstone-dark);}
+.cell.corner-dead{background:#20180f;}
+.cell.sel{box-shadow:inset 0 0 0 3px var(--vermilion);}
+.cell.movable::after{
+  content:'';position:absolute;width:30%;height:30%;border-radius:50%;
+  background:rgba(178,58,46,.55);
+}
+.cell.movable.hasPiece::after{
+  width:86%;height:86%;border-radius:8px;background:transparent;
+  box-shadow:inset 0 0 0 3px rgba(178,58,46,.75);
+}
+.piece{
+  width:78%;height:78%;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif;
+  font-size:clamp(16px,3.6vw,27px);
+  color:var(--ink-light);
+  cursor:default;
+  border:2px solid rgba(255,255,255,.35);
+  box-shadow:0 3px 6px rgba(0,0,0,.45), inset 0 2px 4px rgba(255,255,255,.18), inset 0 -3px 6px rgba(0,0,0,.3);
+  transition:transform .12s;
+  position:relative;
+  z-index:2;
+}
+.piece.king::before{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  border:1.5px dashed rgba(255,255,255,.5);
+}
+.piece.mine{cursor:pointer;}
+.piece.mine:hover{transform:scale(1.07);}
+.piece.frozen{opacity:.42;filter:grayscale(.6);}
+
+/* player color skins */
+.pc-bottom{background:radial-gradient(circle at 32% 28%,#d97a52,#932720);}
+.pc-top{background:radial-gradient(circle at 32% 28%,#5570ad,#233a6c);}
+.pc-Red{background:radial-gradient(circle at 32% 28%,#d1584a,#8c2a20);}
+.pc-Yellow{background:radial-gradient(circle at 32% 28%,#e8c169,#a97a24);color:#2a1c08;}
+.pc-Green{background:radial-gradient(circle at 32% 28%,#5b9968,#2c5c39);}
+.pc-Black{background:radial-gradient(circle at 32% 28%,#5c534a,#231d16);}
+
+.file-label{position:absolute;font-size:9px;color:rgba(0,0,0,.35);}
+.coord-tl{top:2px;left:3px;}
+
+/* side panel */
+.panel{
+  background:linear-gradient(180deg,var(--bg-panel),var(--bg-panel-2));
+  border:1px solid var(--stone-line);border-radius:14px;
+  padding:18px;display:flex;flex-direction:column;gap:16px;
+}
+.turn-box{
+  border-radius:10px;background:rgba(0,0,0,.2);padding:14px;
+  border:1px solid var(--stone-line);
+}
+.turn-box .who{font-size:12px;letter-spacing:.1em;color:var(--ink-dim);text-transform:uppercase;}
+.turn-box .name{
+  font-family:'Yatra One',serif;font-size:22px;margin-top:4px;
+  display:flex;align-items:center;gap:8px;
+}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;border:1.5px solid rgba(255,255,255,.4);}
+
+.dice-area{text-align:center;}
+.die{
+  width:64px;height:64px;margin:10px auto;border-radius:14px;
+  background:linear-gradient(160deg,var(--brass-bright),var(--brass));
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:700;color:var(--ink-dark);font-family:'Poppins';
+  box-shadow:0 6px 14px rgba(0,0,0,.4), inset 0 2px 3px rgba(255,255,255,.5);
+  transition:transform .08s;
+}
+.die.rolling{animation:rollspin .55s ease;}
+@keyframes rollspin{
+  0%{transform:rotate(0) scale(1);}
+  40%{transform:rotate(200deg) scale(1.12);}
+  70%{transform:rotate(330deg) scale(.96);}
+  100%{transform:rotate(360deg) scale(1);}
+}
+.die-meaning{font-size:12.5px;color:var(--ink-dim);min-height:16px;}
+.roll-btn,.pass-btn{
+  width:100%;margin-top:8px;padding:11px;border-radius:9px;border:none;
+  font-family:'Poppins';font-weight:600;font-size:13.5px;cursor:pointer;
+  background:linear-gradient(180deg,var(--brass-bright),var(--brass));color:var(--ink-dark);
+}
+.roll-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+.log-box{
+  flex:1;min-height:130px;max-height:210px;overflow-y:auto;
+  font-size:12.5px;line-height:1.6;color:var(--ink-dim);
+  background:rgba(0,0,0,.22);border-radius:10px;padding:10px 12px;
+  border:1px solid var(--stone-line);
+}
+.log-box div{border-bottom:1px dashed rgba(255,255,255,.06);padding:3px 0;}
+.log-box div:last-child{border-bottom:none;}
+
+.captured-row{display:flex;flex-wrap:wrap;gap:5px;min-height:22px;}
+.cap-chip{
+  width:22px;height:22px;border-radius:50%;font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif;opacity:.85;border:1.5px solid rgba(255,255,255,.3);
+}
+.small-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);margin-bottom:6px;}
+
+.back-btn{
+  background:transparent;border:1px solid var(--stone-line);color:var(--ink-dim);
+  padding:9px;border-radius:8px;font-size:12.5px;cursor:pointer;font-family:'Poppins';
+}
+.back-btn:hover{border-color:var(--brass);color:var(--ink-light);}
+
+/* winner overlay */
+.overlay{
+  position:fixed;inset:0;background:rgba(10,7,4,.78);
+  display:none;align-items:center;justify-content:center;z-index:50;
+  backdrop-filter:blur(3px);
+}
+.overlay.show{display:flex;}
+.win-card{
+  background:linear-gradient(180deg,var(--bg-panel-2),var(--bg-panel));
+  border:1px solid var(--brass);border-radius:16px;
+  padding:38px 44px;text-align:center;max-width:380px;
+  box-shadow:0 30px 70px rgba(0,0,0,.6);
+}
+.win-card h2{font-size:30px;color:var(--brass-bright);margin-bottom:10px;}
+.win-card p{color:var(--ink-dim);font-size:13.5px;margin-bottom:22px;}
+
+.footer-note{
+  text-align:center;color:#8f7c5c;font-size:11px;margin-top:18px;letter-spacing:.03em;
+}
+
+.lang-toggle{
+  position:fixed; top:16px; right:16px; z-index:40;
+  display:flex; gap:6px;
+  background:rgba(20,15,9,.55);
+  padding:5px; border-radius:22px;
+  border:1px solid var(--stone-line);
+  backdrop-filter:blur(4px);
+}
+.lang-btn{
+  background:transparent; border:none; color:var(--ink-dim);
+  padding:6px 14px; border-radius:18px; font-size:12px; font-weight:600;
+  cursor:pointer; font-family:'Poppins',sans-serif; letter-spacing:.02em;
+  transition:.15s;
+}
+.lang-btn:hover{color:var(--ink-light);}
+.lang-btn.active{
+  background:linear-gradient(180deg,var(--brass-bright),var(--brass));
+  color:var(--ink-dark);
+}
+</style>
+</head>
+<body>
+<div class="lang-toggle">
+  <button class="lang-btn active" id="langEN" data-lang="en">EN</button>
+  <button class="lang-btn" id="langJA" data-lang="ja">日本語</button>
+</div>
+<div class="wrap">
+  <div class="brand">
+    <h1 data-i18n="brandH1">CHATURANGA</h1>
+    <p data-i18n="brandSub">Ancient Roots of Shōgi &amp; Chess</p>
+    <span class="rule-src" data-i18n="ruleSrc">Two- and four-player Chaturanga, based on the historical account in "Column One: The Origins of Shōgi" (Chū Shōgi Federation)</span>
+  </div>
+
+  <!-- ============ SETUP SCREEN ============ -->
+  <div class="card" id="setupScreen">
+
+    <div class="step">
+      <div class="step-label"><span class="num">1</span><span data-i18n="step1Label">Game Mode</span></div>
+      <div class="choice-row" id="modeRow">
+        <div class="choice active" data-mode="2p">
+          <div class="ttl" data-i18n="mode2pTtl">Two-Player Chaturanga</div>
+          <div class="sub" data-i18n="mode2pSub">The original war game, King and Minister at the center. Pawns promote to the piece that started behind them.</div>
+        </div>
+        <div class="choice" data-mode="4p">
+          <div class="ttl" data-i18n="mode4pTtl">Four-Player Chaturanga</div>
+          <div class="sub" data-i18n="mode4pSub">Four armies, one per corner. Roll the die to see which piece can move — team up with your diagonal ally to capture both enemy kings.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" id="colorStep2p">
+      <div class="step-label"><span class="num">2</span><span data-i18n="step2Label">Choose Your Army (you play from the near side)</span></div>
+      <div class="choice-row" id="color2pRow">
+        <div class="choice active" data-color="bottom">
+          <div class="swatch" style="background:radial-gradient(circle at 32% 28%,#d97a52,#932720);"></div>
+          <div class="ttl" data-i18n="colorBottomTtl">Crimson Army</div>
+        </div>
+        <div class="choice" data-color="top">
+          <div class="swatch" style="background:radial-gradient(circle at 32% 28%,#5570ad,#233a6c);"></div>
+          <div class="ttl" data-i18n="colorTopTtl">Indigo Army</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" id="colorStep4p" style="display:none;">
+      <div class="step-label"><span class="num">2</span><span data-i18n="step2Label">Choose Your Army (you play from the near side)</span></div>
+      <div class="choice-row" id="color4pRow">
+        <div class="choice active" data-color="Red">
+          <div class="swatch" style="background:radial-gradient(circle at 32% 28%,#d1584a,#8c2a20);"></div>
+          <div class="ttl" data-i18n="colorRedTtl">Red</div>
+        </div>
+        <div class="choice" data-color="Yellow">
+          <div class="swatch" style="background:radial-gradient(circle at 32% 28%,#e8c169,#a97a24);"></div>
+          <div class="ttl" data-i18n="colorYellowTtl">Yellow</div>
+        </div>
+        <div class="choice" data-color="Green">
+          <div class="swatch" style="background:radial-gradient(circle at 32% 28%,#5b9968,#2c5c39);"></div>
+          <div class="ttl" data-i18n="colorGreenTtl">Green</div>
+        </div>
+        <div class="choice" data-color="Black">
+          <div class="swatch" style="background:radial-gradient(circle at 32% 28%,#5c534a,#231d16);"></div>
+          <div class="ttl" data-i18n="colorBlackTtl">Black</div>
+        </div>
+      </div>
+      <div class="ally-note" data-i18n="allyNote">Red &amp; Yellow are allies; Green &amp; Black are allies. Capture both of the opposing team's kings to win. Turns proceed clockwise: Red → Yellow → Green → Black.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-label"><span class="num">3</span><span data-i18n="step3Label">AI Difficulty</span></div>
+      <div class="choice-row" id="diffRow">
+        <div class="choice" data-diff="easy">
+          <div class="ttl" data-i18n="diffEasyTtl">Easy</div>
+          <div class="sub" data-i18n="diffEasySub">Moves at random — good for learning the rules.</div>
+        </div>
+        <div class="choice active" data-diff="normal">
+          <div class="ttl" data-i18n="diffNormalTtl">Normal</div>
+          <div class="sub" data-i18n="diffNormalSub">Plays for material gain, with the occasional loose move.</div>
+        </div>
+        <div class="choice" data-diff="hard">
+          <div class="ttl" data-i18n="diffHardTtl">Hard</div>
+          <div class="sub" data-i18n="diffHardSub">Looks several moves ahead for a near-optimal play.</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" id="startBtn" data-i18n="startBtn">Start Game</button>
+  </div>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <div id="gameScreen">
+    <div class="game-layout">
+      <div class="board-outer">
+        <div class="board" id="board"></div>
+      </div>
+      <div class="panel">
+        <div class="turn-box">
+          <div class="who" data-i18n="turnLabel">Turn</div>
+          <div class="name" id="turnName"><span class="dot" id="turnDot"></span><span id="turnText">-</span></div>
+        </div>
+
+        <div class="dice-area" id="diceArea">
+          <div class="small-title" data-i18n="diceLabel">Dice</div>
+          <div class="die" id="dieFace">-</div>
+          <div class="die-meaning" id="dieMeaning">&nbsp;</div>
+          <button class="roll-btn" id="rollBtn" data-i18n="rollBtn">Roll the Dice</button>
+        </div>
+
+        <div>
+          <div class="small-title" data-i18n="capturedLabel">Captured Pieces</div>
+          <div class="captured-row" id="capturedRow"></div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
+          <div class="small-title" data-i18n="logLabel">Game Log</div>
+          <div class="log-box" id="logBox"></div>
+        </div>
+
+        <button class="back-btn" id="backBtn" data-i18n="backBtn">Back to Setup</button>
+      </div>
+    </div>
+    <div class="footer-note" id="footerNote"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="win-card">
+    <h2 id="winTitle">Victory</h2>
+    <p id="winSub"></p>
+    <button class="start-btn" id="againBtn" data-i18n="againBtn">Set Up New Game</button>
+  </div>
+</div>
+
+
+<script>
+"use strict";
+/* =========================================================================
+   ENGINE — shared utilities
+   ========================================================================= */
+function inB(r,c){return r>=0&&r<8&&c>=0&&c<8;}
+const KNIGHT_OFFS=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KING_OFFS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const DIAG2_OFFS=[[-2,-2],[-2,2],[2,-2],[2,2]];
+const DIAG1_OFFS=[[-1,-1],[-1,1],[1,-1],[1,1]];
+const ROOK_DIRS=[[-1,0],[1,0],[0,-1],[0,1]];
+
+function sliding(board,r,c,dirs,color){
+  const out=[];
+  for(const [dr,dc] of dirs){
+    let nr=r+dr,nc=c+dc;
+    while(inB(nr,nc)){
+      const p=board[nr][nc];
+      if(!p){out.push({r:nr,c:nc,capture:false});}
+      else{ if(p.color!==color) out.push({r:nr,c:nc,capture:true}); break; }
+      nr+=dr;nc+=dc;
+    }
+  }
+  return out;
+}
+function jumps(board,r,c,offs,color){
+  const out=[];
+  for(const [dr,dc] of offs){
+    const nr=r+dr,nc=c+dc;
+    if(!inB(nr,nc))continue;
+    const p=board[nr][nc];
+    if(!p)out.push({r:nr,c:nc,capture:false});
+    else if(p.color!==color)out.push({r:nr,c:nc,capture:true});
+  }
+  return out;
+}
+function cloneBoard(board){
+  return board.map(row=>row.map(p=>p?{type:p.type,color:p.color}:null));
+}
+
+/* =========================================================================
+   Two-Player Chaturanga
+   ========================================================================= */
+const TOP_BACK_2P=['Rt','A','H','R','M','H','A','Rt'];
+const BOTTOM_BACK_2P=['Rt','A','H','M','R','H','A','Rt'];
+const PVAL_2P={P:1,A:3,H:3,M:4,Rt:5,R:1000};
+const PNAME_2P={R:'👑',M:'💎',H:'🐘',A:'🐴',Rt:'🏰',P:'♟️'};
+
+function initBoard2P(colorTop,colorBottom){
+  const board=Array.from({length:8},()=>Array(8).fill(null));
+  for(let c=0;c<8;c++){
+    board[0][c]={type:TOP_BACK_2P[c],color:colorTop};
+    board[1][c]={type:'P',color:colorTop};
+    board[6][c]={type:'P',color:colorBottom};
+    board[7][c]={type:BOTTOM_BACK_2P[c],color:colorBottom};
+  }
+  return board;
+}
+function pawnMoves2P(board,r,c,color,dir){
+  const out=[];
+  const nr=r+dir;
+  if(inB(nr,c)&&!board[nr][c])out.push({r:nr,c,capture:false});
+  for(const dc of [-1,1]){
+    const cc=c+dc;
+    if(inB(nr,cc)){
+      const p=board[nr][cc];
+      if(p&&p.color!==color)out.push({r:nr,c:cc,capture:true});
+    }
+  }
+  return out;
+}
+function pieceMoves2P(board,r,c){
+  const piece=board[r][c];
+  if(!piece)return [];
+  const {type,color}=piece;
+  const dir=color==='bottom'?-1:1;
+  switch(type){
+    case 'R': return jumps(board,r,c,KING_OFFS,color);
+    case 'M': return jumps(board,r,c,DIAG1_OFFS,color);
+    case 'H': return jumps(board,r,c,DIAG2_OFFS,color);
+    case 'A': return jumps(board,r,c,KNIGHT_OFFS,color);
+    case 'Rt': return sliding(board,r,c,ROOK_DIRS,color);
+    case 'P': return pawnMoves2P(board,r,c,color,dir);
+    default: return [];
+  }
+}
+function allLegalMoves2P(board,color){
+  const moves=[];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=board[r][c];
+    if(p&&p.color===color){
+      for(const m of pieceMoves2P(board,r,c)){
+        moves.push({fr:r,fc:c,tr:m.r,tc:m.c,capture:m.capture,piece:p.type});
+      }
+    }
+  }
+  return moves;
+}
+function applyMove2P(board,mv){
+  const piece=board[mv.fr][mv.fc];
+  const captured=board[mv.tr][mv.tc];
+  board[mv.tr][mv.tc]=piece;
+  board[mv.fr][mv.fc]=null;
+  let promoted=null;
+  if(piece.type==='P'){
+    const isBottom=piece.color==='bottom';
+    if((isBottom&&mv.tr===0)||(!isBottom&&mv.tr===7)){
+      const backArr=isBottom?BOTTOM_BACK_2P:TOP_BACK_2P;
+      const promoType=backArr[mv.tc];
+      piece.type=promoType;
+      promoted=promoType;
+    }
+  }
+  return {captured,promoted};
+}
+function kingCount2P(board,color){
+  let n=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=board[r][c]; if(p&&p.color===color&&p.type==='R')n++;}
+  return n;
+}
+
+/* =========================================================================
+   Four-Player Chaturanga
+   ========================================================================= */
+const CORNERS=['Red','Yellow','Green','Black'];
+const ALLY={Red:'Yellow',Yellow:'Red',Green:'Black',Black:'Green'};
+const ENEMIES={Red:['Green','Black'],Yellow:['Green','Black'],Green:['Red','Yellow'],Black:['Red','Yellow']};
+const THRONE={Red:{r:3,c:0},Yellow:{r:0,c:4},Green:{r:4,c:7},Black:{r:7,c:3}};
+const FORWARD={Red:[0,1],Yellow:[1,0],Green:[0,-1],Black:[-1,0]};
+const PROMO_EDGE={
+  Red:(r,c)=>c===7, Yellow:(r,c)=>r===7, Green:(r,c)=>c===0, Black:(r,c)=>r===0,
+};
+const PVAL_4P={P:1,H:3,A:3,RC:5,R:1000};
+const PNAME_4P={R:'👑',H:'🐘',A:'🐴',RC:'⛵',P:'♟️'};
+
+function initBoard4P(){
+  const board=Array.from({length:8},()=>Array(8).fill(null));
+  board[0][0]={type:'RC',color:'Red'}; board[1][0]={type:'A',color:'Red'};
+  board[2][0]={type:'H',color:'Red'};  board[3][0]={type:'R',color:'Red'};
+  for(let r=0;r<4;r++) board[r][1]={type:'P',color:'Red'};
+  board[0][4]={type:'R',color:'Yellow'}; board[0][5]={type:'H',color:'Yellow'};
+  board[0][6]={type:'A',color:'Yellow'}; board[0][7]={type:'RC',color:'Yellow'};
+  for(let c=4;c<8;c++) board[1][c]={type:'P',color:'Yellow'};
+  board[4][7]={type:'R',color:'Green'}; board[5][7]={type:'H',color:'Green'};
+  board[6][7]={type:'A',color:'Green'}; board[7][7]={type:'RC',color:'Green'};
+  for(let r=4;r<8;r++) board[r][6]={type:'P',color:'Green'};
+  board[7][0]={type:'RC',color:'Black'}; board[7][1]={type:'A',color:'Black'};
+  board[7][2]={type:'H',color:'Black'}; board[7][3]={type:'R',color:'Black'};
+  for(let c=0;c<4;c++) board[6][c]={type:'P',color:'Black'};
+  return board;
+}
+function pawnMoves4P(board,r,c,color){
+  const out=[];
+  const [dr,dc]=FORWARD[color];
+  const nr=r+dr,nc=c+dc;
+  if(inB(nr,nc)&&!board[nr][nc])out.push({r:nr,c:nc,capture:false});
+  const perp = dr===0 ? [[1,dc],[-1,dc]] : [[dr,1],[dr,-1]];
+  for(const [pr,pc] of perp){
+    const tr=r+pr,tc=c+pc;
+    if(inB(tr,tc)){
+      const p=board[tr][tc];
+      if(p&&p.color!==color)out.push({r:tr,c:tc,capture:true});
+    }
+  }
+  return out;
+}
+function pieceMoves4P(board,r,c){
+  const piece=board[r][c];
+  if(!piece)return [];
+  const {type,color}=piece;
+  switch(type){
+    case 'R': return jumps(board,r,c,KING_OFFS,color);
+    case 'H': return jumps(board,r,c,DIAG2_OFFS,color);
+    case 'A': return jumps(board,r,c,KNIGHT_OFFS,color);
+    case 'RC': return sliding(board,r,c,ROOK_DIRS,color);
+    case 'P': return pawnMoves4P(board,r,c,color);
+    default: return [];
+  }
+}
+function diceAllowedTypes(v){
+  if(v===2)return ['H']; if(v===3)return ['A']; if(v===4)return ['RC']; if(v===5)return ['R','P'];
+  return [];
+}
+function legalMoves4P(board,controlledColors,diceValue){
+  const types=diceAllowedTypes(diceValue);
+  const moves=[];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=board[r][c];
+    if(p&&controlledColors.includes(p.color)&&types.includes(p.type)){
+      for(const m of pieceMoves4P(board,r,c)){
+        moves.push({fr:r,fc:c,tr:m.r,tc:m.c,capture:m.capture,piece:p.type,color:p.color});
+      }
+    }
+  }
+  return moves;
+}
+function applyMove4P(board,mv){
+  const piece=board[mv.fr][mv.fc];
+  const captured=board[mv.tr][mv.tc];
+  board[mv.tr][mv.tc]=piece;
+  board[mv.fr][mv.fc]=null;
+  let promoted=false;
+  if(piece.type==='P'&&PROMO_EDGE[piece.color](mv.tr,mv.tc)){ piece.type='RC'; promoted=true; }
+  return {captured,promoted};
+}
+function kingAlive4P(board,color){
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=board[r][c]; if(p&&p.color===color&&p.type==='R')return true;}
+  return false;
+}
+function teamAlive(board,team){ return team.some(col=>kingAlive4P(board,col)); }
+function isSquareAttacked4P(board,r,c,byColors){
+  for(let rr=0;rr<8;rr++)for(let cc=0;cc<8;cc++){
+    const p=board[rr][cc];
+    if(p&&byColors.includes(p.color)){
+      const ms=pieceMoves4P(board,rr,cc);
+      if(ms.some(m=>m.r===r&&m.c===c))return true;
+    }
+  }
+  return false;
+}
+
+/* =========================================================================
+   AI — Two-Player (minimax + alpha-beta)
+   ========================================================================= */
+function evaluate2P(board,aiColor){
+  let s=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=board[r][c];
+    if(!p)continue;
+    let v=PVAL_2P[p.type]||0;
+    // small centralization bonus (for horse/elephant)
+    if(p.type==='A'||p.type==='H'||p.type==='M'){
+      const dist=Math.abs(r-3.5)+Math.abs(c-3.5);
+      v+=(7-dist)*0.03;
+    }
+    // pawn advancement bonus
+    if(p.type==='P'){
+      const adv = p.color==='bottom' ? (7-r) : r;
+      v += adv*0.04;
+    }
+    s += (p.color===aiColor)? v : -v;
+  }
+  return s;
+}
+function otherColor2P(c){return c==='bottom'?'top':'bottom';}
+
+function minimax2P(board,color,depth,alpha,beta,aiColor){
+  const topKings=kingCount2P(board,'top'), botKings=kingCount2P(board,'bottom');
+  if(topKings===0||botKings===0||depth===0){
+    return {score:evaluate2P(board,aiColor)};
+  }
+  let moves=allLegalMoves2P(board,color);
+  if(moves.length===0) return {score:evaluate2P(board,aiColor)};
+  moves.sort((a,b)=>(b.capture?1:0)-(a.capture?1:0));
+  const maximizing = color===aiColor;
+  let best=null, bestScore= maximizing? -Infinity: Infinity;
+  for(const mv of moves){
+    const nb=cloneBoard(board);
+    applyMove2P(nb,mv);
+    const res=minimax2P(nb,otherColor2P(color),depth-1,alpha,beta,aiColor);
+    const sc=res.score;
+    if(maximizing){
+      if(sc>bestScore){bestScore=sc;best=mv;}
+      alpha=Math.max(alpha,sc);
+    }else{
+      if(sc<bestScore){bestScore=sc;best=mv;}
+      beta=Math.min(beta,sc);
+    }
+    if(beta<=alpha)break;
+  }
+  return {score:bestScore,move:best};
+}
+
+function chooseAIMove2P(board,color,difficulty){
+  const moves=allLegalMoves2P(board,color);
+  if(moves.length===0)return null;
+  if(difficulty==='easy'){
+    return moves[Math.floor(Math.random()*moves.length)];
+  }
+  if(difficulty==='normal'){
+    let scored=moves.map(mv=>{
+      const nb=cloneBoard(board); applyMove2P(nb,mv);
+      return {mv,score:evaluate2P(nb,color)+(Math.random()*0.9)};
+    });
+    scored.sort((a,b)=>b.score-a.score);
+    const poolSize=Math.min(3,scored.length);
+    const pick=Math.random()<0.7?0:Math.floor(Math.random()*poolSize);
+    return scored[pick].mv;
+  }
+  // hard
+  const res=minimax2P(board,color,3,-Infinity,Infinity,color);
+  return res.move || moves[0];
+}
+
+/* =========================================================================
+   AI — Four-Player (heuristic 1-ply search)
+   ========================================================================= */
+function scoreMove4P(board,mv,controlledColors,ownTeam,enemyTeam,depthBonus){
+  const nb=cloneBoard(board);
+  const {captured,promoted}=applyMove4P(nb,mv);
+  let score=0;
+  if(captured) score += (PVAL_4P[captured.type]||0) * 2.1;
+  if(promoted) score += 1.5;
+  if(mv.piece==='P') score += 0.15;
+  // risk that the landing square is recapturable
+  const enemyColors = enemyTeam;
+  if(isSquareAttacked4P(nb,mv.tr,mv.tc,enemyColors)){
+    score -= (PVAL_4P[mv.piece]||0) * (mv.piece==='R'?1.4:0.65);
+  }
+  // heavily penalize moves that expose the king
+  if(mv.piece==='R'){
+    if(isSquareAttacked4P(nb,mv.tr,mv.tc,enemyColors)) score -= 6;
+  }
+  score += depthBonus;
+  return score;
+}
+function chooseAIMove4P(board,controlledColors,diceValue,ownTeam,enemyTeam,difficulty){
+  const moves=legalMoves4P(board,controlledColors,diceValue);
+  if(moves.length===0)return null;
+  if(difficulty==='easy'){
+    return moves[Math.floor(Math.random()*moves.length)];
+  }
+  const noise = difficulty==='hard' ? 0.25 : 0.9;
+  let scored=moves.map(mv=>({mv,score:scoreMove4P(board,mv,controlledColors,ownTeam,enemyTeam,Math.random()*noise)}));
+  scored.sort((a,b)=>b.score-a.score);
+  return scored[0].mv;
+}
+
+/* =========================================================================
+   Display rotation (4-player): transform coordinates so your own
+   army always appears at the bottom (near side)
+   ========================================================================= */
+function rotOnce(r,c){return [c,7-r];}
+function rotK(r,c,k){let rr=r,cc=c; for(let i=0;i<k;i++){[rr,cc]=rotOnce(rr,cc);} return [rr,cc];}
+const ROT_K={Red:3,Yellow:2,Green:1,Black:0};
+
+/* =========================================================================
+   Internationalization (EN / JA)
+   ========================================================================= */
+const I18N = {
+  en: {
+    pageTitle: "Chaturanga — The Dawn of Chess",
+    brandH1: "CHATURANGA",
+    brandSub: "Ancient Roots of Shōgi & Chess",
+    ruleSrc: 'Two- and four-player Chaturanga, based on the historical account in "Column One: The Origins of Shōgi" (Chū Shōgi Federation)',
+    step1Label: "Game Mode",
+    mode2pTtl: "Two-Player Chaturanga",
+    mode2pSub: "The original war game, King and Minister at the center. Pawns promote to the piece that started behind them.",
+    mode4pTtl: "Four-Player Chaturanga",
+    mode4pSub: "Four armies, one per corner. Roll the die to see which piece can move — team up with your diagonal ally to capture both enemy kings.",
+    step2Label: "Choose Your Army (you play from the near side)",
+    colorBottomTtl: "Crimson Army",
+    colorTopTtl: "Indigo Army",
+    colorRedTtl: "Red", colorYellowTtl: "Yellow", colorGreenTtl: "Green", colorBlackTtl: "Black",
+    allyNote: "Red & Yellow are allies; Green & Black are allies. Capture both of the opposing team's kings to win. Turns proceed clockwise: Red → Yellow → Green → Black.",
+    step3Label: "AI Difficulty",
+    diffEasyTtl: "Easy", diffEasySub: "Moves at random — good for learning the rules.",
+    diffNormalTtl: "Normal", diffNormalSub: "Plays for material gain, with the occasional loose move.",
+    diffHardTtl: "Hard", diffHardSub: "Looks several moves ahead for a near-optimal play.",
+    startBtn: "Start Game",
+    turnLabel: "Turn",
+    diceLabel: "Dice",
+    rollBtn: "Roll the Dice",
+    capturedLabel: "Captured Pieces",
+    logLabel: "Game Log",
+    backBtn: "Back to Setup",
+    againBtn: "Set Up New Game",
+    winDefaultTitle: "Victory",
+
+    pieceNames: {R:'King',M:'Minister',H:'Elephant',A:'Horse',Rt:'Chariot',P:'Pawn',RC:'Boat'},
+    colorNames: {Red:'Red',Yellow:'Yellow',Green:'Green',Black:'Black', top:'Indigo', bottom:'Crimson'},
+    near:'Near', far:'Far', you:'You', ai:'AI',
+
+    msgStart2p: (army)=>`You are playing the ${army} army. Your turn goes first (near side).`,
+    msgStart4p: (army)=>`Four-Player Chaturanga begins. Turn order is clockwise: Red → Yellow → Green → Black. You are playing ${army}.`,
+    msgPass2p: (isHuman)=> isHuman ? 'You have no legal moves and must pass.' : 'The opponent has no legal moves and must pass.',
+    msgMove2p: (actor,piece,from,to,capturedPiece)=> `${actor} move ${piece} ${from} → ${to}` + (capturedPiece ? ` (captures ${capturedPiece})` : ''),
+    msgPromote: (piece)=> ` — promotes to ${piece}!`,
+    winTitle2p: (won)=> won ? 'You Win!' : 'AI Wins',
+    winSub2p: 'The enemy king has been captured.',
+    msgEliminatedNoTurn: (color)=> `${color} has been eliminated and has no turn.`,
+    diceMeaning: (v)=> v===2 ? '2 — Elephant 🐘 may move' : v===3 ? '3 — Horse 🐴 may move' : v===4 ? '4 — Boat ⛵ may move' : v===5 ? '5 — King 👑 or Pawn ♟️ may move' : '',
+    msgPassHuman4p: (army,val)=> `You (${army}) rolled ${val} but have no legal moves — pass.`,
+    msgPassAI4p: (color,val)=> `${color} rolled ${val} but has no legal moves — pass.`,
+    msgMove4p: (actor,isHuman,owner,piece,from,to,capOwner,capPiece)=> `${actor}${isHuman?' (You)':' (AI)'} moves ${owner}'s ${piece} ${from} → ${to}` + (capPiece ? ` (captures ${capOwner}'s ${capPiece})` : ''),
+    msgPromoteBoat: ' — promotes to Boat ⛵!',
+    msgKingCaptured4p: (color)=> `${color}'s king has been captured — eliminated from the game.`,
+    msgAnnex: (annexer,ally)=> `Territory claimed! ${annexer} now commands the allied ${ally} forces.`,
+    teamWinTitle: (won)=> won ? 'Your Team Wins!' : 'Enemy Team Wins',
+    teamWinSub: 'The team that captured both enemy kings is victorious.',
+    turnBoxText: (who,army,side)=> `${who} (${army} · ${side})`,
+    turnBoxText4p: (color,isHuman)=> `${color}${isHuman?' (You)':' (AI)'}`,
+  },
+  ja: {
+    pageTitle: "チャトランガ ― 将棋のはじまり",
+    brandH1: "チャトランガ",
+    brandSub: "将棋とチェスの起源",
+    ruleSrc: '「古典将棋コラム一　将棋の起源」（中将棋連盟）の記述に基づく二人制／四人制チャトランガ',
+    step1Label: "対局形式",
+    mode2pTtl: "二人制チャトランガ",
+    mode2pSub: "王と士が中央に並ぶ元祖将棋。歩兵は最終列で背後の駒に成る。",
+    mode4pTtl: "四人制チャトランガ",
+    mode4pSub: "四隅に軍団。サイコロで動かす駒を決め、対角のペアで王ふたりを狙う。",
+    step2Label: "自分の軍（手前側になります）",
+    colorBottomTtl: "アルナ軍（朱）",
+    colorTopTtl: "ニーラ軍（紺）",
+    colorRedTtl: "赤", colorYellowTtl: "黄", colorGreenTtl: "緑", colorBlackTtl: "黒",
+    allyNote: "赤と黄、緑と黒がそれぞれ同盟チーム。相手チームの王をふたつとも取れば勝利。手番は 赤→黄→緑→黒 の時計回り。",
+    step3Label: "AIの強さ",
+    diffEasyTtl: "イージー", diffEasySub: "ランダムに指す。ルールを覚えたい方向け。",
+    diffNormalTtl: "ノーマル", diffNormalSub: "駒得を狙いつつ、時々ゆるい手も。",
+    diffHardTtl: "ハード", diffHardSub: "先まで読んで最善に近い手を選ぶ。",
+    startBtn: "対局を始める",
+    turnLabel: "手番",
+    diceLabel: "ダイス",
+    rollBtn: "サイコロを振る",
+    capturedLabel: "捕獲した駒",
+    logLabel: "対局ログ",
+    backBtn: "設定に戻る",
+    againBtn: "もう一度設定する",
+    winDefaultTitle: "勝利",
+
+    pieceNames: {R:'王',M:'士',H:'象',A:'馬',Rt:'車',P:'兵',RC:'船'},
+    colorNames: {Red:'赤',Yellow:'黄',Green:'緑',Black:'黒', top:'ニーラ軍', bottom:'アルナ軍'},
+    near:'手前', far:'奥', you:'あなた', ai:'AI',
+
+    msgStart2p: (army)=> `あなたは「${army}」です。あなた（手前）の番から開始します。`,
+    msgStart4p: (army)=> `四人制チャトランガ開始。手番は 赤→黄→緑→黒 の時計回り。あなたは「${army}」です。`,
+    msgPass2p: (isHuman)=> isHuman ? 'あなたは動かせる駒がなく、一回休みです。' : '相手は動かせる駒がなく、一回休みです。',
+    msgMove2p: (actor,piece,from,to,capturedPiece)=> `${actor}が${piece}を${from}→${to}に移動` + (capturedPiece ? `（${capturedPiece}を捕獲）` : ''),
+    msgPromote: (piece)=> `／${piece}に成りました！`,
+    winTitle2p: (won)=> won ? 'あなたの勝ち！' : 'AIの勝ち',
+    winSub2p: '相手の王を捕獲しました。',
+    msgEliminatedNoTurn: (color)=> `${color}は脱落しており手番はありません。`,
+    diceMeaning: (v)=> v===2 ? '2 ― 象🐘が動けます' : v===3 ? '3 ― 馬🐴が動けます' : v===4 ? '4 ― 船⛵が動けます' : v===5 ? '5 ― 王👑または歩♟️が動けます' : '',
+    msgPassHuman4p: (army,val)=> `あなた（${army}）は${val}で動かせる駒がなく、一回休みです。`,
+    msgPassAI4p: (color,val)=> `${color}は${val}で動かせる駒がなく、一回休みです。`,
+    msgMove4p: (actor,isHuman,owner,piece,from,to,capOwner,capPiece)=> `${actor}${isHuman?'（あなた）':'（AI）'}が${owner}の${piece}を${from}→${to}に移動` + (capPiece ? `（${capOwner}の${capPiece}を捕獲）` : ''),
+    msgPromoteBoat: '／船⛵に成りました！',
+    msgKingCaptured4p: (color)=> `${color}の王が捕獲され、脱落しました。`,
+    msgAnnex: (annexer,ally)=> `領地拡大！ ${annexer}が同盟軍「${ally}」の駒を掌握しました。`,
+    teamWinTitle: (won)=> won ? 'あなたのチームの勝ち！' : '相手チームの勝ち',
+    teamWinSub: '両方の王を捕獲したチームの勝利です。',
+    turnBoxText: (who,army,side)=> `${who}（${army}・${side}）`,
+    turnBoxText4p: (color,isHuman)=> `${color}${isHuman?'（あなた）':'（AI）'}`,
+  },
+};
+
+function t(){ return I18N[state.lang] || I18N.en; }
+
+function applyI18N(){
+  const dict = t();
+  document.title = dict.pageTitle;
+  document.documentElement.lang = state.lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(typeof dict[key]==='string') el.textContent = dict[key];
+  });
+  document.getElementById('langEN').classList.toggle('active', state.lang==='en');
+  document.getElementById('langJA').classList.toggle('active', state.lang==='ja');
+  // refresh dynamic in-game text if a game is already on screen
+  if(state.board){
+    renderTurnBox();
+    if(state.mode==='4p' && state.diceValue!==null){
+      document.getElementById('dieMeaning').textContent = dict.diceMeaning(state.diceValue);
+    }
+  }
+}
+
+/* =========================================================================
+   UI state management
+   ========================================================================= */
+const state={
+  mode:'2p',            // '2p' | '4p'
+  lang:'en',             // 'en' | 'ja'
+  epoch:0,                // incremented on every new game; stale timers check this before acting
+  color2p:'bottom',
+  color4p:'Red',
+  difficulty:'normal',
+  board:null,
+  turn:null,             // 2p: 'top'/'bottom'  4p: color name
+  turnOrderIdx:0,
+  diceValue:null,
+  selected:null,          // {r,c}
+  movableSquares:[],       // list of [r,c] for pieces that can currently move
+  legalDestForSelected:[],
+  gameOver:false,
+  captured:{},             // color -> [type,...]
+  controllers:{},          // 4p: color -> controllerColor (annexation state; defaults to itself)
+  humanColor:null,          // the color actually controlled by the user
+  aiColors:[],
+  busy:false,
+};
+
+function log(msg){
+  const box=document.getElementById('logBox');
+  const div=document.createElement('div');
+  div.textContent=msg;
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
+
+/* ---------------- setup screen wiring ---------------- */
+document.getElementById('modeRow').addEventListener('click',e=>{
+  const el=e.target.closest('.choice'); if(!el)return;
+  document.querySelectorAll('#modeRow .choice').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  state.mode=el.dataset.mode;
+  document.getElementById('colorStep2p').style.display = state.mode==='2p' ? '' : 'none';
+  document.getElementById('colorStep4p').style.display = state.mode==='4p' ? '' : 'none';
+});
+document.getElementById('color2pRow').addEventListener('click',e=>{
+  const el=e.target.closest('.choice'); if(!el)return;
+  document.querySelectorAll('#color2pRow .choice').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  state.color2p=el.dataset.color;
+});
+document.getElementById('color4pRow').addEventListener('click',e=>{
+  const el=e.target.closest('.choice'); if(!el)return;
+  document.querySelectorAll('#color4pRow .choice').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  state.color4p=el.dataset.color;
+});
+document.getElementById('diffRow').addEventListener('click',e=>{
+  const el=e.target.closest('.choice'); if(!el)return;
+  document.querySelectorAll('#diffRow .choice').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  state.difficulty=el.dataset.diff;
+});
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('backBtn').addEventListener('click',()=>{
+  document.getElementById('gameScreen').style.display='none';
+  document.getElementById('setupScreen').style.display='';
+});
+document.getElementById('againBtn').addEventListener('click',()=>{
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('gameScreen').style.display='none';
+  document.getElementById('setupScreen').style.display='';
+});
+document.getElementById('langEN').addEventListener('click',()=>{ state.lang='en'; applyI18N(); });
+document.getElementById('langJA').addEventListener('click',()=>{ state.lang='ja'; applyI18N(); });
+document.getElementById('rollBtn').addEventListener('click',()=>{
+  if(state.mode!=='4p'||state.busy)return;
+  humanRollDice();
+});
+
+/* ---------------- game bootstrap ---------------- */
+function startGame(){
+  state.epoch++;
+  state.gameOver=false;
+  state.selected=null;
+  state.busy=false;
+  document.getElementById('logBox').innerHTML='';
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('setupScreen').style.display='none';
+  document.getElementById('gameScreen').style.display='block';
+
+  if(state.mode==='2p'){
+    // Internal coordinates are always bottom=near(you) / top=far(AI).
+    // The Crimson/Indigo choice only affects the visual skin.
+    state.board=initBoard2P('top','bottom');
+    state.humanColor = 'bottom';
+    state.aiColorSingle = 'top';
+    state.turn='bottom';
+    state.captured={top:[],bottom:[]};
+    document.getElementById('diceArea').style.display='none';
+    log(t().msgStart2p(colorLabel(state.color2p)));
+  } else {
+    state.board=initBoard4P();
+    state.humanColor=state.color4p;
+    state.aiColors=CORNERS.filter(c=>c!==state.humanColor);
+    state.turnOrderIdx=0;
+    state.turn=CORNERS[0];
+    state.captured={Red:[],Yellow:[],Green:[],Black:[]};
+    state.controllers={Red:'Red',Yellow:'Yellow',Green:'Green',Black:'Black'};
+    state.diceValue=null;
+    document.getElementById('diceArea').style.display='';
+    log(t().msgStart4p(colorLabel(state.humanColor)));
+  }
+  renderAll();
+  nextTurnFlow();
+}
+
+function colorLabel(c){
+  return t().colorNames[c] || c;
+}
+
+/* ---------------- rendering ---------------- */
+function buildBoardDom(){
+  const b=document.getElementById('board');
+  b.innerHTML='';
+  for(let i=0;i<64;i++){
+    const cell=document.createElement('div');
+    cell.className='cell';
+    b.appendChild(cell);
+  }
+}
+buildBoardDom();
+applyI18N();
+
+function cellIndexFor(r,c){
+  if(state.mode==='4p'){
+    const k=ROT_K[state.humanColor];
+    const [dr,dc]=rotK(r,c,k);
+    return dr*8+dc;
+  }
+  return r*8+c;
+}
+
+function skinFor2p(pieceColor){
+  if(state.mode!=='2p') return pieceColor;
+  const humanSkin = state.color2p; // 'bottom' or 'top' label choice
+  const aiSkin = humanSkin==='bottom' ? 'top' : 'bottom';
+  return (pieceColor===state.humanColor) ? humanSkin : aiSkin;
+}
+
+function isPieceFrozen(pieceColor){
+  if(state.mode!=='4p') return false;
+  if(kingAlive4P(state.board,pieceColor)) return false;
+  return state.controllers[pieceColor]===pieceColor; // not annexed by anyone = frozen
+}
+
+function renderAll(){
+  const cells=document.querySelectorAll('#board .cell');
+  cells.forEach((cell,idx)=>{
+    cell.className='cell';
+    const row=Math.floor(idx/8), col=idx%8;
+    cell.classList.add((row+col)%2===0?'light':'dark');
+    cell.innerHTML='';
+  });
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=state.board[r][c];
+    const idx=cellIndexFor(r,c);
+    const cell=cells[idx];
+    if(state.selected&&state.selected.r===r&&state.selected.c===c) cell.classList.add('sel');
+    const isDest=state.legalDestForSelected.some(d=>d.r===r&&d.c===c);
+    if(isDest){ cell.classList.add('movable'); if(p) cell.classList.add('hasPiece'); }
+    if(p){
+      const div=document.createElement('div');
+      const isKing = p.type==='R';
+      const skinColor = state.mode==='2p' ? skinFor2p(p.color) : p.color;
+      div.className='piece pc-'+skinColor+(isKing?' king':'');
+      const nameMap = state.mode==='2p'?PNAME_2P:PNAME_4P;
+      div.textContent=nameMap[p.type]||p.type;
+      const isMovableSrc = state.movableSquares.some(s=>s.r===r&&s.c===c);
+      if(isMovableSrc && isHumanTurn()) div.classList.add('mine');
+      if(isPieceFrozen(p.color)) div.classList.add('frozen');
+      cell.appendChild(div);
+    }
+  }
+  renderTurnBox();
+  renderCaptured();
+}
+
+function renderTurnBox(){
+  const dot=document.getElementById('turnDot');
+  const txt=document.getElementById('turnText');
+  if(state.mode==='2p'){
+    const isMe = state.turn===state.humanColor;
+    dot.className='dot pc-'+skinFor2p(state.turn);
+    txt.textContent = t().turnBoxText(isMe?t().you:t().ai, colorLabel(skinFor2p(state.turn)), state.turn==='bottom'?t().near:t().far);
+  } else {
+    const isMe = state.turn===state.humanColor;
+    dot.className='dot pc-'+state.turn;
+    txt.textContent = t().turnBoxText4p(colorLabel(state.turn), isMe);
+  }
+}
+function renderCaptured(){
+  const row=document.getElementById('capturedRow');
+  row.innerHTML='';
+  const nameMap = state.mode==='2p'?PNAME_2P:PNAME_4P;
+  Object.keys(state.captured).forEach(color=>{
+    state.captured[color].forEach(type=>{
+      const chip=document.createElement('div');
+      const skinColor = state.mode==='2p' ? skinFor2p(color) : color;
+      chip.className='cap-chip pc-'+skinColor;
+      chip.textContent=nameMap[type]||type;
+      row.appendChild(chip);
+    });
+  });
+}
+
+/* ---------------- turn helpers ---------------- */
+function isHumanTurn(){
+  if(state.gameOver)return false;
+  return state.turn===state.humanColor;
+}
+
+function otherColor2P_(c){return c==='bottom'?'top':'bottom';}
+
+/* ================= Two-Player turn flow ================= */
+function nextTurnFlow(){
+  if(state.gameOver)return;
+  state.busy=false;
+  const myEpoch=state.epoch;
+  if(state.mode==='2p'){
+    computeMovable2P();
+    if(state.movableSquares.length===0){
+      log(t().msgPass2p(state.turn===state.humanColor));
+      state.turn=otherColor2P_(state.turn);
+      renderAll();
+      setTimeout(()=>{ if(state.epoch!==myEpoch)return; nextTurnFlow(); },500);
+      return;
+    }
+    renderAll();
+    if(!isHumanTurn()){
+      state.busy=true;
+      setTimeout(()=>{ if(state.epoch!==myEpoch)return; aiTurn2P(); },650);
+    }
+  } else {
+    handle4PTurnStart();
+  }
+}
+
+function computeMovable2P(){
+  const moves=allLegalMoves2P(state.board,state.turn);
+  const set=new Map();
+  moves.forEach(m=>set.set(m.fr+','+m.fc,true));
+  state.movableSquares=[...set.keys()].map(k=>{const [r,c]=k.split(',').map(Number);return {r,c};});
+}
+
+function aiTurn2P(){
+  const mv=chooseAIMove2P(state.board,state.turn,state.difficulty);
+  state.busy=false;
+  if(!mv){ state.turn=otherColor2P_(state.turn); nextTurnFlow(); return; }
+  performMove2P(mv);
+}
+
+function performMove2P(mv){
+  const piece=state.board[mv.fr][mv.fc];
+  const {captured,promoted}=applyMove2P(state.board,mv);
+  const nameMap=t().pieceNames;
+  const actor = piece.color===state.humanColor ? t().you : t().ai;
+  let msg = t().msgMove2p(actor, nameMap[mv.piece], coordStr(mv.fr,mv.fc), coordStr(mv.tr,mv.tc), captured?nameMap[captured.type]:null);
+  if(promoted) msg += t().msgPromote(nameMap[promoted]);
+  log(msg);
+  if(captured){ state.captured[piece.color].push(captured.type); }
+  if(captured && captured.type==='R' && kingCount2P(state.board, captured.color)===0){
+    state.gameOver=true;
+    renderAll();
+    showWinner(t().winTitle2p(piece.color===state.humanColor), t().winSub2p);
+    return;
+  }
+  state.selected=null; state.legalDestForSelected=[];
+  state.turn=otherColor2P_(state.turn);
+  renderAll();
+  nextTurnFlow();
+}
+
+function coordStr(r,c){
+  const files=['a','b','c','d','e','f','g','h'];
+  return files[c]+(8-r);
+}
+
+/* ---------------- Two-Player: click handling ---------------- */
+document.getElementById('board').addEventListener('click',e=>{
+  if(state.gameOver||state.busy)return;
+  const cell=e.target.closest('.cell');
+  if(!cell)return;
+  const cells=[...document.querySelectorAll('#board .cell')];
+  const idx=cells.indexOf(cell);
+  let row=Math.floor(idx/8), col=idx%8;
+  // the 4-player board is rotated, so invert the transform
+  if(state.mode==='4p'){
+    const k=ROT_K[state.humanColor];
+    const inv=(4-k)%4;
+    [row,col]=rotK(row,col,inv);
+  }
+  handleCellClick(row,col);
+});
+
+function handleCellClick(r,c){
+  if(!isHumanTurn())return;
+  if(state.mode==='2p'){
+    handleCellClick2P(r,c);
+  } else {
+    handleCellClick4P(r,c);
+  }
+}
+
+function handleCellClick2P(r,c){
+  const p=state.board[r][c];
+  if(state.selected){
+    const dest=state.legalDestForSelected.find(d=>d.r===r&&d.c===c);
+    if(dest){
+      performMove2P({fr:state.selected.r,fc:state.selected.c,tr:r,tc:c,capture:dest.capture,piece:state.board[state.selected.r][state.selected.c].type});
+      return;
+    }
+  }
+  if(p&&p.color===state.humanColor && state.movableSquares.some(s=>s.r===r&&s.c===c)){
+    state.selected={r,c};
+    state.legalDestForSelected=pieceMoves2P(state.board,r,c);
+  } else {
+    state.selected=null; state.legalDestForSelected=[];
+  }
+  renderAll();
+}
+
+/* ================= Four-Player turn flow ================= */
+function nextColorIdx(idx){ return (idx+1)%4; }
+
+function handle4PTurnStart(){
+  if(state.gameOver)return;
+  state.busy=false;
+  const color=state.turn;
+  const myEpoch=state.epoch;
+  if(!kingAlive4P(state.board,color)){
+    log(t().msgEliminatedNoTurn(colorLabel(color)));
+    advance4PTurn();
+    return;
+  }
+  state.diceValue=null;
+  document.getElementById('dieFace').textContent='-';
+  document.getElementById('dieMeaning').textContent='\u00a0';
+  renderAll();
+  if(color===state.humanColor){
+    document.getElementById('rollBtn').disabled=false;
+  } else {
+    document.getElementById('rollBtn').disabled=true;
+    state.busy=true;
+    setTimeout(()=>{ if(state.epoch!==myEpoch)return; aiRollDice(color); },550);
+  }
+}
+
+function controlledColorsFor(color){
+  // which colors' pieces this color can move (including annexed allies)
+  const list=[color];
+  for(const col of CORNERS){
+    if(state.controllers[col]===color && col!==color) list.push(col);
+  }
+  return [...new Set(list)];
+}
+
+function diceMeaningText(v){
+  return t().diceMeaning(v);
+}
+
+function rollDieAnimated(cb){
+  const die=document.getElementById('dieFace');
+  const myEpoch=state.epoch;
+  die.classList.add('rolling');
+  let n=0;
+  const iv=setInterval(()=>{
+    if(state.epoch!==myEpoch){ clearInterval(iv); return; }
+    die.textContent=[2,3,4,5][Math.floor(Math.random()*4)]; n++; if(n>6){clearInterval(iv);}
+  },55);
+  setTimeout(()=>{
+    if(state.epoch!==myEpoch)return;
+    die.classList.remove('rolling');
+    const val=[2,3,4,5][Math.floor(Math.random()*4)];
+    die.textContent=val;
+    document.getElementById('dieMeaning').textContent=diceMeaningText(val);
+    cb(val);
+  },500);
+}
+
+function humanRollDice(){
+  document.getElementById('rollBtn').disabled=true;
+  const myEpoch=state.epoch;
+  rollDieAnimated(val=>{
+    if(state.epoch!==myEpoch)return;
+    state.diceValue=val;
+    const controlled=controlledColorsFor(state.humanColor);
+    const moves=legalMoves4P(state.board,controlled,val);
+    computeMovable4P(moves);
+    if(moves.length===0){
+      log(t().msgPassHuman4p(colorLabel(state.humanColor), val));
+      renderAll();
+      setTimeout(()=>{ if(state.epoch!==myEpoch)return; advance4PTurn(); },700);
+      return;
+    }
+    renderAll();
+  });
+}
+
+function aiRollDice(color){
+  const myEpoch=state.epoch;
+  rollDieAnimated(val=>{
+    if(state.epoch!==myEpoch)return;
+    state.diceValue=val;
+    const controlled=controlledColorsFor(color);
+    const ownTeam = (color==='Red'||color==='Yellow')?['Red','Yellow']:['Green','Black'];
+    const enemyTeam = ownTeam[0]==='Red'?['Green','Black']:['Red','Yellow'];
+    const mv=chooseAIMove4P(state.board,controlled,val,ownTeam,enemyTeam,state.difficulty);
+    if(!mv){
+      log(t().msgPassAI4p(colorLabel(color), val));
+      state.busy=false;
+      renderAll();
+      setTimeout(()=>{ if(state.epoch!==myEpoch)return; advance4PTurn(); },650);
+      return;
+    }
+    setTimeout(()=>{ if(state.epoch!==myEpoch)return; state.busy=false; performMove4P(mv,color); },400);
+  });
+}
+
+function computeMovable4P(moves){
+  const set=new Map();
+  moves.forEach(m=>set.set(m.fr+','+m.fc,true));
+  state.movableSquares=[...set.keys()].map(k=>{const [r,c]=k.split(',').map(Number);return {r,c};});
+  state.selected=null; state.legalDestForSelected=[];
+}
+
+function handleCellClick4P(r,c){
+  if(state.diceValue==null){return;}
+  const p=state.board[r][c];
+  if(state.selected){
+    const dest=state.legalDestForSelected.find(d=>d.r===r&&d.c===c);
+    if(dest){
+      const mv={fr:state.selected.r,fc:state.selected.c,tr:r,tc:c,capture:dest.capture,piece:state.board[state.selected.r][state.selected.c].type,color:state.board[state.selected.r][state.selected.c].color};
+      performMove4P(mv,state.humanColor);
+      return;
+    }
+  }
+  const controlled=controlledColorsFor(state.humanColor);
+  if(p&&controlled.includes(p.color)&&state.movableSquares.some(s=>s.r===r&&s.c===c)){
+    state.selected={r,c};
+    state.legalDestForSelected=pieceMoves4P(state.board,r,c).filter(m=>diceAllowedTypes(state.diceValue).includes(p.type));
+  } else {
+    state.selected=null; state.legalDestForSelected=[];
+  }
+  renderAll();
+}
+
+function performMove4P(mv,actingColor){
+  const piece=state.board[mv.fr][mv.fc];
+  const pieceColor=piece.color;
+  const {captured,promoted}=applyMove4P(state.board,mv);
+  const nameMap=t().pieceNames;
+  let msg=t().msgMove4p(colorLabel(actingColor), actingColor===state.humanColor, colorLabel(pieceColor), nameMap[mv.piece], coordStr(mv.fr,mv.fc), coordStr(mv.tr,mv.tc), captured?colorLabel(captured.color):null, captured?nameMap[captured.type]:null);
+  if(promoted) msg+=t().msgPromoteBoat;
+  log(msg);
+  if(captured){
+    state.captured[actingColor].push(captured.type);
+    if(captured.type==='R'){
+      log(t().msgKingCaptured4p(colorLabel(captured.color)));
+      checkTeamVictory();
+      if(state.gameOver)return;
+    }
+  }
+  // Throne-annexation check: the moved piece is a king that reached the
+  // ally's throne square, and that ally's king is already dead
+  if(mv.piece==='R'){
+    const throne=THRONE[ALLY[pieceColor]];
+    if(throne && throne.r===mv.tr && throne.c===mv.tc && !kingAlive4P(state.board,ALLY[pieceColor])){
+      if(state.controllers[ALLY[pieceColor]]!==pieceColor){
+        state.controllers[ALLY[pieceColor]]=pieceColor;
+        log(t().msgAnnex(colorLabel(pieceColor), colorLabel(ALLY[pieceColor])));
+      }
+    }
+  }
+  state.selected=null; state.legalDestForSelected=[]; state.movableSquares=[];
+  renderAll();
+  const myEpoch=state.epoch;
+  setTimeout(()=>{ if(state.epoch!==myEpoch)return; advance4PTurn(); },350);
+}
+
+function checkTeamVictory(){
+  const redYellowAlive = teamAlive(state.board,['Red','Yellow']);
+  const greenBlackAlive = teamAlive(state.board,['Green','Black']);
+  if(!redYellowAlive || !greenBlackAlive){
+    state.gameOver=true;
+    renderAll();
+    const humanTeam = (state.humanColor==='Red'||state.humanColor==='Yellow')?['Red','Yellow']:['Green','Black'];
+    const humanTeamAlive = teamAlive(state.board,humanTeam);
+    showWinner(t().teamWinTitle(humanTeamAlive), t().teamWinSub);
+  }
+}
+
+function advance4PTurn(){
+  if(state.gameOver)return;
+  state.turnOrderIdx=nextColorIdx(state.turnOrderIdx);
+  state.turn=CORNERS[state.turnOrderIdx];
+  document.getElementById('rollBtn').disabled=true;
+  handle4PTurnStart();
+}
+
+/* ---------------- winner overlay ---------------- */
+function showWinner(title,sub){
+  document.getElementById('winTitle').textContent=title;
+  document.getElementById('winSub').textContent=sub;
+  document.getElementById('overlay').classList.add('show');
+}
+</script>
+</body>
+</html>
