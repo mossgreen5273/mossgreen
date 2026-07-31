@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="ja" class="lang-ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安南将棋 / Annan Shogi</title>
+<style>
+  :root{
+    --board-light:#dcb26b;
+    --board-dark:#c99a52;
+    --frame:#3b2417;
+    --paper:#eae1cb;
+    --paper-deep:#ddd1b3;
+    --ink:#231a10;
+    --ink-soft:#5c4a33;
+    --promoted:#a8342a;
+    --accent:#2f6f62;
+    --accent-soft:#bcd6cd;
+    --gold:#c9982f;
+    --danger:#a8342a;
+    --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+    --serif: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: radial-gradient(ellipse at top, #f4ecd8 0%, var(--paper-deep) 55%, #cfc09a 100%);
+    color:var(--ink);
+    font-family:var(--sans);
+  }
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding:18px 14px 60px;
+  }
+  header.top{
+    text-align:center;
+    margin-bottom:10px;
+  }
+  header.top h1{
+    font-family:var(--serif);
+    font-weight:700;
+    letter-spacing:.12em;
+    font-size:clamp(24px,5vw,34px);
+    margin:6px 0 2px;
+    color:var(--ink);
+  }
+  header.top p.sub{
+    margin:0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    letter-spacing:.04em;
+  }
+
+  .status-bar{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin:14px 0 10px;
+    flex-wrap:wrap;
+  }
+  .turn-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:var(--frame);
+    color:#f2e6c8;
+    padding:7px 16px;
+    border-radius:999px;
+    font-size:13.5px;
+    font-weight:600;
+    letter-spacing:.06em;
+  }
+  .turn-pill .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:#f2e6c8;
+  }
+  .turn-pill.thinking .dot{
+    background:var(--gold);
+    animation: pulse 1s infinite ease-in-out;
+  }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+  .tide-pill{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    background:var(--accent);
+    color:#fff;
+    padding:6px 14px;
+    border-radius:16px;
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.03em;
+    line-height:1.3;
+  }
+  .msg{
+    font-size:13px;
+    font-weight:700;
+    color:var(--danger);
+    min-height:18px;
+    letter-spacing:.05em;
+  }
+  .btn{
+    font-family:var(--sans);
+    border:1px solid var(--frame);
+    background:var(--paper);
+    color:var(--ink);
+    padding:6px 14px;
+    border-radius:8px;
+    font-size:12.5px;
+    cursor:pointer;
+    letter-spacing:.03em;
+    transition:.15s;
+  }
+  .btn:hover{ background:var(--frame); color:#f2e6c8; }
+  .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent);}
+  .btn.primary:hover{ background:#255650; }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .hand-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:56px;
+    flex-wrap:wrap;
+    padding:4px 8px;
+  }
+  .hand-row.gote{ transform: rotate(180deg); }
+  .hand-label{
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:.08em;
+    width:100%;
+    text-align:center;
+    transform:none;
+    margin-bottom:2px;
+  }
+  .hand-row.gote .hand-label{ transform: rotate(180deg); margin-bottom:0; margin-top:2px;}
+
+  .hand-piece{
+    position:relative;
+    width:46px;height:50px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    background:linear-gradient(180deg,#f2e2b8,#e2c88b);
+    border:1px solid #9c7a3e;
+    clip-path:polygon(50% 0%, 90% 18%, 100% 100%, 0% 100%, 10% 18%);
+    font-family:var(--serif);
+    font-size:20px;
+    font-weight:700;
+    color:var(--ink);
+    box-shadow:0 2px 3px rgba(0,0,0,.25);
+    transition:.12s;
+  }
+  .hand-piece:hover{ transform:translateY(-2px); }
+  .hand-piece.selected{
+    outline:3px solid var(--accent);
+    outline-offset:2px;
+  }
+  .hand-piece .count{
+    position:absolute; bottom:-2px; right:-2px;
+    background:var(--frame); color:#f2e6c8;
+    font-family:var(--sans);
+    font-size:10px; font-weight:700;
+    border-radius:50%;
+    width:16px;height:16px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .hand-empty{
+    font-size:11px;color:var(--ink-soft);opacity:.55;
+    padding:14px 0;
+  }
+
+  .board-outer{
+    display:flex;
+    justify-content:center;
+    margin:6px 0;
+    position:relative;
+  }
+  .board-frame{
+    background:var(--frame);
+    padding:14px;
+    border-radius:6px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 2px #1e130a;
+    position:relative;
+  }
+  .board-frame.thinking{ opacity:.75; }
+  .thinking-overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .thinking-badge{
+    background:var(--frame);
+    color:var(--gold);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.1em;
+    padding:8px 16px;
+    border-radius:999px;
+    box-shadow:0 4px 14px rgba(0,0,0,.4);
+    display:none;
+  }
+  .board-frame.thinking .thinking-badge{ display:inline-block; }
+  .thinking-badge .en{ color: var(--gold); opacity:.85; }
+
+  .board{
+    display:grid;
+    grid-template-columns:repeat(9, minmax(30px,44px));
+    grid-template-rows:repeat(9, minmax(30px,44px));
+    background:var(--board-light);
+    background-image:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 100%);
+    border:2px solid #1e130a;
+  }
+  .cell{
+    position:relative;
+    border-right:1px solid #6b4a24;
+    border-bottom:1px solid #6b4a24;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--board-light);
+  }
+  .cell:nth-child(9n){ border-right:none; }
+  .cell.target::after{
+    content:"";
+    position:absolute;
+    width:32%; height:32%;
+    border-radius:50%;
+    background:rgba(47,111,98,.55);
+  }
+  .cell.target.capture::after{
+    width:80%; height:80%;
+    border-radius:0;
+    background:transparent;
+    border:3px solid rgba(168,52,42,.75);
+  }
+  .cell.last-from{ box-shadow: inset 0 0 0 3px rgba(201,152,47,.55); }
+  .cell.last-to{ box-shadow: inset 0 0 0 3px rgba(201,152,47,.9); }
+  .cell.last-to.flash{ animation: lastMoveFlash 1.1s ease-out 1; }
+  @keyframes lastMoveFlash{
+    0%   { background-color: rgba(201,152,47,.85); box-shadow: inset 0 0 0 4px rgba(201,152,47,1); }
+    100% { background-color: var(--board-light); box-shadow: inset 0 0 0 3px rgba(201,152,47,.9); }
+  }
+  .cell.king-check{ background:rgba(168,52,42,.35); }
+
+  .piece{
+    position:relative;
+    width:86%; height:90%;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#f4e5bb,#e3c88a);
+    border:1px solid #8a6a34;
+    clip-path:polygon(50% 2%, 88% 20%, 98% 98%, 2% 98%, 12% 20%);
+    box-shadow:0 2px 2px rgba(0,0,0,.3);
+    cursor:pointer;
+    user-select:none;
+  }
+  .piece.gote{ transform:rotate(180deg); }
+  .piece.selected{ outline:3px solid var(--accent); outline-offset:1px; }
+  .piece .kanji{
+    font-family:var(--serif);
+    font-weight:700;
+    font-size:15.5px;
+    line-height:1;
+    color:var(--ink);
+    letter-spacing:-1px;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+  }
+  .piece.promoted .kanji{ color:var(--promoted); }
+  .piece .badge{
+    position:absolute;
+    top:-7px; left:-7px;
+    background:#fff;
+    color:var(--promoted);
+    border:1px solid var(--promoted);
+    border-radius:50%;
+    width:15px;height:15px;
+    font-size:9px;
+    font-family:var(--serif);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;
+    box-shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+  .piece.gote .badge{ transform:rotate(180deg); }
+
+  .piece .pin-badge{
+    position:absolute;
+    bottom:-7px; right:-7px;
+    background:#fff5ec;
+    color:var(--danger);
+    border:1.5px solid var(--danger);
+    border-radius:50%;
+    width:16px;height:16px;
+    font-size:11px;
+    font-family:var(--sans);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;
+    box-shadow:0 1px 2px rgba(0,0,0,.35);
+    animation: pinPulse 1.6s infinite ease-in-out;
+  }
+  .piece.gote .pin-badge{ transform:rotate(180deg); }
+  @keyframes pinPulse{ 0%,100%{ box-shadow:0 1px 2px rgba(0,0,0,.35), 0 0 0 0 rgba(168,52,42,.45); } 50%{ box-shadow:0 1px 2px rgba(0,0,0,.35), 0 0 0 4px rgba(168,52,42,0); } }
+
+  .pin-hint{
+    font-size:12px;
+    color:var(--danger);
+    font-weight:700;
+    text-align:center;
+    margin:-4px 0 6px;
+    letter-spacing:.02em;
+  }
+  .pin-hint .en{ display:block; font-size:0.85em; font-weight:600; }
+
+  .coords-file{
+    display:grid;
+    grid-template-columns:repeat(9, minmax(30px,44px));
+    text-align:center;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin:0 14px;
+  }
+  .board-row-wrap{ display:flex; align-items:center; }
+  .rank-col{
+    display:grid;
+    grid-template-rows:repeat(9, minmax(30px,44px));
+    align-items:center;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    padding:0 4px;
+  }
+  .rank-col span, .coords-file span{ display:flex; align-items:center; justify-content:center; }
+
+  .panel{
+    max-width:640px;
+    margin:26px auto 0;
+    background:var(--paper);
+    border:1px solid #c9b98d;
+    border-radius:10px;
+    padding:14px 18px;
+    font-size:13px;
+    line-height:1.7;
+    color:var(--ink-soft);
+  }
+  .panel summary{
+    cursor:pointer;
+    font-weight:700;
+    color:var(--ink);
+    letter-spacing:.03em;
+    font-size:13.5px;
+  }
+  .panel h4{ margin:12px 0 4px; color:var(--ink); font-size:12.5px;}
+  .panel ul{ margin:4px 0 4px 18px; padding:0;}
+
+  .modal-bg{
+    position:fixed; inset:0;
+    background:rgba(20,14,7,.55);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50;
+    padding:16px;
+  }
+  .modal-card{
+    background:var(--paper);
+    border:1px solid var(--frame);
+    border-radius:10px;
+    padding:22px 26px;
+    text-align:center;
+    box-shadow:0 14px 40px rgba(0,0,0,.4);
+    max-width:360px;
+    width:100%;
+  }
+  .modal-card p{ margin:0 0 14px; font-size:14px; color:var(--ink); font-weight:600;}
+  .modal-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
+
+  .setup-card{
+    max-width:420px;
+    margin:0 auto;
+    background:var(--paper);
+    border:1px solid var(--frame);
+    border-radius:14px;
+    padding:22px 24px 26px;
+    box-shadow:0 14px 40px rgba(0,0,0,.35);
+  }
+  .setup-card h2{
+    font-family:var(--serif);
+    text-align:center;
+    margin:0 0 16px;
+    font-size:19px;
+    letter-spacing:.08em;
+  }
+  .setup-group{ margin-bottom:16px; }
+  .setup-group > label.gtitle{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    letter-spacing:.04em;
+  }
+  .choice-row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .choice-btn{
+    flex:1;
+    min-width:80px;
+    text-align:center;
+    padding:9px 8px;
+    border:1.5px solid #9c7a3e;
+    border-radius:8px;
+    background:#fbf4e2;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink);
+    transition:.12s;
+  }
+  .choice-btn.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .choice-btn small{ display:block; font-weight:400; font-size:10.5px; margin-top:2px; opacity:.85;}
+  .setup-start{
+    width:100%;
+    margin-top:6px;
+    padding:11px;
+    font-size:14.5px;
+  }
+
+  .gameover-banner{
+    max-width:520px;
+    margin:16px auto 0;
+    text-align:center;
+    background:var(--frame);
+    color:#f4e8c8;
+    padding:16px 20px;
+    border-radius:10px;
+    font-family:var(--serif);
+    font-size:19px;
+    letter-spacing:.08em;
+    box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  .gameover-banner .btn{ margin-top:10px; }
+  .hidden{ display:none !important; }
+
+  /* ---- language toggle: show only the active language ---- */
+  html.lang-en .lang-ja{ display:none !important; }
+  html.lang-ja .en, html.lang-ja .en-title, html.lang-ja .en-line{ display:none !important; }
+
+  .lang-toggle{
+    display:inline-flex;
+    border:1.5px solid var(--frame);
+    border-radius:8px;
+    overflow:hidden;
+    font-size:12px;
+    font-weight:700;
+  }
+  .lang-toggle button{
+    font-family:var(--sans);
+    border:none;
+    background:var(--paper);
+    color:var(--ink-soft);
+    padding:6px 12px;
+    cursor:pointer;
+  }
+  .lang-toggle button.active{
+    background:var(--frame);
+    color:#f2e6c8;
+  }
+  .setup-lang-row{
+    display:flex;
+    justify-content:center;
+    margin-bottom:14px;
+  }
+
+  /* ---- bilingual (JA/EN) text treatment ---- */
+  .en{
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 500;
+    color: var(--ink-soft);
+    opacity: .82;
+  }
+  h1 .en-title{
+    display:block;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 0.42em;
+    letter-spacing: .06em;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+  p.sub .en{
+    display:block;
+    font-size: 0.92em;
+    margin-top: 3px;
+    font-style: italic;
+  }
+  h2 .en, .panel summary .en{
+    display:block;
+    font-size: 0.5em;
+    margin-top: 3px;
+  }
+  .gtitle .en{ font-size: 0.85em; margin-left: 4px; }
+  .btn .en{ font-size: 0.82em; margin-left: 4px; }
+  .choice-btn .en-line{
+    display:block;
+    font-size: 0.86em;
+    font-style: italic;
+    color: inherit;
+    opacity: .85;
+    margin-top: 1px;
+  }
+  .panel li .en{
+    display:block;
+    font-size: 0.88em;
+    margin-top: 3px;
+    line-height: 1.5;
+  }
+  .panel h4 .en{ display:inline; font-size:0.8em; margin-left:6px; }
+  .hand-label .en{ font-size:0.85em; margin-left:4px; }
+  .tide-pill .tide-subline{
+    display:block;
+    font-size: 0.82em;
+    font-style: italic;
+    opacity: .9;
+  }
+
+  @media (max-width:480px){
+    .board{ grid-template-columns:repeat(9, minmax(26px,36px)); grid-template-rows:repeat(9, minmax(26px,36px)); }
+    .rank-col, .coords-file{ font-size:9px; }
+    .piece .kanji{ font-size:12.5px; }
+    .hand-piece{ width:38px; height:42px; font-size:16px;}
+  }
+  :focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1><span class="lang-ja">安南将棋</span><span class="en-title">Annan Shogi</span></h1>
+    <p class="sub"><span class="lang-ja">縦に並んだ味方の駒は、後ろの駒の動きを借りる ― 新型ルール（角・飛の前の歩は一つ進めた配置）
+      </span><span class="en">A friendly piece directly behind another borrows its original move — new-style setup, with the pawns in front of the rook and bishop starting one square advanced.</span>
+    </p>
+  </header>
+
+  <!-- setup screen -->
+  <div id="setupScreen">
+    <div class="setup-card">
+      <div class="setup-lang-row">
+        <div class="lang-toggle" id="langToggleSetup">
+          <button type="button" data-lang="ja">日本語</button>
+          <button type="button" data-lang="en">English</button>
+        </div>
+      </div>
+      <h2><span class="lang-ja">対局設定</span><span class="en">Game Setup</span></h2>
+      <div class="setup-group">
+        <label class="gtitle"><span class="lang-ja">対戦相手</span><span class="en">Opponent</span></label>
+        <div class="choice-row" id="modeRow">
+          <div class="choice-btn" data-mode="ai"><span class="lang-ja">AI と対戦</span><span class="en-line">vs AI</span></div>
+          <div class="choice-btn" data-mode="human"><span class="lang-ja">2人で対戦</span><span class="en-line">2 Players</span></div>
+        </div>
+      </div>
+      <div class="setup-group" id="colorGroup">
+        <label class="gtitle"><span class="lang-ja">あなたの手番</span><span class="en">Your Side</span></label>
+        <div class="choice-row" id="colorRow">
+          <div class="choice-btn" data-color="S"><span class="lang-ja">先手</span><span class="en-line">Sente (first)</span></div>
+          <div class="choice-btn" data-color="G"><span class="lang-ja">後手</span><span class="en-line">Gote (second)</span></div>
+        </div>
+      </div>
+      <div class="setup-group" id="levelGroup">
+        <label class="gtitle"><span class="lang-ja">AIの強さ</span><span class="en">AI Strength</span></label>
+        <div class="choice-row" id="levelRow">
+          <div class="choice-btn" data-level="1">1<small><span class="lang-ja">入門</span><span class="en">Beginner</span></small></div>
+          <div class="choice-btn" data-level="2">2<small><span class="lang-ja">初級</span><span class="en">Easy</span></small></div>
+          <div class="choice-btn" data-level="3">3<small><span class="lang-ja">中級</span><span class="en">Normal</span></small></div>
+          <div class="choice-btn" data-level="4">4<small><span class="lang-ja">上級</span><span class="en">Hard</span></small></div>
+          <div class="choice-btn" data-level="5">5<small><span class="lang-ja">最強</span><span class="en">Strongest</span></small></div>
+        </div>
+      </div>
+      <div class="setup-group">
+        <label class="gtitle"><span class="lang-ja">特別ルール：潮汐（このアプリ独自）</span><span class="en">Special Rule: Tide (original)</span></label>
+        <div class="choice-row" id="tideRow">
+          <div class="choice-btn" data-tide="on"><span class="lang-ja">使う</span><span class="en">On</span><small><span class="lang-ja">10手ごとに安南⇄安北</span><span class="en">flips every 10 moves</span></small></div>
+          <div class="choice-btn" data-tide="off"><span class="lang-ja">使わない</span><span class="en">Off</span><small><span class="lang-ja">安南将棋のみ</span><span class="en">classic rules only</span></small></div>
+        </div>
+      </div>
+      <div class="setup-group">
+        <label class="gtitle"><span class="lang-ja">借りている動きのヒント表示</span><span class="en">Move Hints</span></label>
+        <div class="choice-row" id="badgeRow">
+          <div class="choice-btn" data-badge="on"><span class="lang-ja">表示する</span><span class="en">On</span><small><span class="lang-ja">駒に借用元をバッジ表示</span><span class="en">show a badge</span></small></div>
+          <div class="choice-btn" data-badge="off"><span class="lang-ja">表示しない</span><span class="en">Off</span><small><span class="lang-ja">上級者向け・難易度UP</span><span class="en">harder, no hints</span></small></div>
+        </div>
+      </div>
+      <button class="btn primary setup-start" id="startBtn"><span class="lang-ja">対局開始</span><span class="en">Start Game</span></button>
+    </div>
+  </div>
+
+  <!-- game screen -->
+  <div id="gameScreen" class="hidden">
+    <div class="status-bar">
+      <span class="turn-pill" id="turnPill"><span class="dot"></span><span id="turnText">先手番</span></span>
+      <span class="tide-pill hidden" id="tidePill"></span>
+      <span class="msg" id="msgText"></span>
+      <div class="lang-toggle" id="langToggleGame">
+        <button type="button" data-lang="ja">JA</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+      <button class="btn" id="badgeToggleBtn"><span class="lang-ja">ヒント: ON</span><span class="en">Hints: ON</span></button>
+      <button class="btn" id="settingsBtn"><span class="lang-ja">設定</span><span class="en">Settings</span></button>
+      <button class="btn" id="undoBtn"><span class="lang-ja">待った</span><span class="en">Undo</span></button>
+    </div>
+    <div class="pin-hint hidden" id="pinHint"></div>
+
+    <div class="hand-row gote" id="handGote"></div>
+
+    <div class="board-outer">
+      <div class="board-frame" id="boardFrame">
+        <div class="board-row-wrap">
+          <div class="rank-col" id="rankCol"></div>
+          <div>
+            <div class="coords-file" id="fileRow"></div>
+            <div class="board" id="board"></div>
+          </div>
+        </div>
+        <div class="thinking-overlay"><span class="thinking-badge" id="thinkingBadge"><span class="lang-ja">AI思考中… </span><span class="en">Thinking…</span></span></div>
+      </div>
+    </div>
+
+    <div class="hand-row" id="handSente"></div>
+
+    <div id="gameoverArea"></div>
+
+    <details class="panel">
+      <summary><span class="lang-ja">安南将棋のルール（このアプリの実装内容）</span><span class="en">Rules &amp; implementation notes</span></summary>
+      <h4><span class="lang-ja">由来</span><span class="en">Origin</span></h4>
+      <ul>
+        <li><span class="lang-ja">安南将棋は、大正15年（1926年）ごろ、東京帝国大学仏文科講師だった鈴木信太郎（1895–1970、後の東京大学名誉教授）が考案したと伝わる変則将棋です。
+          </span><span class="en">Annan Shogi is a shogi variant said to have been devised around 1926 by Shintaro Suzuki (1895–1970), a lecturer in French literature at Tokyo Imperial University who later became a professor emeritus at the University of Tokyo.</span>
+        </li>
+        <li><span class="lang-ja">「縦に並んだ駒は後ろの駒の動きになる」という基本ルール、および「初期配置は角・飛の前の歩を1マス前進させる」という配置（Wikipedia「安南将棋」に記載の新型ルール）は、いずれも安南将棋として伝わってきたものであり、筆者の独自ルールではありません。
+          </span><span class="en">The core rule ("a piece behind another takes on that piece's original move") and the starting setup (pawns in front of the rook/bishop advanced one square, per the "new-style" rules on Japanese Wikipedia) are both part of the traditional game — not something invented by this app's creator.</span>
+        </li>
+      </ul>
+      <h4><span class="lang-ja">基本ルール</span><span class="en">Core Rules</span></h4>
+      <ul>
+        <li><span class="lang-ja">盤上のどの駒も、自分の駒がすぐ後ろ（自陣側）の同じ筋に隣接していれば、その駒<b>本来の動き</b>を借りて動きます。玉将も例外ではありません。
+          </span><span class="en">Any piece with a friendly piece directly behind it (toward your own side, same file) borrows that piece's <b>original move</b>. The king is not exempt.</span>
+        </li>
+        <li><span class="lang-ja">後ろに味方がいなければ、駒は本来の動きのままです。3枚以上縦に並んでいる場合も、直後の1枚だけを参照します。
+          </span><span class="en">With no friendly piece behind it, a piece keeps its own move. Even with three or more pieces stacked in a file, only the one immediately behind matters.</span>
+        </li>
+        <li><span class="lang-ja">初期配置は通常の将棋と同じですが、飛車・角の前の歩だけを1マス前進させてあります（そうしないと初手から歩が飛車の動きを借りて成り込めてしまうためです）。
+          </span><span class="en">The setup matches standard shogi, except the pawns in front of the rook and bishop start one square advanced (otherwise a pawn could borrow the rook's move and promote on the very first turn).</span>
+        </li>
+      </ul>
+      <h4><span class="lang-ja">このアプリの特別ルール：潮汐ルール</span><span class="en">This App's Original Rule: the Tide Rule</span></h4>
+      <ul>
+        <li><span class="lang-ja"><b>潮汐ルールは安南将棋の伝統的なルールではなく、このアプリのために新しく加えたオリジナルの特別ルールです。</b>
+          </span><span class="en"><b>The Tide Rule is not a traditional Annan Shogi rule — it's an original addition made specifically for this app.</b></span>
+        </li>
+        <li><span class="lang-ja">有効にすると、10手ごとに参照方向が反転します。安南（前の駒が後ろの駒の動きを借りる）と安北（後ろの駒が前の駒の動きを借りる）が交互に入れ替わり、同じ局面でも意味が変わり続けます。
+          </span><span class="en">When enabled, the reference direction flips every 10 moves, alternating between Annan (front borrows from back) and Annboku (back borrows from front) — the same position keeps meaning something different.</span>
+        </li>
+        <li><span class="lang-ja">対局設定画面でオン・オフを切り替えられます。オフにすれば、伝統的な安南将棋（新型ルール）のみで対局できます。
+          </span><span class="en">Toggle it on or off from the game setup screen. Off, you'll play traditional Annan Shogi (new-style rules) only.</span>
+        </li>
+        <li><span class="lang-ja">現在の参照方向と、次に反転するまでの手数は盤面上部に表示されます。
+          </span><span class="en">The current reference direction and the number of moves left until the next flip are shown above the board.</span>
+        </li>
+        <li><span class="lang-ja">簡略化として、AIの先読みは「現在の参照方向が続くもの」として計算しています。潮の反転直前・直後は、AIの読みがやや甘くなることがあります。
+          </span><span class="en">As a simplification, the AI's lookahead assumes the current direction continues. Its reading may be slightly weaker right around a flip.</span>
+        </li>
+      </ul>
+      <h4><span class="lang-ja">反則・特殊ルール</span><span class="en">Fouls &amp; Special Rules</span></h4>
+      <ul>
+        <li><span class="lang-ja">二歩（歩を打って、同じ筋に自分の不成の歩が2枚になる手）は禁止です。借りた動きで結果的に同じ筋に歩が2枚並ぶこと自体は禁止していません。
+          </span><span class="en">Nifu (dropping a pawn into a file that already has your own unpromoted pawn) is forbidden. Ending up with two pawns in a file through borrowed movement is not restricted.</span>
+        </li>
+        <li><span class="lang-ja">打ち歩詰め（歩を打って即詰みにする手）は禁止です。
+          </span><span class="en">Uchifuzume (dropping a pawn for an immediate checkmate) is forbidden.</span>
+        </li>
+        <li><span class="lang-ja">行きどころのない駒（打った時点・動いた時点で動けなくなる駒）は、このアプリでは<b>禁止していません</b>（安南将棋の慣例に合わせた簡略化）。
+          </span><span class="en">Pieces with no legal moves after being dropped or moved are <b>allowed</b> in this app, matching common Annan Shogi convention.</span>
+        </li>
+        <li><span class="lang-ja">成りは、成れる条件を満たしていれば常に任意（強制成りなし）としています。AIは有利になる場合、自動的に成ります。
+          </span><span class="en">Promotion is always optional when eligible (no forced promotion). The AI promotes automatically when it's advantageous.</span>
+        </li>
+        <li><span class="lang-ja">千日手（同一局面の繰り返し）の判定は実装していません。
+          </span><span class="en">Sennichite (repetition draw) detection is not implemented.</span>
+        </li>
+      </ul>
+      <h4><span class="lang-ja">遊び方</span><span class="en">How to Play</span></h4>
+      <ul>
+        <li><span class="lang-ja">駒（盤上または持ち駒）をタップすると、移動・打てるマスがハイライトされます。
+          </span><span class="en">Tap a piece (on the board or in hand) to highlight the squares it can move to or drop on.</span>
+        </li>
+        <li><span class="lang-ja">成れる手を指すと、成るかどうかを確認します。
+          </span><span class="en">When a move is eligible for promotion, you'll be asked whether to promote.</span>
+        </li>
+        <li><span class="lang-ja">駒の左上に小さな赤いバッジが出ている場合、その駒は後ろ（安北の場合は前）の駒の動きを借りています。バッジの文字が借りている動きです。「ヒント」ボタンでオン・オフをいつでも切り替えられます（対局中の切り替えも可能。オフにすると難易度が上がります）。
+          </span><span class="en">A small red badge in a piece's top-left corner means it's borrowing a move from behind it (or in front, under Annboku). The badge shows which move. Toggle the "Hints" button any time, including mid-game — turning it off makes the game harder.</span>
+        </li>
+        <li><span class="lang-ja">駒の右下に小さな「！」バッジが出ている場合、その駒は<b>ピン</b>されています（一部の動きを選ぶと自玉が王手になるため、選択肢が減っています）。その駒を選択すると、盤面上部に注意メッセージも表示されます。こちらも「ヒント」ボタンでオン・オフを切り替えられます。
+          </span><span class="en">A small "!" badge in a piece's bottom-right corner means it's <b>pinned</b> — some of its usual moves are unavailable because they'd expose your king to check. Selecting it also shows a warning above the board. This is controlled by the same "Hints" toggle.</span>
+        </li>
+        <li><span class="lang-ja">AIの強さは5段階。数字が大きいほど深く読み、弱点も減ります。
+          </span><span class="en">AI strength has 5 levels. Higher numbers read deeper and play with fewer weaknesses.</span>
+        </li>
+      </ul>
+    </details>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   エンジン（ルール・盤面・合法手判定）
+   ============================================================ */
+const PROMOTES_TO = { FU:'TO', KY:'NY', KE:'NK', GI:'NG', KA:'UM', HI:'RY' };
+const DEMOTES_TO   = { TO:'FU', NY:'KY', NK:'KE', NG:'GI', UM:'KA', RY:'HI' };
+const GOLD_LIKE = new Set(['KI','TO','NY','NK','NG']);
+const HAND_ORDER = ['HI','KA','KI','GI','KE','KY','FU'];
+
+const KANJI = {
+  FU:'歩', KY:'香', KE:'桂', GI:'銀', KI:'金', KA:'角', HI:'飛',
+  TO:'と', NY:'杏', NK:'圭', NG:'全', UM:'馬', RY:'龍'
+};
+const ENGLISH_NAME = {
+  FU:'Pawn', KY:'Lance', KE:'Knight', GI:'Silver', KI:'Gold', KA:'Bishop', HI:'Rook', OU:'King',
+  TO:'Prom. Pawn', NY:'Prom. Lance', NK:'Prom. Knight', NG:'Prom. Silver', UM:'Horse', RY:'Dragon'
+};
+function ouKanji(owner){ return owner==='S' ? '玉' : '王'; }
+function label(kind, owner, promoted){
+  if(kind==='OU') return ouKanji(owner);
+  const k = promoted ? (PROMOTES_TO[kind] || kind) : kind;
+  return KANJI[k] || k;
+}
+function englishName(kind, promoted){
+  const k = promoted ? (PROMOTES_TO[kind] || kind) : kind;
+  return ENGLISH_NAME[k] || k;
+}
+
+function baseVectors(kind){
+  switch(kind){
+    case 'FU': return { steps:[[-1,0]], slides:[] };
+    case 'KY': return { steps:[], slides:[[-1,0]] };
+    case 'KE': return { steps:[[-2,-1],[-2,1]], slides:[] };
+    case 'GI': return { steps:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,1]], slides:[] };
+    case 'KA': return { steps:[], slides:[[-1,-1],[-1,1],[1,-1],[1,1]] };
+    case 'HI': return { steps:[], slides:[[-1,0],[1,0],[0,-1],[0,1]] };
+    case 'OU': return { steps:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]], slides:[] };
+    case 'UM': return { steps:[[-1,0],[1,0],[0,-1],[0,1]], slides:[[-1,-1],[-1,1],[1,-1],[1,1]] };
+    case 'RY': return { steps:[[-1,-1],[-1,1],[1,-1],[1,1]], slides:[[-1,0],[1,0],[0,-1],[0,1]] };
+    default:
+      if (GOLD_LIKE.has(kind)) return { steps:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,0]], slides:[] };
+      return { steps:[], slides:[] };
+  }
+}
+function inBounds(r,c){ return r>=0 && r<9 && c>=0 && c<9; }
+function cloneBoard(board){ return board.map(row=>row.map(p=>p?{...p}:null)); }
+function cloneHands(hands){ return { S:{...hands.S}, G:{...hands.G} }; }
+
+function initBoard(){
+  const board = Array.from({length:9},()=>Array(9).fill(null));
+  const backRow = ['KY','KE','GI','KI','OU','KI','GI','KE','KY'];
+  for(let c=0;c<9;c++){
+    board[0][c] = { kind: backRow[c], owner:'G', promoted:false };
+    board[8][c] = { kind: backRow[c], owner:'S', promoted:false };
+  }
+  // 先手の飛車は2筋(=col7)、角は8筋(=col1)。後手はその鏡像（角は2筋、飛車は8筋）。
+  board[1][1] = { kind:'HI', owner:'G', promoted:false };
+  board[1][7] = { kind:'KA', owner:'G', promoted:false };
+  board[7][1] = { kind:'KA', owner:'S', promoted:false };
+  board[7][7] = { kind:'HI', owner:'S', promoted:false };
+  for(let c=0;c<9;c++){
+    if(c===1 || c===7){
+      board[3][c] = { kind:'FU', owner:'G', promoted:false };
+      board[5][c] = { kind:'FU', owner:'S', promoted:false };
+    } else {
+      board[2][c] = { kind:'FU', owner:'G', promoted:false };
+      board[6][c] = { kind:'FU', owner:'S', promoted:false };
+    }
+  }
+  return board;
+}
+
+function effectiveType(board, r, c, mode){
+  const p = board[r][c];
+  const homeDir = p.owner === 'S' ? 1 : -1; // 自陣方向（安南のデフォルト参照方向）
+  const lookDir = (mode==='annboku') ? -homeDir : homeDir; // 安北では前方（敵陣側）を参照
+  const br = r + lookDir;
+  if(inBounds(br,c)){
+    const bp = board[br][c];
+    if(bp && bp.owner === p.owner){
+      return { kind: bp.kind, promoted: bp.promoted };
+    }
+  }
+  return { kind: p.kind, promoted: p.promoted };
+}
+function effectiveKind(board,r,c,mode){
+  const et = effectiveType(board,r,c,mode);
+  return et.promoted ? (PROMOTES_TO[et.kind] || et.kind) : et.kind;
+}
+
+// pseudo-legal moves (does NOT check whether own king ends up in check)
+function pieceMoves(board, r, c, mode){
+  const p = board[r][c];
+  if(!p) return [];
+  const ek = effectiveKind(board,r,c,mode);
+  const { steps, slides } = baseVectors(ek);
+  const sign = p.owner === 'S' ? 1 : -1;
+  const moves = [];
+  for(const [dr,dc] of steps){
+    const nr = r + dr*sign, nc = c + dc*sign;
+    if(!inBounds(nr,nc)) continue;
+    const t = board[nr][nc];
+    if(!t) moves.push({r:nr,c:nc,capture:false});
+    else if(t.owner !== p.owner) moves.push({r:nr,c:nc,capture:true});
+  }
+  for(const [dr,dc] of slides){
+    let nr = r + dr*sign, nc = c + dc*sign;
+    while(inBounds(nr,nc)){
+      const t = board[nr][nc];
+      if(!t){ moves.push({r:nr,c:nc,capture:false}); }
+      else {
+        if(t.owner !== p.owner) moves.push({r:nr,c:nc,capture:true});
+        break;
+      }
+      nr += dr*sign; nc += dc*sign;
+    }
+  }
+  return moves;
+}
+
+function findKing(board, owner){
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    const p = board[r][c];
+    if(p && p.owner===owner && p.kind==='OU') return {r,c};
+  }
+  return null;
+}
+function isSquareAttacked(board, byOwner, r, c, mode){
+  for(let rr=0;rr<9;rr++) for(let cc=0;cc<9;cc++){
+    const p = board[rr][cc];
+    if(p && p.owner===byOwner){
+      const mv = pieceMoves(board, rr, cc, mode);
+      if(mv.some(m=>m.r===r && m.c===c)) return true;
+    }
+  }
+  return false;
+}
+function isInCheck(board, owner, mode){
+  const k = findKing(board, owner);
+  if(!k) return false;
+  const opp = owner === 'S' ? 'G' : 'S';
+  return isSquareAttacked(board, opp, k.r, k.c, mode);
+}
+
+function legalMovesFrom(board, r, c, mode){
+  const p = board[r][c];
+  if(!p) return [];
+  const pseudo = pieceMoves(board, r, c, mode);
+  const legal = [];
+  for(const m of pseudo){
+    const nb = cloneBoard(board);
+    nb[r][c] = null;
+    nb[m.r][m.c] = { ...p };
+    if(isInCheck(nb, p.owner, mode)) continue;
+    legal.push(m);
+  }
+  return legal;
+}
+
+function legalDropSquares(board, hands, owner, kind, mode){
+  const squares = [];
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    if(board[r][c]) continue;
+    if(kind==='FU'){
+      let nifu = false;
+      for(let rr=0;rr<9;rr++){
+        const t = board[rr][c];
+        if(t && t.owner===owner && t.kind==='FU' && !t.promoted){ nifu = true; break; }
+      }
+      if(nifu) continue;
+    }
+    const nb = cloneBoard(board);
+    nb[r][c] = { kind, owner, promoted:false };
+    if(isInCheck(nb, owner, mode)) continue;
+    if(kind==='FU'){
+      const opp = owner==='S' ? 'G' : 'S';
+      if(isInCheck(nb, opp, mode)){
+        const nh = cloneHands(hands);
+        nh[owner][kind] = (nh[owner][kind]||1) - 1;
+        if(!hasAnyLegalMove(nb, nh, opp, mode)) continue; // 打ち歩詰め禁止
+      }
+    }
+    squares.push({r,c});
+  }
+  return squares;
+}
+
+function hasAnyLegalMove(board, hands, owner, mode){
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    const p = board[r][c];
+    if(p && p.owner===owner){
+      if(legalMovesFrom(board,r,c,mode).length>0) return true;
+    }
+  }
+  const kinds = Object.keys(hands[owner]||{});
+  for(const k of kinds){
+    if((hands[owner][k]||0)>0){
+      if(legalDropSquares(board,hands,owner,k,mode).length>0) return true;
+    }
+  }
+  return false;
+}
+
+function allLegalMoves(board, hands, owner, mode){
+  const out = [];
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    const p = board[r][c];
+    if(p && p.owner===owner){
+      const mvs = legalMovesFrom(board,r,c,mode);
+      for(const m of mvs) out.push({type:'move', fr:r, fc:c, tr:m.r, tc:m.c, capture:m.capture});
+    }
+  }
+  const kinds = Object.keys(hands[owner]||{});
+  for(const k of kinds){
+    if((hands[owner][k]||0)>0){
+      const sqs = legalDropSquares(board,hands,owner,k,mode);
+      for(const s of sqs) out.push({type:'drop', kind:k, tr:s.r, tc:s.c});
+    }
+  }
+  return out;
+}
+
+const PROMO_ZONE = { S:[0,1,2], G:[6,7,8] };
+function isPromotable(kind){ return kind in PROMOTES_TO; }
+function inZone(owner, r){ return PROMO_ZONE[owner].includes(r); }
+
+/* ---------- 潮汐ルール（このゲーム独自の特別ルール） ----------
+   通常は「前の駒が後ろの駒の動きを借りる」(安南)。
+   潮汐ルールを有効にすると、既定の手数ごとに参照方向が反転し、
+   「後ろの駒が前の駒の動きを借りる」(安北) との間を行き来する。 */
+const TIDE_INTERVAL = 10; // 何手ごとに反転するか
+function tideModeFor(moveCount, tideEnabled){
+  if(!tideEnabled) return 'annan';
+  return (Math.floor(moveCount / TIDE_INTERVAL) % 2 === 0) ? 'annan' : 'annboku';
+}
+function tideMovesUntilFlip(moveCount, tideEnabled){
+  if(!tideEnabled) return null;
+  return TIDE_INTERVAL - (moveCount % TIDE_INTERVAL);
+}
+
+/* ============================================================
+   AI（ミニマックス + アルファベータ + 反復深化）
+   ============================================================ */
+const PIECE_VALUE = {
+  FU:100, KY:280, KE:300, GI:480, KI:520, KA:640, HI:720, OU:0,
+  TO:520, NY:500, NK:500, NG:500, UM:850, RY:950
+};
+function pv(kind){ return PIECE_VALUE[kind] || 0; }
+
+// 駒の「本来の価値」と「今の動きの価値」を混ぜて評価する
+function pieceScore(board, r, c, mode){
+  const p = board[r][c];
+  const nominal = p.promoted ? (PROMOTES_TO[p.kind]||p.kind) : p.kind;
+  const eff = effectiveType(board, r, c, mode);
+  const effKind = eff.promoted ? (PROMOTES_TO[eff.kind]||eff.kind) : eff.kind;
+  const nominalV = pv(p.kind==='OU' ? 'OU' : nominal);
+  const effV = pv(eff.kind==='OU' ? 'OU' : effKind);
+  return nominalV*0.35 + effV*0.65;
+}
+
+function evaluateAbsolute(board, hands, mode){
+  // 正の値 = 先手有利
+  let score = 0;
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    const p = board[r][c];
+    if(!p) continue;
+    if(p.kind==='OU') continue;
+    const s = pieceScore(board, r, c, mode);
+    score += (p.owner==='S' ? s : -s);
+    // 中央寄りをわずかに評価（機動力の代理指標）
+    const centerBonus = (4 - Math.max(Math.abs(r-4), Math.abs(c-4))) * 2;
+    score += (p.owner==='S' ? centerBonus : -centerBonus);
+  }
+  for(const k of Object.keys(hands.S||{})) score += (hands.S[k]||0) * pv(k) * 0.9;
+  for(const k of Object.keys(hands.G||{})) score -= (hands.G[k]||0) * pv(k) * 0.9;
+  return score;
+}
+function evalForAI(board, hands, aiOwner, mode){
+  const abs = evaluateAbsolute(board, hands, mode);
+  return aiOwner==='S' ? abs : -abs;
+}
+
+// 探索専用の高速な擬似合法手生成（自玉の安全確認はしない）
+function pseudoMovesForSearch(board, hands, owner, mode){
+  const out = [];
+  const oppOwner = owner==='S' ? 'G':'S';
+  const oppKing = findKing(board, oppOwner);
+  const ownKing = findKing(board, owner);
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+    const p = board[r][c];
+    if(p && p.owner===owner){
+      const mvs = pieceMoves(board, r, c, mode);
+      for(const m of mvs){
+        out.push({type:'move', fr:r, fc:c, tr:m.r, tc:m.c, capture:m.capture, cap:m.capture ? board[m.r][m.c] : null});
+      }
+    }
+  }
+  const kinds = Object.keys(hands[owner]||{});
+  const near = (tr,tc) => {
+    let d = 99;
+    if(oppKing) d = Math.min(d, Math.max(Math.abs(tr-oppKing.r), Math.abs(tc-oppKing.c)));
+    if(ownKing) d = Math.min(d, Math.max(Math.abs(tr-ownKing.r), Math.abs(tc-ownKing.c)));
+    return d;
+  };
+  for(const k of kinds){
+    if((hands[owner][k]||0)<=0) continue;
+    for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+      if(board[r][c]) continue;
+      if(k==='FU'){
+        let nifu=false;
+        for(let rr=0;rr<9;rr++){ const t=board[rr][c]; if(t && t.owner===owner && t.kind==='FU' && !t.promoted){ nifu=true; break; } }
+        if(nifu) continue;
+      }
+      if(near(r,c) <= 3){
+        out.push({type:'drop', kind:k, tr:r, tc:c, capture:false, cap:null});
+      }
+    }
+  }
+  return out;
+}
+
+function orderMoves(moves){
+  moves.sort((a,b)=>{
+    const av = a.capture ? pv(a.cap.promoted ? (PROMOTES_TO[a.cap.kind]||a.cap.kind) : a.cap.kind) : 0;
+    const bv = b.capture ? pv(b.cap.promoted ? (PROMOTES_TO[b.cap.kind]||b.cap.kind) : b.cap.kind) : 0;
+    return bv - av;
+  });
+  return moves;
+}
+
+function applyPseudo(board, hands, mv){
+  const nb = cloneBoard(board);
+  const nh = cloneHands(hands);
+  if(mv.type==='move'){
+    const p = nb[mv.fr][mv.fc];
+    const target = nb[mv.tr][mv.tc];
+    if(target){
+      const baseKind = target.promoted ? (DEMOTES_TO[target.kind]||target.kind) : target.kind;
+      if(baseKind!=='OU'){
+        nh[p.owner][baseKind] = (nh[p.owner][baseKind]||0) + 1;
+      }
+    }
+    nb[mv.fr][mv.fc] = null;
+    let promote = false;
+    if(isPromotable(p.kind) && !p.promoted && (inZone(p.owner, mv.fr) || inZone(p.owner, mv.tr))){
+      promote = true; // AIは常に得なら成る前提（簡略化として自動で成る）
+    }
+    nb[mv.tr][mv.tc] = { kind:p.kind, owner:p.owner, promoted: promote ? true : p.promoted };
+  } else {
+    nb[mv.tr][mv.tc] = { kind:mv.kind, owner: mv.owner || null, promoted:false };
+  }
+  return { nb, nh };
+}
+// drop 用に owner を埋め込むヘルパ
+function withOwner(mv, owner){ if(mv.type==='drop') return {...mv, owner}; return mv; }
+
+const TIME_UP = Symbol('TIME_UP');
+
+function minimax(board, hands, turnOwner, depth, alpha, beta, aiOwner, deadline, nodeCounter, mode){
+  nodeCounter.n++;
+  if((nodeCounter.n & 63)===0 && performance.now() > deadline) throw TIME_UP;
+
+  const kS = findKing(board,'S'), kG = findKing(board,'G');
+  if(!kS) return aiOwner==='S' ? -100000 - depth : 100000 + depth;
+  if(!kG) return aiOwner==='G' ? -100000 - depth : 100000 + depth;
+
+  if(depth===0) return evalForAI(board, hands, aiOwner, mode);
+
+  let moves = pseudoMovesForSearch(board, hands, turnOwner, mode).map(m=>withOwner(m, turnOwner));
+  if(moves.length===0){
+    return turnOwner===aiOwner ? (-80000 - depth) : (80000 + depth);
+  }
+  orderMoves(moves);
+  const cap = depth>=4 ? 12 : depth===3 ? 16 : depth===2 ? 22 : 34;
+  if(moves.length>cap) moves = moves.slice(0,cap);
+
+  const maximizing = (turnOwner===aiOwner);
+  let best = maximizing ? -Infinity : Infinity;
+  for(const mv of moves){
+    const {nb, nh} = applyPseudo(board, hands, mv);
+    const otherOwner = turnOwner==='S' ? 'G' : 'S';
+    const val = minimax(nb, nh, otherOwner, depth-1, alpha, beta, aiOwner, deadline, nodeCounter, mode);
+    if(maximizing){
+      if(val>best) best = val;
+      if(best>alpha) alpha = best;
+    } else {
+      if(val<best) best = val;
+      if(best<beta) beta = best;
+    }
+    if(beta<=alpha) break;
+  }
+  return best;
+}
+
+const LEVEL_CONFIG = {
+  1: { maxDepth:1, timeMs:400,  topN:6 },
+  2: { maxDepth:2, timeMs:700,  topN:3 },
+  3: { maxDepth:3, timeMs:1300, topN:2 },
+  4: { maxDepth:4, timeMs:2200, topN:1 },
+  5: { maxDepth:5, timeMs:3200, topN:1 }
+};
+
+function chooseAIMove(board, hands, aiOwner, level, mode){
+  const config = LEVEL_CONFIG[level] || LEVEL_CONFIG[3];
+  const rootMoves = allLegalMoves(board, hands, aiOwner, mode);
+  if(rootMoves.length===0) return null;
+  const rootMovesOrdered = orderMoves(rootMoves.map(m=>{
+    if(m.type==='move'){ m.cap = board[m.tr][m.tc]; }
+    return m;
+  }));
+
+  const deadline = performance.now() + config.timeMs;
+  const nodeCounter = { n:0 };
+  let scored = rootMovesOrdered.map(m=>({mv:m, score:-Infinity}));
+
+  try{
+    for(let depth=1; depth<=config.maxDepth; depth++){
+      const results = [];
+      for(const entry of scored){
+        const mv = entry.mv;
+        const applyMv = mv.type==='drop' ? {...mv, owner:aiOwner} : mv;
+        const {nb, nh} = applyPseudo(board, hands, applyMv);
+        const otherOwner = aiOwner==='S' ? 'G' : 'S';
+        const val = minimax(nb, nh, otherOwner, depth-1, -Infinity, Infinity, aiOwner, deadline, nodeCounter, mode);
+        results.push({ mv, score: val });
+      }
+      results.sort((a,b)=>b.score-a.score);
+      scored = results;
+    }
+  } catch(e){
+    if(e!==TIME_UP) throw e;
+  }
+
+  scored.sort((a,b)=>b.score-a.score);
+  const topN = Math.min(config.topN, scored.length);
+  const pick = scored[Math.floor(Math.random()*topN)];
+  return pick.mv;
+}
+
+/* ============================================================
+   ゲーム状態
+   ============================================================ */
+let state = null;
+let settings = { mode:'ai', humanColor:'S', level:3, tideEnabled:true, showBadges:true, lang:'ja' };
+
+function applyLangClass(){
+  document.documentElement.classList.toggle('lang-en', settings.lang==='en');
+  document.documentElement.classList.toggle('lang-ja', settings.lang!=='en');
+  document.querySelectorAll('.lang-toggle button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.lang===settings.lang);
+  });
+}
+function T(ja, en){ return settings.lang==='en' ? en : ja; }
+
+function curMode(){
+  return tideModeFor(state.moveCount, settings.tideEnabled);
+}
+
+function newGame(){
+  state = {
+    board: initBoard(),
+    hands: { S:{}, G:{} },
+    turn: 'S',
+    moveCount: 0,
+    selected: null,
+    legalTargets: [],
+    lastMove: null,
+    justMoved: false,
+    messageKey: '',
+    gameOver: false,
+    winner: null,
+    history: [],
+    thinking: false
+  };
+  render();
+  maybeTriggerAI();
+}
+
+function isAITurn(){
+  return settings.mode==='ai' && state && !state.gameOver && state.turn !== settings.humanColor;
+}
+
+function pushHistory(){
+  state.history.push({
+    board: cloneBoard(state.board),
+    hands: cloneHands(state.hands),
+    turn: state.turn,
+    moveCount: state.moveCount,
+    lastMove: state.lastMove
+  });
+  if(state.history.length>80) state.history.shift();
+}
+
+function switchTurnAndEvaluate(){
+  const other = state.turn === 'S' ? 'G' : 'S';
+  state.turn = other;
+  const mode = curMode();
+  const inChk = isInCheck(state.board, other, mode);
+  const anyMove = hasAnyLegalMove(state.board, state.hands, other, mode);
+  if(!anyMove){
+    state.gameOver = true;
+    state.winner = other === 'S' ? 'G' : 'S';
+    state.messageKey = inChk ? 'checkmate' : 'nomoves';
+  } else {
+    state.messageKey = inChk ? 'check' : '';
+  }
+}
+function messageText(key){
+  switch(key){
+    case 'checkmate': return T('詰み','Checkmate');
+    case 'nomoves': return T('手が指せません（反則負け）','No legal moves (loss)');
+    case 'check': return T('王手！','Check!');
+    default: return '';
+  }
+}
+
+function doMove(fromR, fromC, toR, toC){
+  pushHistory();
+  const p = state.board[fromR][fromC];
+  const target = state.board[toR][toC];
+  const owner = p.owner;
+
+  const finalize = (promote) => {
+    state.board[fromR][fromC] = null;
+    if(target){
+      const baseKind = target.promoted ? (DEMOTES_TO[target.kind]||target.kind) : target.kind;
+      if(baseKind !== 'OU'){
+        state.hands[owner][baseKind] = (state.hands[owner][baseKind]||0) + 1;
+      }
+    }
+    state.board[toR][toC] = { kind:p.kind, owner:p.owner, promoted: promote ? true : p.promoted };
+    state.lastMove = { from:{r:fromR,c:fromC}, to:{r:toR,c:toC} };
+    state.justMoved = true;
+    state.moveCount++;
+    state.selected = null;
+    state.legalTargets = [];
+    switchTurnAndEvaluate();
+    render();
+    maybeTriggerAI();
+  };
+
+  const canPromote = isPromotable(p.kind) && !p.promoted && (inZone(owner, fromR) || inZone(owner, toR));
+  if(canPromote){
+    askPromote(p, owner).then(finalize);
+  } else {
+    finalize(false);
+  }
+}
+
+function doDrop(kind, toR, toC){
+  pushHistory();
+  const owner = state.turn;
+  state.board[toR][toC] = { kind, owner, promoted:false };
+  state.hands[owner][kind] = (state.hands[owner][kind]||0) - 1;
+  state.lastMove = { from:null, to:{r:toR,c:toC} };
+  state.justMoved = true;
+  state.moveCount++;
+  state.selected = null;
+  state.legalTargets = [];
+  switchTurnAndEvaluate();
+  render();
+  maybeTriggerAI();
+}
+
+function undo(){
+  if(state.history.length===0) return;
+  // 対AI戦では、直前の自分の手までまとめて戻す
+  let steps = 1;
+  if(settings.mode==='ai' && state.history.length>=2){
+    steps = 2;
+  }
+  let h = null;
+  for(let i=0;i<steps && state.history.length>0;i++){
+    h = state.history.pop();
+  }
+  if(!h) return;
+  state.board = h.board;
+  state.hands = h.hands;
+  state.turn = h.turn;
+  state.moveCount = h.moveCount;
+  state.lastMove = h.lastMove;
+  state.justMoved = false;
+  state.selected = null;
+  state.legalTargets = [];
+  state.gameOver = false;
+  state.winner = null;
+  state.messageKey = isInCheck(state.board, state.turn, curMode()) ? 'check' : '';
+  render();
+}
+
+function askConfirm(messageHtml, yesLabelHtml, noLabelHtml){
+  return new Promise(resolve=>{
+    const root = document.getElementById('modalRoot');
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    const card = document.createElement('div');
+    card.className = 'modal-card';
+    card.innerHTML = '<p>'+messageHtml+'</p>';
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const yes = document.createElement('button');
+    yes.className = 'btn primary'; yes.innerHTML = yesLabelHtml;
+    const no = document.createElement('button');
+    no.className = 'btn'; no.innerHTML = noLabelHtml;
+    actions.appendChild(no); actions.appendChild(yes);
+    card.appendChild(actions);
+    bg.appendChild(card);
+    root.appendChild(bg);
+    yes.onclick = ()=>{ root.removeChild(bg); resolve(true); };
+    no.onclick = ()=>{ root.removeChild(bg); resolve(false); };
+    bg.onclick = (e)=>{ if(e.target===bg){ root.removeChild(bg); resolve(false); } };
+  });
+}
+
+function askPromote(piece, owner){
+  return new Promise(resolve=>{
+    const root = document.getElementById('modalRoot');
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    const card = document.createElement('div');
+    card.className = 'modal-card';
+    const pname = label(piece.kind, owner, false);
+    const promo = label(piece.kind, owner, true);
+    const enName = englishName(piece.kind, false);
+    const enPromo = englishName(piece.kind, true);
+    const msg = T('「'+pname+'」を「'+promo+'」に成りますか？', 'Promote '+pname+' ('+enName+') to '+promo+' ('+enPromo+')?');
+    card.innerHTML = '<p>'+msg+'</p>';
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const yes = document.createElement('button');
+    yes.className = 'btn primary'; yes.textContent = T('成る','Promote');
+    const no = document.createElement('button');
+    no.className = 'btn'; no.textContent = T('そのまま','Keep');
+    actions.appendChild(yes); actions.appendChild(no);
+    card.appendChild(actions);
+    bg.appendChild(card);
+    root.appendChild(bg);
+    yes.onclick = ()=>{ root.removeChild(bg); resolve(true); };
+    no.onclick = ()=>{ root.removeChild(bg); resolve(false); };
+  });
+}
+
+/* ---------- AI turn trigger ---------- */
+const AI_MIN_THINK_MS = 750; // 早すぎて見逃さないよう、最低これだけは間を置く
+
+function maybeTriggerAI(){
+  if(!isAITurn()) return;
+  state.thinking = true;
+  render();
+  setTimeout(runAIMove, 60);
+}
+
+function runAIMove(){
+  if(!state || state.gameOver){ return; }
+  const aiOwner = state.turn;
+  const mode = curMode();
+  const t0 = performance.now();
+  const mv = chooseAIMove(state.board, state.hands, aiOwner, settings.level, mode);
+  const elapsed = performance.now() - t0;
+  const remaining = Math.max(0, AI_MIN_THINK_MS - elapsed);
+  setTimeout(()=>applyAIMove(mv), remaining);
+}
+
+function applyAIMove(mv){
+  if(!state || state.gameOver){ return; }
+  const aiOwner = state.turn;
+  state.thinking = false;
+  if(!mv){ render(); return; }
+  if(mv.type==='move'){
+    const p = state.board[mv.fr][mv.fc];
+    const canPromote = isPromotable(p.kind) && !p.promoted && (inZone(aiOwner, mv.fr) || inZone(aiOwner, mv.tr));
+    // AIは有利なら常に成る（簡略化）。ただし桂・香・歩が最奥に進み動けなくなる場合は必ず成る。
+    pushHistory();
+    const target = state.board[mv.tr][mv.tc];
+    state.board[mv.fr][mv.fc] = null;
+    if(target){
+      const baseKind = target.promoted ? (DEMOTES_TO[target.kind]||target.kind) : target.kind;
+      if(baseKind !== 'OU') state.hands[aiOwner][baseKind] = (state.hands[aiOwner][baseKind]||0) + 1;
+    }
+    state.board[mv.tr][mv.tc] = { kind:p.kind, owner:p.owner, promoted: canPromote ? true : p.promoted };
+    state.lastMove = { from:{r:mv.fr,c:mv.fc}, to:{r:mv.tr,c:mv.tc} };
+    state.justMoved = true;
+  } else {
+    pushHistory();
+    state.board[mv.tr][mv.tc] = { kind:mv.kind, owner:aiOwner, promoted:false };
+    state.hands[aiOwner][mv.kind] = (state.hands[aiOwner][mv.kind]||0) - 1;
+    state.lastMove = { from:null, to:{r:mv.tr,c:mv.tc} };
+    state.justMoved = true;
+  }
+  state.moveCount++;
+  state.selected = null;
+  state.legalTargets = [];
+  switchTurnAndEvaluate();
+  render();
+  maybeTriggerAI();
+}
+
+/* ---------- interaction ---------- */
+function onCellClick(r,c){
+  if(!state || state.gameOver || isAITurn() || state.thinking) return;
+  const target = state.legalTargets.find(t=>t.r===r && t.c===c);
+  if(target && state.selected){
+    if(state.selected.mode==='board'){
+      doMove(state.selected.r, state.selected.c, r, c);
+    } else {
+      doDrop(state.selected.kind, r, c);
+    }
+    return;
+  }
+  const p = state.board[r][c];
+  if(p && p.owner === state.turn){
+    state.selected = { mode:'board', r, c };
+    state.legalTargets = legalMovesFrom(state.board, r, c, curMode());
+    render();
+  } else {
+    state.selected = null;
+    state.legalTargets = [];
+    render();
+  }
+}
+
+function onHandClick(owner, kind){
+  if(!state || state.gameOver || isAITurn() || state.thinking) return;
+  if(owner !== state.turn) return;
+  if((state.hands[owner][kind]||0) <= 0) return;
+  state.selected = { mode:'hand', kind, owner };
+  state.legalTargets = legalDropSquares(state.board, state.hands, owner, kind, curMode()).map(s=>({...s, capture:false}));
+  render();
+}
+
+/* ---------- rendering ---------- */
+const FILE_LABELS = ['9','8','7','6','5','4','3','2','1'];
+const RANK_LABELS = ['一','二','三','四','五','六','七','八','九'];
+
+function render(){
+  if(!state) return;
+  const mode = curMode();
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  const kingInCheckPos = state.gameOver ? null : (isInCheck(state.board,'S',mode) ? findKing(state.board,'S') : (isInCheck(state.board,'G',mode) ? findKing(state.board,'G') : null));
+
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const isTarget = state.legalTargets.find(t=>t.r===r&&t.c===c);
+      if(isTarget){
+        cell.classList.add('target');
+        if(isTarget.capture) cell.classList.add('capture');
+      }
+      if(state.lastMove){
+        if(state.lastMove.from && state.lastMove.from.r===r && state.lastMove.from.c===c) cell.classList.add('last-from');
+        if(state.lastMove.to.r===r && state.lastMove.to.c===c){
+          cell.classList.add('last-to');
+          if(state.justMoved) cell.classList.add('flash');
+        }
+      }
+      if(kingInCheckPos && kingInCheckPos.r===r && kingInCheckPos.c===c) cell.classList.add('king-check');
+
+      const p = state.board[r][c];
+      if(p){
+        const pieceEl = document.createElement('div');
+        pieceEl.className = 'piece' + (p.owner==='G' ? ' gote':'') + (p.promoted ? ' promoted':'');
+        pieceEl.title = T(
+          (p.owner==='S' ? '先手' : '後手') + 'の' + label(p.kind, p.owner, p.promoted) + '（' + englishName(p.kind, p.promoted) + '）',
+          englishName(p.kind, p.promoted) + (p.owner==='S' ? ' (Sente)' : ' (Gote)')
+        );
+        if(state.selected && state.selected.mode==='board' && state.selected.r===r && state.selected.c===c){
+          pieceEl.classList.add('selected');
+        }
+        const kanjiSpan = document.createElement('span');
+        kanjiSpan.className='kanji';
+        kanjiSpan.textContent = label(p.kind, p.owner, p.promoted);
+        pieceEl.appendChild(kanjiSpan);
+
+        const ek = effectiveType(state.board, r, c, mode);
+        const effDisplayKind = ek.promoted ? (PROMOTES_TO[ek.kind]||ek.kind) : ek.kind;
+        const isBorrowed = (ek.kind !== p.kind) || (ek.promoted !== p.promoted);
+        if(isBorrowed && settings.showBadges){
+          const badge = document.createElement('span');
+          badge.className='badge';
+          badge.textContent = ek.kind==='OU' ? ouKanji(p.owner) : (KANJI[effDisplayKind]||effDisplayKind);
+          badge.title = mode==='annboku'
+            ? T('このマスの駒は前の駒の動きを借りています（安北）','This piece borrows the move of the piece in front (Annboku)')
+            : T('このマスの駒は後ろの駒の動きを借りています（安南）','This piece borrows the move of the piece behind it (Annan)');
+          pieceEl.appendChild(badge);
+        }
+
+        // ピン（動かすと自玉が王手になる）による移動制限の警告バッジ
+        if(settings.showBadges && !state.gameOver && p.owner===state.turn){
+          const pseudo = pieceMoves(state.board, r, c, mode);
+          if(pseudo.length>0){
+            const legalHere = legalMovesFrom(state.board, r, c, mode);
+            if(legalHere.length < pseudo.length){
+              const pin = document.createElement('span');
+              pin.className = 'pin-badge';
+              pin.textContent = '!';
+              pin.title = T('一部の動きは、動かすと自玉が王手になるため選べません（ピン）','Some moves are illegal because they would expose your king to check (pinned)');
+              pieceEl.appendChild(pin);
+            }
+          }
+        }
+        cell.appendChild(pieceEl);
+      }
+      cell.addEventListener('click', ()=>onCellClick(r,c));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  const fileRow = document.getElementById('fileRow');
+  fileRow.innerHTML = FILE_LABELS.map(f=>'<span>'+f+'</span>').join('');
+  const rankCol = document.getElementById('rankCol');
+  rankCol.innerHTML = RANK_LABELS.map(r=>'<span>'+r+'</span>').join('');
+
+  renderHand('handGote','G');
+  renderHand('handSente','S');
+
+  document.getElementById('turnText').textContent = state.turn==='S' ? T('先手番','Sente') : T('後手番','Gote');
+  const pill = document.getElementById('turnPill');
+  pill.classList.toggle('thinking', !!state.thinking);
+  document.getElementById('msgText').textContent = state.gameOver ? '' : messageText(state.messageKey);
+
+  const tidePill = document.getElementById('tidePill');
+  if(settings.tideEnabled){
+    tidePill.classList.remove('hidden');
+    const untilFlip = tideMovesUntilFlip(state.moveCount, true);
+    const modeLabel = mode==='annan' ? T('安南（前→後を借用）','Annan') : T('安北（後→前を借用）','Annboku');
+    tidePill.innerHTML = T('潮汐: ','Tide: ') + modeLabel +
+      '<span class="en-line">' + T('残り'+untilFlip+'手', untilFlip+' moves left') + '</span>';
+  } else {
+    tidePill.classList.add('hidden');
+  }
+
+  const pinHintEl = document.getElementById('pinHint');
+  let showPinHint = false;
+  if(settings.showBadges && !state.gameOver && state.selected && state.selected.mode==='board'){
+    const sr = state.selected.r, sc = state.selected.c;
+    const sp = state.board[sr][sc];
+    if(sp){
+      const pseudo = pieceMoves(state.board, sr, sc, mode);
+      const legalHere = legalMovesFrom(state.board, sr, sc, mode);
+      if(pseudo.length>0 && legalHere.length < pseudo.length){
+        showPinHint = true;
+      }
+    }
+  }
+  if(showPinHint){
+    pinHintEl.classList.remove('hidden');
+    pinHintEl.textContent = '⚠ ' + T('ピン中：一部の動きは自玉が王手になるため選べません','Pinned: some moves would expose your king to check');
+  } else {
+    pinHintEl.classList.add('hidden');
+  }
+
+  const boardFrame = document.getElementById('boardFrame');
+  boardFrame.classList.toggle('thinking', !!state.thinking);
+  document.getElementById('thinkingBadge').textContent = T('AI思考中…','Thinking…');
+
+  document.getElementById('undoBtn').disabled = state.history.length===0 || !!state.thinking;
+  document.getElementById('badgeToggleBtn').textContent = T('ヒント: ','Hints: ') + (settings.showBadges ? T('ON','ON') : T('OFF','OFF'));
+
+  const goArea = document.getElementById('gameoverArea');
+  goArea.innerHTML = '';
+  if(state.gameOver){
+    const banner = document.createElement('div');
+    banner.className = 'gameover-banner';
+    const winnerText = state.winner==='S' ? T('先手の勝ち','Sente wins') : T('後手の勝ち','Gote wins');
+    banner.innerHTML = '<div>'+messageText(state.messageKey)+' ― '+winnerText+'</div>';
+    const btn = document.createElement('button');
+    btn.className='btn primary';
+    btn.textContent = T('もう一局','Play Again');
+    btn.onclick = ()=>{ newGame(); };
+    banner.appendChild(btn);
+    goArea.appendChild(banner);
+  }
+  state.justMoved = false;
+}
+
+function renderHand(elId, owner){
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  const labelDiv = document.createElement('div');
+  labelDiv.className = 'hand-label';
+  labelDiv.textContent = (owner==='S' ? T('先手の持ち駒',"Sente's hand") : T('後手の持ち駒',"Gote's hand"));
+  el.appendChild(labelDiv);
+
+  const kinds = HAND_ORDER.filter(k => (state.hands[owner][k]||0) > 0);
+  if(kinds.length===0){
+    const empty = document.createElement('span');
+    empty.className='hand-empty';
+    empty.textContent = T('（なし）','(none)');
+    el.appendChild(empty);
+    return;
+  }
+  kinds.forEach(k=>{
+    const hp = document.createElement('div');
+    hp.className='hand-piece';
+    hp.title = T(label(k, owner, false)+'（'+(ENGLISH_NAME[k]||k)+'）', ENGLISH_NAME[k] || k);
+    if(state.selected && state.selected.mode==='hand' && state.selected.kind===k && state.selected.owner===owner){
+      hp.classList.add('selected');
+    }
+    const span = document.createElement('span');
+    span.textContent = KANJI[k];
+    hp.appendChild(span);
+    const count = state.hands[owner][k];
+    if(count>1){
+      const cnt = document.createElement('span');
+      cnt.className='count';
+      cnt.textContent = count;
+      hp.appendChild(cnt);
+    }
+    hp.addEventListener('click', ()=>onHandClick(owner,k));
+    el.appendChild(hp);
+  });
+}
+
+/* ============================================================
+   セットアップ画面
+   ============================================================ */
+function initSetupUI(){
+  const modeRow = document.getElementById('modeRow');
+  const colorRow = document.getElementById('colorRow');
+  const levelRow = document.getElementById('levelRow');
+  const tideRow = document.getElementById('tideRow');
+  const badgeRow = document.getElementById('badgeRow');
+  const colorGroup = document.getElementById('colorGroup');
+  const levelGroup = document.getElementById('levelGroup');
+
+  function refreshChoiceButtons(){
+    modeRow.querySelectorAll('.choice-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.mode===settings.mode);
+    });
+    colorRow.querySelectorAll('.choice-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.color===settings.humanColor);
+    });
+    levelRow.querySelectorAll('.choice-btn').forEach(b=>{
+      b.classList.toggle('active', Number(b.dataset.level)===settings.level);
+    });
+    tideRow.querySelectorAll('.choice-btn').forEach(b=>{
+      b.classList.toggle('active', (b.dataset.tide==='on')===settings.tideEnabled);
+    });
+    badgeRow.querySelectorAll('.choice-btn').forEach(b=>{
+      b.classList.toggle('active', (b.dataset.badge==='on')===settings.showBadges);
+    });
+    const aiMode = settings.mode==='ai';
+    colorGroup.style.display = aiMode ? '' : 'none';
+    levelGroup.style.display = aiMode ? '' : 'none';
+  }
+
+  modeRow.querySelectorAll('.choice-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{ settings.mode = b.dataset.mode; refreshChoiceButtons(); });
+  });
+  colorRow.querySelectorAll('.choice-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{ settings.humanColor = b.dataset.color; refreshChoiceButtons(); });
+  });
+  levelRow.querySelectorAll('.choice-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{ settings.level = Number(b.dataset.level); refreshChoiceButtons(); });
+  });
+  tideRow.querySelectorAll('.choice-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{ settings.tideEnabled = (b.dataset.tide==='on'); refreshChoiceButtons(); });
+  });
+  badgeRow.querySelectorAll('.choice-btn').forEach(b=>{
+    b.addEventListener('click', ()=>{ settings.showBadges = (b.dataset.badge==='on'); refreshChoiceButtons(); });
+  });
+
+  refreshChoiceButtons();
+
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    document.getElementById('setupScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    newGame();
+  });
+
+  document.getElementById('settingsBtn').addEventListener('click', async ()=>{
+    const ok = await askConfirm(
+      T('設定画面に戻ります。現在の対局は終了します。よろしいですか？','Return to the setup screen? The current game will end.'),
+      T('はい','Yes'),
+      T('いいえ','No')
+    );
+    if(!ok) return;
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('setupScreen').classList.remove('hidden');
+    state = null;
+  });
+
+  document.getElementById('undoBtn').addEventListener('click', undo);
+
+  document.getElementById('badgeToggleBtn').addEventListener('click', ()=>{
+    settings.showBadges = !settings.showBadges;
+    if(state) render();
+  });
+
+  function setLang(lang){
+    settings.lang = lang;
+    applyLangClass();
+    if(state) render();
+  }
+  document.querySelectorAll('.lang-toggle button').forEach(b=>{
+    b.addEventListener('click', ()=>setLang(b.dataset.lang));
+  });
+  applyLangClass();
+}
+
+initSetupUI();
+})();
+</script>
+</body>
+</html>
