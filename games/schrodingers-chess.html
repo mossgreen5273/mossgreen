@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Schrödinger's Chess</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#080912;
+    --bg-1:#11142a;
+    --bg-2:#181c3a;
+    --square-dark:#232a52;
+    --square-light:#323a68;
+    --accent-violet:#8b7bf0;
+    --accent-cyan:#52e8d6;
+    --accent-amber:#f5b94d;
+    --accent-rose:#f37199;
+    --text-hi:#eef0fb;
+    --text-lo:#9099c2;
+    --white-piece:#fbead0;
+    --black-piece:#b79bff;
+    --border-glow: 0 0 12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;
+    background:
+      radial-gradient(circle at 15% 10%, #1b2050 0%, transparent 45%),
+      radial-gradient(circle at 85% 90%, #241a4a 0%, transparent 50%),
+      var(--bg-0);
+    color:var(--text-hi);
+    font-family:'Space Grotesk', sans-serif;
+    min-height:100vh;
+  }
+  .app{
+    max-width:1180px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  header{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    border-bottom:1px solid #2a2f57;
+    padding-bottom:18px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--accent-cyan);
+  }
+  h1{
+    margin:0;
+    font-size:clamp(26px,4vw,38px);
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  h1 span{color:var(--accent-violet);}
+  .subtitle{color:var(--text-lo); font-size:14.5px; max-width:640px; line-height:1.6;}
+
+  .layout{
+    display:grid;
+    grid-template-columns: minmax(0,1fr) 320px;
+    gap:26px;
+    align-items:start;
+  }
+  @media (max-width: 880px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  .board-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+  .status-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    max-width:560px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--text-lo);
+  }
+  .turn-pill{
+    display:flex;align-items:center;gap:8px;
+    padding:6px 14px;
+    border-radius:999px;
+    background:var(--bg-2);
+    border:1px solid #34397a;
+  }
+  .turn-dot{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--white-piece);
+    box-shadow:var(--border-glow) var(--white-piece);
+    transition:all .25s;
+  }
+  .turn-dot.black{background:var(--black-piece); box-shadow:var(--border-glow) var(--black-piece);}
+
+  .board{
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    grid-template-rows:repeat(8,1fr);
+    width:min(560px,92vw);
+    aspect-ratio:1/1;
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 20px 60px -20px #000a, 0 0 0 1px #2a2f57;
+  }
+  .sq{
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    font-size:clamp(22px,4.4vw,34px);
+    cursor:pointer;
+    user-select:none;
+    transition:background .15s;
+  }
+  .sq.dark{background:var(--square-dark);}
+  .sq.light{background:var(--square-light);}
+  .sq .coord{
+    position:absolute;
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px;
+    color:#00000055;
+    top:2px;left:4px;
+    pointer-events:none;
+  }
+  .sq.selected{background:#42408f;}
+  .sq.selected::after{
+    content:"";position:absolute;inset:0;
+    box-shadow:inset 0 0 0 2px var(--accent-cyan);
+    pointer-events:none;
+  }
+  .sq.legal::before{
+    content:"";
+    position:absolute;
+    width:26%;height:26%;
+    border-radius:50%;
+    background:var(--accent-cyan);
+    opacity:0.65;
+    pointer-events:none;
+  }
+  .sq.legal.capture::before{
+    width:80%;height:80%;
+    background:transparent;
+    border-radius:50%;
+    box-shadow:inset 0 0 0 4px var(--accent-rose);
+    opacity:0.85;
+  }
+  .sq.flash-tunnel{animation:flashTunnel .6s ease;}
+  .sq.flash-entangle{animation:flashEntangle .6s ease;}
+  @keyframes flashTunnel{
+    0%{background:var(--accent-amber);}
+    100%{}
+  }
+  @keyframes flashEntangle{
+    0%{background:var(--accent-violet);}
+    100%{}
+  }
+
+  .piece{
+    line-height:1;
+    filter:drop-shadow(0 2px 3px #00000060);
+    transition:transform .12s;
+  }
+  .piece.white{color:var(--white-piece);}
+  .piece.black{color:var(--black-piece);}
+  .piece.unknown{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:600;
+    font-size:0.72em;
+    animation:pulseUnknown 2.4s ease-in-out infinite;
+  }
+  .piece.unknown.white{color:var(--white-piece); text-shadow:0 0 10px #fbead088;}
+  .piece.unknown.black{color:var(--black-piece); text-shadow:0 0 10px #b79bff88;}
+  @keyframes pulseUnknown{
+    0%,100%{opacity:0.65; transform:scale(0.94);}
+    50%{opacity:1; transform:scale(1.05);}
+  }
+
+  .panel{
+    background:var(--bg-1);
+    border:1px solid #262b52;
+    border-radius:14px;
+    padding:18px 18px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .panel h2{
+    margin:0;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:0.14em;
+    color:var(--text-lo);
+    font-weight:600;
+  }
+  .prob-row{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .prob-row .label{
+    display:flex;justify-content:space-between;
+    font-size:13px;
+    color:var(--text-hi);
+  }
+  .prob-row .label b{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--accent-cyan);
+    font-weight:500;
+  }
+  input[type=range]{
+    width:100%;
+    accent-color:var(--accent-violet);
+  }
+  .toggle-row{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:13.5px;
+  }
+  select{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13.5px;
+    font-weight:500;
+    color:var(--text-hi);
+    background:var(--bg-2);
+    border:1px solid #34397a;
+    border-radius:8px;
+    padding:8px 10px;
+    cursor:pointer;
+  }
+  select:focus{outline:none; border-color:var(--accent-cyan);}
+  .segmented{
+    display:flex;
+    gap:6px;
+  }
+  .seg-btn{
+    flex:1;
+    text-align:center;
+    padding:8px 6px;
+    border-radius:8px;
+    border:1px solid #34397a;
+    background:var(--bg-2);
+    color:var(--text-lo);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .seg-btn.active{
+    background:linear-gradient(135deg, var(--accent-violet), #6a5cd0);
+    color:#fff;
+    border-color:transparent;
+  }
+  #cpuOptions{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    padding-top:2px;
+  }
+  #cpuOptions.hidden{display:none;}
+  button{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    padding:10px 14px;
+    border-radius:8px;
+    border:1px solid #34397a;
+    background:var(--bg-2);
+    color:var(--text-hi);
+    cursor:pointer;
+    transition:all .15s;
+  }
+  button:hover{background:#2a2f5c; border-color:var(--accent-violet);}
+  button.primary{
+    background:linear-gradient(135deg, var(--accent-violet), #6a5cd0);
+    border:none;
+  }
+  button.primary:hover{filter:brightness(1.1);}
+
+  .lang-toggle{
+    position:fixed;
+    top:14px;
+    right:14px;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    gap:0;
+    padding:0;
+    border-radius:999px;
+    overflow:hidden;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:600;
+    border:1px solid #34397a;
+    background:var(--bg-2);
+  }
+  .lang-toggle span{
+    padding:7px 12px;
+    color:var(--text-lo);
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .lang-toggle span.active{
+    background:var(--accent-violet);
+    color:#fff;
+  }
+  .lang-toggle span:hover:not(.active){color:var(--text-hi);}
+
+  .log{
+    height:210px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column-reverse;
+    gap:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    padding-right:4px;
+  }
+  .log::-webkit-scrollbar{width:6px;}
+  .log::-webkit-scrollbar-thumb{background:#34397a; border-radius:3px;}
+  .log-entry{
+    padding:6px 9px;
+    border-radius:6px;
+    background:var(--bg-2);
+    border-left:2px solid #34397a;
+    line-height:1.5;
+    color:var(--text-lo);
+  }
+  .log-entry.reveal{border-left-color:var(--accent-cyan); color:var(--text-hi);}
+  .log-entry.decohere{border-left-color:var(--accent-violet); color:var(--text-hi);}
+  .log-entry.tunnel{border-left-color:var(--accent-amber); color:var(--text-hi);}
+  .log-entry.entangle{border-left-color:var(--accent-rose); color:var(--text-hi);}
+  .log-entry.win{border-left-color:#5efc82; color:#eafff0; font-weight:600;}
+
+  .rules{
+    font-size:12.5px;
+    line-height:1.7;
+    color:var(--text-lo);
+  }
+  .rules b{color:var(--text-hi);}
+  details summary{
+    cursor:pointer;
+    font-size:13px;
+    color:var(--accent-cyan);
+    font-weight:600;
+    margin-bottom:8px;
+  }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:#05060cdd;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+  }
+  .overlay.show{display:flex;}
+  .overlay-card{
+    background:var(--bg-1);
+    border:1px solid var(--accent-violet);
+    border-radius:16px;
+    padding:36px 40px;
+    text-align:center;
+    max-width:360px;
+    box-shadow:0 0 60px -10px #8b7bf077;
+  }
+  .overlay-card h2{
+    font-size:24px; color:var(--text-hi); margin:0 0 10px;
+    text-transform:none; letter-spacing:0;
+  }
+  .overlay-card p{color:var(--text-lo); font-size:14px; margin:0 0 20px;}
+
+  /* ---- Title screen ---- */
+  .title-screen{
+    position:fixed; inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(circle at 20% 20%, #241a4a 0%, transparent 45%),
+      radial-gradient(circle at 80% 80%, #1b2050 0%, transparent 50%),
+      var(--bg-0);
+    z-index:100;
+    padding:24px;
+    overflow:hidden;
+  }
+  .title-screen.hidden{display:none;}
+  .floating-piece{
+    position:absolute;
+    color:var(--accent-violet);
+    opacity:0.10;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    pointer-events:none;
+    animation:pulseUnknown 4s ease-in-out infinite;
+  }
+  .title-card{
+    position:relative;
+    text-align:center;
+    max-width:600px;
+    z-index:1;
+  }
+  .title-eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--accent-cyan);
+    margin-bottom:16px;
+  }
+  .title-main{
+    font-size:clamp(38px,7vw,66px);
+    font-weight:700;
+    margin:0 0 16px;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+  .title-main span{color:var(--accent-violet);}
+  .title-tagline{
+    color:var(--text-lo);
+    font-size:15.5px;
+    line-height:1.7;
+    max-width:460px;
+    margin:0 auto 28px;
+  }
+  .title-features{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px 22px;
+    margin-bottom:34px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--text-hi);
+  }
+  .title-features span{color:var(--accent-cyan);}
+  .title-play-btn{
+    font-size:16px;
+    padding:15px 46px;
+    letter-spacing:0.02em;
+  }
+  .title-footnote{
+    margin-top:18px;
+    font-size:12px;
+    color:var(--text-lo);
+  }
+</style>
+</head>
+<body>
+<div class="lang-toggle" id="langToggle">
+  <span data-lang-btn="en" id="langBtnEn">EN</span><span data-lang-btn="ja" id="langBtnJa">JA</span>
+</div>
+<div class="title-screen" id="titleScreen">
+  <div class="floating-piece" style="top:10%; left:8%; font-size:70px;">?</div>
+  <div class="floating-piece" style="top:65%; left:14%; font-size:50px; animation-delay:1s;">♞</div>
+  <div class="floating-piece" style="top:20%; left:82%; font-size:60px; animation-delay:2s;">?</div>
+  <div class="floating-piece" style="top:72%; left:80%; font-size:44px; animation-delay:1.5s;">♛</div>
+  <div class="floating-piece" style="top:42%; left:50%; font-size:36px; animation-delay:0.6s;">?</div>
+
+  <div class="title-card">
+    <div class="title-eyebrow" id="titleEyebrow">A Quantum Variant of Chess</div>
+    <h1 class="title-main">Schrödinger's <span>Chess</span></h1>
+    <p class="title-tagline" id="titleTagline">
+      Every piece is a superposition — nothing at all until you move it.
+      Setup is random and hidden, identities shift with decoherence,
+      pieces tunnel across the board, and entangled pairs move as one.
+    </p>
+    <div class="title-features">
+      <div><span>◈</span> <span id="featHidden">Hidden random setup</span></div>
+      <div><span>◈</span> <span id="featDecoherence">Decoherence</span></div>
+      <div><span>◈</span> <span id="featTunneling">Quantum tunneling</span></div>
+      <div><span>◈</span> <span id="featEntanglement">Entanglement</span></div>
+    </div>
+    <button class="primary title-play-btn" id="playBtn">Play</button>
+    <div class="title-footnote" id="titleFootnote">Play solo vs. CPU (3 difficulty levels) or pass &amp; play with a friend</div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" style="display:none;">
+
+  <header>
+    <div class="eyebrow" id="headerEyebrow">EXPERIMENTAL RULESET — QUANTUM MECHANICS MEETS CHESS</div>
+    <h1>Schrödinger's <span>Chess</span></h1>
+    <p class="subtitle" id="headerSubtitle">
+      Every piece stays a "?" until observed — a superposition. The piece composition matches standard chess,
+      but the placement is completely random each game. Moving a piece collapses it and reveals its identity;
+      moving it again may cause it to decohere into something else. Tunneling and entanglement keep shaking up the board.
+    </p>
+  </header>
+
+  <div class="layout">
+    <div class="board-wrap">
+      <div class="status-bar">
+        <div class="turn-pill"><div class="turn-dot" id="turnDot"></div><span id="turnLabel">White to move</span></div>
+        <div id="kingCount">♔ 1 &nbsp;/&nbsp; ♚ 1</div>
+      </div>
+      <div class="board" id="board"></div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:18px;">
+      <div class="panel">
+        <h2 id="panelParamsTitle">Quantum Parameters</h2>
+        <div class="prob-row">
+          <div class="label"><span id="decohereLabel">Decoherence probability (on re-move)</span><b id="decohereVal">60%</b></div>
+          <input type="range" id="decohereSlider" min="0" max="100" value="60">
+        </div>
+        <div class="prob-row">
+          <div class="label"><span id="tunnelLabel">Tunneling probability</span><b id="tunnelVal">18%</b></div>
+          <input type="range" id="tunnelSlider" min="0" max="100" value="18">
+        </div>
+        <div class="prob-row">
+          <div class="label"><span id="entangleLabel">Entanglement probability</span><b id="entangleVal">40%</b></div>
+          <input type="range" id="entangleSlider" min="0" max="100" value="40">
+        </div>
+        <div class="toggle-row">
+          <span id="opponentLabel">Opponent</span>
+          <select id="opponentMode">
+            <option value="cpu" id="optCpu">CPU</option>
+            <option value="human" id="optHuman">Human (pass &amp; play)</option>
+          </select>
+        </div>
+        <div id="cpuOptions">
+          <div class="prob-row">
+            <div class="label"><span id="yourColorLabel">Your color</span></div>
+            <div class="segmented">
+              <div class="seg-btn active" data-color="w" id="colorWhiteBtn">White (first)</div>
+              <div class="seg-btn" data-color="b" id="colorBlackBtn">Black (second)</div>
+            </div>
+          </div>
+          <div class="prob-row">
+            <div class="label"><span id="difficultyLabel">Difficulty</span></div>
+            <div class="segmented">
+              <div class="seg-btn" data-diff="easy" id="diffEasyBtn">Easy</div>
+              <div class="seg-btn active" data-diff="normal" id="diffNormalBtn">Normal</div>
+              <div class="seg-btn" data-diff="hard" id="diffHardBtn">Hard</div>
+            </div>
+          </div>
+        </div>
+        <button class="primary" id="resetBtn">New Game</button>
+      </div>
+
+      <div class="panel">
+        <h2 id="obsLogTitle">Observation Log</h2>
+        <div class="log" id="log"></div>
+      </div>
+
+      <div class="panel">
+        <details>
+          <summary id="howToPlaySummary">How to Play</summary>
+          <div class="rules" id="rulesContent">
+            <p><b>Starting position:</b> All 32 pieces are "?" (superposition). Each side has the standard chess composition (8 Pawns, 2 Rooks, 2 Knights, 2 Bishops, 1 Queen, 1 King), but the placement across the 16 home squares is completely random each game — shuffled independently for each color.</p>
+            <p><b>Moving:</b> Selecting a piece highlights only the legal squares for its true identity (the icon stays hidden).</p>
+            <p><b>Observation:</b> The first time a piece moves, its identity is revealed.</p>
+            <p><b>Decoherence:</b> Moving a revealed piece again has a chance (see slider) of randomly changing it into a different piece type.</p>
+            <p><b>Quantum tunneling:</b> After a move, one of your other pieces may randomly teleport to an empty square.</p>
+            <p><b>Entanglement:</b> Two random pieces on the board may mirror the same move offset as the piece you just moved (captures can happen this way too).</p>
+            <p><b>Win condition:</b> Your opponent loses when they have zero Kings left on the board — whether by capture or by decoherence.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-card">
+    <h2 id="overlayTitle">Game Over</h2>
+    <p id="overlayText"></p>
+    <button class="primary" id="overlayBtn">Play Again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const TYPES = ['P','N','B','R','Q','K'];
+  const NAME_EN = {P:'Pawn',N:'Knight',B:'Bishop',R:'Rook',Q:'Queen',K:'King'};
+  const NAME_JA = {P:'ポーン',N:'ナイト',B:'ビショップ',R:'ルーク',Q:'クイーン',K:'キング'};
+  const GLYPH = {
+    w:{K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙'},
+    b:{K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'}
+  };
+  const FILES = ['a','b','c','d','e','f','g','h'];
+  const PIECE_VALUE = {P:1,N:3,B:3,R:5,Q:9,K:1000};
+
+  // ---- i18n ----
+  let lang = 'en'; // 'en' | 'ja'
+
+  const I18N = {
+    en: {
+      titleEyebrow: 'A Quantum Variant of Chess',
+      titleTagline: 'Every piece is a superposition — nothing at all until you move it. Setup is random and hidden, identities shift with decoherence, pieces tunnel across the board, and entangled pairs move as one.',
+      featHidden: 'Hidden random setup',
+      featDecoherence: 'Decoherence',
+      featTunneling: 'Quantum tunneling',
+      featEntanglement: 'Entanglement',
+      playBtn: 'Play',
+      titleFootnote: 'Play solo vs. CPU (3 difficulty levels) or pass & play with a friend',
+      headerEyebrow: 'EXPERIMENTAL RULESET — QUANTUM MECHANICS MEETS CHESS',
+      headerSubtitle: 'Every piece stays a "?" until observed — a superposition. The piece composition matches standard chess, but the placement is completely random each game. Moving a piece collapses it and reveals its identity; moving it again may cause it to decohere into something else. Tunneling and entanglement keep shaking up the board.',
+      panelParamsTitle: 'Quantum Parameters',
+      decohereLabel: 'Decoherence probability (on re-move)',
+      tunnelLabel: 'Tunneling probability',
+      entangleLabel: 'Entanglement probability',
+      opponentLabel: 'Opponent',
+      optCpu: 'CPU',
+      optHuman: 'Human (pass & play)',
+      yourColorLabel: 'Your color',
+      colorWhiteBtn: 'White (first)',
+      colorBlackBtn: 'Black (second)',
+      difficultyLabel: 'Difficulty',
+      diffEasyBtn: 'Easy',
+      diffNormalBtn: 'Normal',
+      diffHardBtn: 'Hard',
+      resetBtn: 'New Game',
+      obsLogTitle: 'Observation Log',
+      howToPlaySummary: 'How to Play',
+      rulesHTML: `
+            <p><b>Starting position:</b> All 32 pieces are "?" (superposition). Each side has the standard chess composition (8 Pawns, 2 Rooks, 2 Knights, 2 Bishops, 1 Queen, 1 King), but the placement across the 16 home squares is completely random each game — shuffled independently for each color.</p>
+            <p><b>Moving:</b> Selecting a piece highlights only the legal squares for its true identity (the icon stays hidden).</p>
+            <p><b>Observation:</b> The first time a piece moves, its identity is revealed.</p>
+            <p><b>Decoherence:</b> Moving a revealed piece again has a chance (see slider) of randomly changing it into a different piece type.</p>
+            <p><b>Quantum tunneling:</b> After a move, one of your other pieces may randomly teleport to an empty square.</p>
+            <p><b>Entanglement:</b> Two random pieces on the board may mirror the same move offset as the piece you just moved (captures can happen this way too).</p>
+            <p><b>Win condition:</b> Your opponent loses when they have zero Kings left on the board — whether by capture or by decoherence.</p>`,
+      overlayPlayAgain: 'Play Again',
+      turnWhite: 'White to move',
+      turnBlack: 'Black to move',
+      youSuffix: ' (You)',
+      cpuThinkingSuffix: ' (CPU thinking...)',
+      colorWhiteWord: 'White',
+      colorBlackWord: 'Black',
+      winsSuffix: ' Wins',
+      mutualCollapseTitle: 'Mutual Collapse',
+      winnerText: `The opponent's King has vanished from the board (captured or lost to decoherence).`,
+      mutualText: `Both Kings vanished at the same time. A remarkable quantum coincidence.`,
+      newGameLog: 'New game started. Every piece is in superposition — a "?".',
+      mysteryPiece: 'mystery piece',
+      names: NAME_EN,
+      logMove: (mv,pl,f,t) => `${mv}'s ${pl} moved ${f}→${t}.`,
+      logMoveCapture: (mv,pl,f,t,cv,cl) => `${mv}'s ${pl} moved ${f}→${t}, capturing ${cv}'s ${cl}.`,
+      logObserved: (f,ty) => `Observed: the piece on ${f} was a ${ty}.`,
+      logDecohere: (t,ot,nt) => `Decoherence! The ${ot} on ${t} changed into a ${nt}.`,
+      logTunnel: (f,t,pl) => `Tunneling! The ${pl} on ${f} teleported to ${t}.`,
+      logEntangle: (f,t,pl) => `Entanglement! The ${pl} on ${f} mirrored the move to ${t}.`,
+      logEntangleCapture: (f,t,pl,cl) => `Entanglement! The ${pl} on ${f} mirrored the move to ${t}, capturing the ${cl}.`
+    },
+    ja: {
+      titleEyebrow: '量子力学的チェス・バリアント',
+      titleTagline: 'すべての駒は重ね合わせ状態 — 動かすまでは何者でもない。配置はランダムかつ非公開で、デコヒーレンスによって正体が変化し、駒は盤上をトンネリングし、もつれた駒同士は同じ動きをする。',
+      featHidden: 'ランダムな非公開配置',
+      featDecoherence: 'デコヒーレンス',
+      featTunneling: '量子トンネリング',
+      featEntanglement: '量子もつれ',
+      playBtn: 'プレイ',
+      titleFootnote: 'CPU対戦（難易度3段階）、またはパス＆プレイで友達と対戦できます',
+      headerEyebrow: '実験的ルール — 量子力学とチェスの融合',
+      headerSubtitle: 'すべての駒は観測されるまで「？」のまま — 重ね合わせ状態です。駒の構成は通常のチェスと同じですが、配置は毎回完全にランダムです。駒を動かすと重ね合わせが収束し正体が明らかになり、再び動かすと別の駒に変化（デコヒーレンス）することがあります。トンネリングともつれが盤面を絶えず揺さぶります。',
+      panelParamsTitle: '量子パラメータ',
+      decohereLabel: 'デコヒーレンス確率（再移動時）',
+      tunnelLabel: 'トンネリング確率',
+      entangleLabel: 'もつれ確率',
+      opponentLabel: '対戦相手',
+      optCpu: 'CPU',
+      optHuman: '人間（パス＆プレイ）',
+      yourColorLabel: 'あなたの色',
+      colorWhiteBtn: '白（先手）',
+      colorBlackBtn: '黒（後手）',
+      difficultyLabel: '難易度',
+      diffEasyBtn: 'やさしい',
+      diffNormalBtn: 'ふつう',
+      diffHardBtn: 'むずかしい',
+      resetBtn: '新しいゲーム',
+      obsLogTitle: '観測ログ',
+      howToPlaySummary: '遊び方',
+      rulesHTML: `
+            <p><b>開始配置：</b>32枚すべての駒は「？」（重ね合わせ状態）です。各サイドの駒構成は通常のチェスと同じ（ポーン8、ルーク2、ナイト2、ビショップ2、クイーン1、キング1）ですが、自陣16マスへの配置は毎回完全にランダムで、両陣営とも独立にシャッフルされます。</p>
+            <p><b>移動：</b>駒を選択すると、その本当の正体に基づいた合法手のみがハイライトされます（アイコンは非表示のまま）。</p>
+            <p><b>観測：</b>駒が初めて動いたとき、その正体が明らかになります。</p>
+            <p><b>デコヒーレンス：</b>正体が判明した駒を再び動かすと、一定確率（スライダーで調整可能）でランダムに別の駒種へ変化します。</p>
+            <p><b>量子トンネリング：</b>手を指すと、自分の他の駒がランダムに空きマスへテレポートすることがあります。</p>
+            <p><b>量子もつれ：</b>盤上のランダムな2つの駒が、直前に動かした駒と同じ移動量をミラーすることがあります（この際に捕獲が発生することもあります）。</p>
+            <p><b>勝利条件：</b>相手のキングが盤上から0体になった時点（捕獲またはデコヒーレンスによる）で、その相手の負けとなります。</p>`,
+      overlayPlayAgain: 'もう一度プレイ',
+      turnWhite: '白の手番',
+      turnBlack: '黒の手番',
+      youSuffix: '（あなた）',
+      cpuThinkingSuffix: '（CPU思考中…）',
+      colorWhiteWord: '白',
+      colorBlackWord: '黒',
+      winsSuffix: 'の勝利',
+      mutualCollapseTitle: '相互崩壊',
+      winnerText: '相手のキングが盤上から消えました（捕獲またはデコヒーレンスにより）。',
+      mutualText: '両方のキングが同時に消滅しました。驚くべき量子の偶然です。',
+      newGameLog: '新しいゲームを開始しました。すべての駒は重ね合わせ状態「？」です。',
+      mysteryPiece: '謎の駒',
+      names: NAME_JA,
+      logMove: (mv,pl,f,t) => `${mv}の${pl}が${f}→${t}に移動。`,
+      logMoveCapture: (mv,pl,f,t,cv,cl) => `${mv}の${pl}が${f}→${t}に移動し、${cv}の${cl}を捕獲。`,
+      logObserved: (f,ty) => `観測：${f}の駒は${ty}だった。`,
+      logDecohere: (t,ot,nt) => `デコヒーレンス！${t}の${ot}が${nt}に変化した。`,
+      logTunnel: (f,t,pl) => `トンネリング！${f}の${pl}が${t}にテレポートした。`,
+      logEntangle: (f,t,pl) => `もつれ！${f}の${pl}が${t}への移動をミラーした。`,
+      logEntangleCapture: (f,t,pl,cl) => `もつれ！${f}の${pl}が${t}への移動をミラーし、${cl}を捕獲した。`
+    }
+  };
+
+  function t(key){ return I18N[lang][key]; }
+
+  function applyStaticText(){
+    document.getElementById('titleEyebrow').textContent = t('titleEyebrow');
+    document.getElementById('titleTagline').textContent = t('titleTagline');
+    document.getElementById('featHidden').textContent = t('featHidden');
+    document.getElementById('featDecoherence').textContent = t('featDecoherence');
+    document.getElementById('featTunneling').textContent = t('featTunneling');
+    document.getElementById('featEntanglement').textContent = t('featEntanglement');
+    document.getElementById('playBtn').textContent = t('playBtn');
+    document.getElementById('titleFootnote').textContent = t('titleFootnote');
+    document.getElementById('headerEyebrow').textContent = t('headerEyebrow');
+    document.getElementById('headerSubtitle').textContent = t('headerSubtitle');
+    document.getElementById('panelParamsTitle').textContent = t('panelParamsTitle');
+    document.getElementById('decohereLabel').textContent = t('decohereLabel');
+    document.getElementById('tunnelLabel').textContent = t('tunnelLabel');
+    document.getElementById('entangleLabel').textContent = t('entangleLabel');
+    document.getElementById('opponentLabel').textContent = t('opponentLabel');
+    document.getElementById('optCpu').textContent = t('optCpu');
+    document.getElementById('optHuman').textContent = t('optHuman');
+    document.getElementById('yourColorLabel').textContent = t('yourColorLabel');
+    document.getElementById('colorWhiteBtn').textContent = t('colorWhiteBtn');
+    document.getElementById('colorBlackBtn').textContent = t('colorBlackBtn');
+    document.getElementById('difficultyLabel').textContent = t('difficultyLabel');
+    document.getElementById('diffEasyBtn').textContent = t('diffEasyBtn');
+    document.getElementById('diffNormalBtn').textContent = t('diffNormalBtn');
+    document.getElementById('diffHardBtn').textContent = t('diffHardBtn');
+    document.getElementById('resetBtn').textContent = t('resetBtn');
+    document.getElementById('obsLogTitle').textContent = t('obsLogTitle');
+    document.getElementById('howToPlaySummary').textContent = t('howToPlaySummary');
+    document.getElementById('rulesContent').innerHTML = t('rulesHTML');
+    document.getElementById('overlayBtn').textContent = t('overlayPlayAgain');
+    document.getElementById('langBtnEn').classList.toggle('active', lang==='en');
+    document.getElementById('langBtnJa').classList.toggle('active', lang==='ja');
+    document.documentElement.lang = lang;
+  }
+
+  function setLang(newLang){
+    lang = newLang;
+    applyStaticText();
+    renderLog();
+    if(typeof board !== 'undefined' && board) render();
+  }
+
+  document.getElementById('langBtnEn').addEventListener('click', ()=>setLang('en'));
+  document.getElementById('langBtnJa').addEventListener('click', ()=>setLang('ja'));
+  applyStaticText();
+
+  let board, turn, selected, legalTargets, gameOver;
+  let mode = 'cpu';        // 'cpu' | 'human'
+  let playerColor = 'w';   // color the human plays when mode==='cpu'
+  let aiColor = 'b';
+  let difficulty = 'normal'; // 'easy' | 'normal' | 'hard'
+  let flipped = false;
+  let probs = {decohere:0.6, tunnel:0.18, entangle:0.40};
+
+  const boardEl = document.getElementById('board');
+  const logEl = document.getElementById('log');
+  const turnLabelEl = document.getElementById('turnLabel');
+  const turnDotEl = document.getElementById('turnDot');
+  const kingCountEl = document.getElementById('kingCount');
+  const overlayEl = document.getElementById('overlay');
+
+  function freshPiece(color, type){
+    return {color, type, revealed:false, hasMoved:false};
+  }
+
+  function shuffledPieceSet(){
+    // standard chess composition per side: 8P, 2R, 2N, 2B, 1Q, 1K
+    const pool = ['R','R','N','N','B','B','Q','K','P','P','P','P','P','P','P','P'];
+    for(let i=pool.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [pool[i],pool[j]] = [pool[j],pool[i]];
+    }
+    return pool;
+  }
+
+  function initBoard(){
+    const b = Array.from({length:8}, () => Array(8).fill(null));
+
+    const blackSquares = [];
+    for(let r=0;r<2;r++) for(let c=0;c<8;c++) blackSquares.push([r,c]);
+    const whiteSquares = [];
+    for(let r=6;r<8;r++) for(let c=0;c<8;c++) whiteSquares.push([r,c]);
+
+    const blackPool = shuffledPieceSet();
+    const whitePool = shuffledPieceSet();
+
+    blackSquares.forEach(([r,c], i) => { b[r][c] = freshPiece('b', blackPool[i]); });
+    whiteSquares.forEach(([r,c], i) => { b[r][c] = freshPiece('w', whitePool[i]); });
+
+    return b;
+  }
+
+  function inBounds(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+
+  function getRawMoves(b, r, c){
+    const piece = b[r][c];
+    if(!piece) return [];
+    const moves = [];
+    const dirsRook = [[1,0],[-1,0],[0,1],[0,-1]];
+    const dirsBishop = [[1,1],[1,-1],[-1,1],[-1,-1]];
+    const dirsQueen = dirsRook.concat(dirsBishop);
+    const knightOff = [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+
+    function slide(dirs){
+      for(const [dr,dc] of dirs){
+        let rr=r+dr, cc=c+dc;
+        while(inBounds(rr,cc)){
+          const target = b[rr][cc];
+          if(!target){ moves.push({r:rr,c:cc, capture:false}); }
+          else{
+            if(target.color !== piece.color) moves.push({r:rr,c:cc, capture:true});
+            break;
+          }
+          rr+=dr; cc+=dc;
+        }
+      }
+    }
+    function step(offsets){
+      for(const [dr,dc] of offsets){
+        const rr=r+dr, cc=c+dc;
+        if(!inBounds(rr,cc)) continue;
+        const target = b[rr][cc];
+        if(!target) moves.push({r:rr,c:cc, capture:false});
+        else if(target.color !== piece.color) moves.push({r:rr,c:cc, capture:true});
+      }
+    }
+
+    switch(piece.type){
+      case 'R': slide(dirsRook); break;
+      case 'B': slide(dirsBishop); break;
+      case 'Q': slide(dirsQueen); break;
+      case 'N': step(knightOff); break;
+      case 'K': step(dirsQueen); break;
+      case 'P': {
+        const dir = piece.color === 'w' ? -1 : 1;
+        const startRow = piece.color === 'w' ? 6 : 1;
+        const oneR = r+dir;
+        if(inBounds(oneR,c) && !b[oneR][c]){
+          moves.push({r:oneR,c, capture:false});
+          const twoR = r+dir*2;
+          if(r===startRow && !piece.hasMoved && !b[twoR][c]){
+            moves.push({r:twoR,c, capture:false});
+          }
+        }
+        for(const dc of [-1,1]){
+          const rr=r+dir, cc=c+dc;
+          if(inBounds(rr,cc) && b[rr][cc] && b[rr][cc].color !== piece.color){
+            moves.push({r:rr,c:cc, capture:true});
+          }
+        }
+        break;
+      }
+    }
+    return moves;
+  }
+
+  let logHistory = [];
+
+  function colorWord(color){ return color==='w' ? t('colorWhiteWord') : t('colorBlackWord'); }
+  function pieceLabelFor(revealed, type){ return revealed ? t('names')[type] : t('mysteryPiece'); }
+
+  function formatLogText(entry){
+    const p = entry.params;
+    switch(entry.kind){
+      case 'newgame': return t('newGameLog');
+      case 'move': return t('logMove')(colorWord(p.moverColor), pieceLabelFor(p.moverRevealed, p.moverType), p.from, p.to);
+      case 'moveCapture': return t('logMoveCapture')(colorWord(p.moverColor), pieceLabelFor(p.moverRevealed, p.moverType), p.from, p.to, colorWord(p.capColor), pieceLabelFor(p.capRevealed, p.capType));
+      case 'observed': return t('logObserved')(p.from, t('names')[p.type]);
+      case 'decohere': return t('logDecohere')(p.to, t('names')[p.oldType], t('names')[p.newType]);
+      case 'tunnel': return t('logTunnel')(p.from, p.to, pieceLabelFor(p.revealed, p.type));
+      case 'entangle': return t('logEntangle')(p.from, p.to, pieceLabelFor(p.revealed, p.type));
+      case 'entangleCapture': return t('logEntangleCapture')(p.from, p.to, pieceLabelFor(p.revealed, p.type), pieceLabelFor(p.capRevealed, p.capType));
+    }
+    return '';
+  }
+
+  function renderLog(){
+    logEl.innerHTML = '';
+    logHistory.forEach(entry => {
+      const div = document.createElement('div');
+      div.className = 'log-entry' + (entry.cls ? ' '+entry.cls : '');
+      div.textContent = formatLogText(entry);
+      logEl.appendChild(div);
+    });
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function logMsg(kind, params, cls){
+    logHistory.push({kind, params, cls});
+    renderLog();
+  }
+
+  function randType(exclude){
+    let pool = TYPES.filter(t => t !== exclude);
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+
+  function countKings(){
+    let wk=0, bk=0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = board[r][c];
+      if(p && p.type==='K'){ if(p.color==='w') wk++; else bk++; }
+    }
+    return {wk,bk};
+  }
+
+
+  function performMove(from, to){
+    const mover = board[from.r][from.c];
+    const captured = board[to.r][to.c];
+    const wasRevealed = mover.revealed;
+    const fromCoord = FILES[from.c] + (8-from.r);
+    const toCoord = FILES[to.c] + (8-to.r);
+
+    board[to.r][to.c] = mover;
+    board[from.r][from.c] = null;
+
+    if(captured){
+      logMsg('moveCapture', {
+        moverColor: mover.color, moverRevealed: wasRevealed, moverType: mover.type,
+        from: fromCoord, to: toCoord,
+        capColor: captured.color, capRevealed: captured.revealed, capType: captured.type
+      }, 'reveal');
+    } else {
+      logMsg('move', {
+        moverColor: mover.color, moverRevealed: wasRevealed, moverType: mover.type,
+        from: fromCoord, to: toCoord
+      });
+    }
+
+    if(!wasRevealed){
+      mover.revealed = true;
+      mover.hasMoved = true;
+      logMsg('observed', {from: fromCoord, type: mover.type}, 'reveal');
+    } else {
+      mover.hasMoved = true;
+      if(Math.random() < probs.decohere){
+        const oldType = mover.type;
+        mover.type = randType(oldType);
+        logMsg('decohere', {to: toCoord, oldType: oldType, newType: mover.type}, 'decohere');
+      }
+    }
+
+    // Tunneling: another piece of mover's color teleports to random empty square
+    if(Math.random() < probs.tunnel){
+      const candidates = [];
+      for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+        if(board[r][c] && board[r][c].color===mover.color && !(r===to.r && c===to.c)){
+          candidates.push({r,c});
+        }
+      }
+      const empties = [];
+      for(let r=0;r<8;r++) for(let c=0;c<8;c++){ if(!board[r][c]) empties.push({r,c}); }
+      if(candidates.length && empties.length){
+        const from2 = candidates[Math.floor(Math.random()*candidates.length)];
+        const to2 = empties[Math.floor(Math.random()*empties.length)];
+        const tp = board[from2.r][from2.c];
+        board[to2.r][to2.c] = tp;
+        board[from2.r][from2.c] = null;
+        const f2 = FILES[from2.c]+(8-from2.r), t2 = FILES[to2.c]+(8-to2.r);
+        logMsg('tunnel', {from: f2, to: t2, revealed: tp.revealed, type: tp.type}, 'tunnel');
+        flashSquare(to2.r, to2.c, 'flash-tunnel');
+      }
+    }
+
+    // Entanglement: two random pieces on board mirror the same delta
+    if(Math.random() < probs.entangle){
+      const dr = to.r - from.r, dc = to.c - from.c;
+      const all = [];
+      for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+        if(board[r][c] && !(r===to.r && c===to.c)) all.push({r,c});
+      }
+      if(all.length >= 2){
+        const idx1 = Math.floor(Math.random()*all.length);
+        let idx2 = Math.floor(Math.random()*all.length);
+        while(idx2===idx1 && all.length>1) idx2 = Math.floor(Math.random()*all.length);
+        const picks = [all[idx1], all[idx2]];
+        for(const pos of picks){
+          const p = board[pos.r][pos.c];
+          if(!p) continue;
+          const nr = pos.r+dr, nc = pos.c+dc;
+          if(!inBounds(nr,nc)) continue;
+          const targetCell = board[nr][nc];
+          if(targetCell && targetCell.color === p.color) continue;
+          const capturedByEnt = targetCell;
+          board[nr][nc] = p;
+          board[pos.r][pos.c] = null;
+          const f3 = FILES[pos.c]+(8-pos.r), t3 = FILES[nc]+(8-nr);
+          if(capturedByEnt){
+            logMsg('entangleCapture', {from: f3, to: t3, revealed: p.revealed, type: p.type, capRevealed: capturedByEnt.revealed, capType: capturedByEnt.type}, 'entangle');
+          } else {
+            logMsg('entangle', {from: f3, to: t3, revealed: p.revealed, type: p.type}, 'entangle');
+          }
+          flashSquare(nr, nc, 'flash-entangle');
+        }
+      }
+    }
+  }
+
+  function flashSquare(r,c,cls){
+    const el = boardEl.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+    if(!el) return;
+    el.classList.add(cls);
+    setTimeout(()=> el.classList.remove(cls), 600);
+  }
+
+  function render(){
+    boardEl.innerHTML = '';
+    const order = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+    order.forEach((r, ri) => {
+      order.forEach((c, ci) => {
+        const sq = document.createElement('div');
+        sq.className = 'sq ' + (((r+c)%2===0) ? 'light' : 'dark');
+        sq.dataset.r = r; sq.dataset.c = c;
+        if(ci===0){
+          const coord = document.createElement('div');
+          coord.className='coord';
+          coord.textContent = 8-r;
+          sq.appendChild(coord);
+        }
+        const piece = board[r][c];
+        if(piece){
+          const span = document.createElement('span');
+          span.className = 'piece ' + (piece.color==='w'?'white':'black') + (piece.revealed? '' : ' unknown');
+          span.textContent = piece.revealed ? GLYPH[piece.color][piece.type] : '?';
+          sq.appendChild(span);
+        }
+        if(selected && selected.r===r && selected.c===c) sq.classList.add('selected');
+        if(legalTargets && legalTargets.some(m=>m.r===r && m.c===c)){
+          sq.classList.add('legal');
+          if(legalTargets.find(m=>m.r===r&&m.c===c).capture) sq.classList.add('capture');
+        }
+        sq.addEventListener('click', ()=>onSquareClick(r,c));
+        boardEl.appendChild(sq);
+      });
+    });
+    const isAiTurn = mode==='cpu' && turn===aiColor;
+    let label = (turn==='w' ? t('turnWhite') : t('turnBlack'));
+    if(mode==='cpu'){
+      label += turn===playerColor ? t('youSuffix') : t('cpuThinkingSuffix');
+    }
+    turnLabelEl.textContent = label;
+    turnDotEl.className = 'turn-dot' + (turn==='b' ? ' black' : '');
+    const {wk,bk} = countKings();
+    kingCountEl.textContent = `♔ ${wk}  /  ♚ ${bk}`;
+  }
+
+  function onSquareClick(r,c){
+    if(gameOver) return;
+    if(mode==='cpu' && turn===aiColor) return;
+    const piece = board[r][c];
+    if(selected){
+      const move = legalTargets.find(m=>m.r===r && m.c===c);
+      if(move){
+        performMove(selected, {r,c});
+        selected = null; legalTargets = null;
+        afterMove();
+        return;
+      }
+      if(piece && piece.color===turn){
+        selected = {r,c};
+        legalTargets = getRawMoves(board,r,c);
+        render();
+        return;
+      }
+      selected = null; legalTargets = null;
+      render();
+      return;
+    }
+    if(piece && piece.color===turn){
+      selected = {r,c};
+      legalTargets = getRawMoves(board,r,c);
+      render();
+    }
+  }
+
+  function afterMove(){
+    const {wk,bk} = countKings();
+    if(wk===0 || bk===0){
+      gameOver = true;
+      render();
+      const winner = (wk===0 && bk===0) ? null : (wk===0 ? 'Black' : 'White');
+      showOverlay(winner);
+      return;
+    }
+    turn = turn==='w' ? 'b' : 'w';
+    render();
+    if(mode==='cpu' && turn===aiColor && !gameOver){
+      setTimeout(aiMove, 650);
+    }
+  }
+
+  // ---- AI logic ----
+  function evalBoardForColor(b, color){
+    let score = 0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = b[r][c];
+      if(p) score += (p.color===color ? PIECE_VALUE[p.type] : -PIECE_VALUE[p.type]);
+    }
+    return score;
+  }
+
+  function allMovesFor(b, color){
+    const moves = [];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = b[r][c];
+      if(p && p.color===color){
+        getRawMoves(b,r,c).forEach(m => moves.push({from:{r,c}, to:m}));
+      }
+    }
+    return moves;
+  }
+
+  function applyMoveSim(b, move){
+    const nb = b.map(row => row.map(p => p ? {...p} : null));
+    nb[move.to.r][move.to.c] = nb[move.from.r][move.from.c];
+    nb[move.from.r][move.from.c] = null;
+    return nb;
+  }
+
+  function chooseAIMove(color, diff){
+    const moves = allMovesFor(board, color);
+    if(moves.length === 0) return null;
+
+    if(diff === 'easy'){
+      return moves[Math.floor(Math.random()*moves.length)];
+    }
+
+    if(diff === 'normal'){
+      const scored = moves.map(m => ({
+        m, score: evalBoardForColor(applyMoveSim(board, m), color)
+      }));
+      const maxScore = Math.max(...scored.map(s=>s.score));
+      const top = scored.filter(s => s.score >= maxScore - 1);
+      return top[Math.floor(Math.random()*top.length)].m;
+    }
+
+    // hard: 2-ply minimax on material
+    const opponent = color==='w' ? 'b' : 'w';
+    let best = null, bestScore = -Infinity;
+    for(const m of moves){
+      const nb = applyMoveSim(board, m);
+      const oppMoves = allMovesFor(nb, opponent);
+      let oppBest = -Infinity;
+      if(oppMoves.length === 0){
+        oppBest = -evalBoardForColor(nb, opponent);
+      } else {
+        for(const om of oppMoves){
+          const nb2 = applyMoveSim(nb, om);
+          const s = evalBoardForColor(nb2, opponent);
+          if(s > oppBest) oppBest = s;
+        }
+      }
+      const myScore = -oppBest;
+      if(myScore > bestScore){
+        bestScore = myScore;
+        best = m;
+      }
+    }
+    return best || moves[Math.floor(Math.random()*moves.length)];
+  }
+
+  function aiMove(){
+    if(gameOver) return;
+    const mv = chooseAIMove(aiColor, difficulty);
+    if(!mv){
+      turn = turn==='w' ? 'b' : 'w';
+      render();
+      return;
+    }
+    performMove(mv.from, mv.to);
+    afterMove();
+  }
+
+  function showOverlay(winnerColor){
+    const winnerWord = winnerColor === 'White' ? t('colorWhiteWord') : winnerColor === 'Black' ? t('colorBlackWord') : null;
+    document.getElementById('overlayTitle').textContent = winnerWord ? `${winnerWord}${t('winsSuffix')}` : t('mutualCollapseTitle');
+    document.getElementById('overlayText').textContent = winnerWord ? t('winnerText') : t('mutualText');
+    overlayEl.classList.add('show');
+  }
+
+  function newGame(){
+    board = initBoard();
+    turn = 'w';
+    selected = null; legalTargets = null; gameOver = false;
+    flipped = (mode==='cpu' && playerColor==='b');
+    logHistory = [];
+    overlayEl.classList.remove('show');
+    logMsg('newgame', {});
+    render();
+    if(mode==='cpu' && turn===aiColor && !gameOver){
+      setTimeout(aiMove, 650);
+    }
+  }
+
+  document.getElementById('decohereSlider').addEventListener('input', e=>{
+    probs.decohere = e.target.value/100;
+    document.getElementById('decohereVal').textContent = e.target.value+'%';
+  });
+  document.getElementById('tunnelSlider').addEventListener('input', e=>{
+    probs.tunnel = e.target.value/100;
+    document.getElementById('tunnelVal').textContent = e.target.value+'%';
+  });
+  document.getElementById('entangleSlider').addEventListener('input', e=>{
+    probs.entangle = e.target.value/100;
+    document.getElementById('entangleVal').textContent = e.target.value+'%';
+  });
+
+  const opponentModeEl = document.getElementById('opponentMode');
+  const cpuOptionsEl = document.getElementById('cpuOptions');
+  opponentModeEl.addEventListener('change', e=>{
+    mode = e.target.value;
+    cpuOptionsEl.classList.toggle('hidden', mode !== 'cpu');
+  });
+
+  function setActiveSeg(groupSelector, activeEl){
+    document.querySelectorAll(groupSelector).forEach(el => el.classList.remove('active'));
+    activeEl.classList.add('active');
+  }
+  const colorWhiteBtn = document.getElementById('colorWhiteBtn');
+  const colorBlackBtn = document.getElementById('colorBlackBtn');
+  colorWhiteBtn.addEventListener('click', ()=>{
+    playerColor='w'; aiColor='b';
+    document.querySelectorAll('[data-color]').forEach(el=>el.classList.remove('active'));
+    colorWhiteBtn.classList.add('active');
+  });
+  colorBlackBtn.addEventListener('click', ()=>{
+    playerColor='b'; aiColor='w';
+    document.querySelectorAll('[data-color]').forEach(el=>el.classList.remove('active'));
+    colorBlackBtn.classList.add('active');
+  });
+
+  const diffButtons = document.querySelectorAll('[data-diff]');
+  diffButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      difficulty = btn.dataset.diff;
+      diffButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', newGame);
+  document.getElementById('overlayBtn').addEventListener('click', newGame);
+
+  document.getElementById('playBtn').addEventListener('click', () => {
+    document.getElementById('titleScreen').classList.add('hidden');
+    document.getElementById('appRoot').style.display = 'flex';
+    newGame();
+  });
+})();
+</script>
+</body>
+</html>
+  
