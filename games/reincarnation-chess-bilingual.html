@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reincarnation Chess 輪廻転生チェス</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Zen+Maru+Gothic:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   bg-void / bg-panel / board-light / board-dark
+   accent-gold (rebirth) / accent-vermillion (karma) / accent-jade (bond)
+   ============================================================ */
+:root{
+  --bg-void:#0f0e17;
+  --bg-panel:#1b1a2e;
+  --bg-panel-2:#221f38;
+  --board-light:#332f52;
+  --board-dark:#17151f;
+  --board-light-alt:#3c3763;
+  --accent-gold:#d4af37;
+  --accent-gold-dim:#8a7326;
+  --accent-vermillion:#a6432c;
+  --accent-jade:#4c8c6b;
+  --text-primary:#ede8dd;
+  --text-muted:#8b879c;
+  --hairline:rgba(237,232,221,0.12);
+  --font-display:'Shippori Mincho', serif;
+  --font-body:'Zen Maru Gothic', sans-serif;
+  --font-mono:'JetBrains Mono', monospace;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:radial-gradient(ellipse at 50% -10%, #232043 0%, var(--bg-void) 55%);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+button{font-family:var(--font-body);}
+:focus-visible{outline:2px solid var(--accent-gold); outline-offset:2px;}
+
+.screen{ display:none; min-height:100vh; }
+.screen.active{ display:block; }
+
+/* ---------------- Language toggle ---------------- */
+.lang-toggle{
+  position:fixed;
+  top:14px; right:14px;
+  z-index:100;
+  background:var(--bg-panel);
+  border:1px solid var(--hairline);
+  color:var(--text-muted);
+  padding:0.45rem 0.9rem;
+  border-radius:20px;
+  cursor:pointer;
+  font-family:var(--font-mono);
+  font-size:0.75rem;
+  letter-spacing:0.05em;
+  box-shadow:0 4px 14px rgba(0,0,0,0.35);
+  transition:border-color .15s, color .15s;
+}
+.lang-toggle:hover{ border-color:var(--accent-gold); color:var(--accent-gold); }
+
+/* ---------------- Selection screen ---------------- */
+#screen-select{
+  display:flex; flex-direction:column; align-items:center;
+  padding:6vmin 4vmin 8vmin;
+  text-align:center;
+}
+
+.wheel-wrap{
+  position:relative;
+  width:min(46vmin, 320px); height:min(46vmin, 320px);
+  margin-bottom:1.2rem;
+  display:flex; align-items:center; justify-content:center;
+}
+.wheel-glow{
+  position:absolute; inset:-18%;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0) 70%);
+  filter:blur(2px);
+  animation:pulseGlow 4.5s ease-in-out infinite;
+}
+@keyframes pulseGlow{
+  0%,100%{ opacity:.55; transform:scale(1); }
+  50%{ opacity:1; transform:scale(1.06); }
+}
+.wheel{
+  position:relative;
+  width:100%; height:100%;
+  border-radius:50%;
+  border:1px solid var(--hairline);
+  background:
+    repeating-conic-gradient(from 0deg, rgba(212,175,55,0.08) 0deg 15deg, transparent 15deg 30deg),
+    radial-gradient(circle, #201d38 0%, #16142a 70%);
+  animation:spin 90s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.wheel::before{
+  content:"";
+  position:absolute; inset:14%;
+  border-radius:50%;
+  border:1px solid var(--hairline);
+}
+.wheel .glyph{
+  position:absolute; top:50%; left:50%;
+  width:2.4rem; height:2.4rem;
+  margin:-1.2rem 0 0 -1.2rem;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.6rem;
+  color:var(--accent-gold);
+  text-shadow:0 0 10px rgba(212,175,55,0.6);
+  animation:counterSpin 90s linear infinite;
+}
+@keyframes counterSpin{ to{ transform:rotate(-360deg); } }
+.wheel-core{
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  font-family:var(--font-display);
+  font-size:0.85rem;
+  letter-spacing:0.25em;
+  color:var(--text-muted);
+}
+
+h1.title{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:clamp(2rem, 5vw, 3.1rem);
+  letter-spacing:0.04em;
+  margin:0 0 0.15rem;
+  color:var(--text-primary);
+}
+.title .jp{
+  display:block;
+  font-size:0.42em;
+  letter-spacing:0.5em;
+  color:var(--accent-gold);
+  margin-top:0.4rem;
+  font-weight:400;
+}
+.title .en{
+  display:block;
+  font-size:0.32em;
+  letter-spacing:0.12em;
+  color:var(--accent-gold);
+  margin-top:0.5rem;
+  font-weight:400;
+  font-family:var(--font-body);
+}
+.subtitle{
+  color:var(--text-muted);
+  max-width:38rem;
+  line-height:1.7;
+  margin:0.6rem 0 2.6rem;
+  font-size:0.98rem;
+}
+.subtitle strong{ color:var(--text-primary); font-weight:500; }
+
+.panel{
+  background:var(--bg-panel);
+  border:1px solid var(--hairline);
+  border-radius:10px;
+  padding:1.6rem 1.8rem;
+  width:min(640px, 92vw);
+  margin-bottom:1.4rem;
+  text-align:left;
+}
+.panel h2{
+  font-family:var(--font-display);
+  font-size:1.05rem;
+  font-weight:600;
+  margin:0 0 1rem;
+  color:var(--accent-gold);
+  letter-spacing:0.03em;
+  display:flex; align-items:center; gap:0.5rem;
+}
+.panel h2 .eyebrow{
+  font-family:var(--font-mono);
+  font-size:0.65rem;
+  color:var(--text-muted);
+  letter-spacing:0.15em;
+  border:1px solid var(--hairline);
+  padding:0.15rem 0.45rem;
+  border-radius:4px;
+}
+.panel h2 .optional-tag{ font-weight:400; color:var(--text-muted); font-size:0.75rem; }
+
+.row-choice{
+  display:flex; gap:0.6rem; flex-wrap:wrap;
+}
+.choice-btn{
+  flex:1 1 auto;
+  min-width:110px;
+  background:var(--bg-panel-2);
+  border:1px solid var(--hairline);
+  color:var(--text-muted);
+  border-radius:8px;
+  padding:0.7rem 0.9rem;
+  cursor:pointer;
+  font-size:0.9rem;
+  transition:border-color .15s, color .15s, background .15s;
+}
+.choice-btn:hover{ border-color:var(--accent-gold-dim); color:var(--text-primary); }
+.choice-btn.selected{
+  border-color:var(--accent-gold);
+  color:var(--accent-gold);
+  background:linear-gradient(180deg, rgba(212,175,55,0.14), rgba(212,175,55,0.04));
+}
+.choice-btn small{ display:block; color:var(--text-muted); font-size:0.72rem; margin-top:0.15rem; font-family:var(--font-mono); }
+.choice-btn.selected small{ color:var(--accent-gold-dim); }
+
+.option-list{ display:flex; flex-direction:column; gap:0.7rem; }
+.option-toggle{
+  display:flex; align-items:flex-start; gap:0.8rem;
+  border:1px solid var(--hairline);
+  border-radius:8px;
+  padding:0.75rem 0.9rem;
+  cursor:pointer;
+  background:var(--bg-panel-2);
+  transition:border-color .15s;
+}
+.option-toggle:hover{ border-color:var(--accent-gold-dim); }
+.option-toggle input{ margin-top:0.2rem; accent-color:var(--accent-gold); width:16px; height:16px; flex:none; }
+.option-toggle .otext strong{ color:var(--text-primary); font-size:0.92rem; }
+.option-toggle .otext span{ display:block; color:var(--text-muted); font-size:0.8rem; margin-top:0.15rem; line-height:1.5; }
+.option-toggle.karma strong{ color:var(--accent-vermillion); }
+.option-toggle.bond strong{ color:var(--accent-jade); }
+.option-toggle.enlight strong{ color:var(--accent-gold); }
+
+.rule-note{
+  font-size:0.78rem; color:var(--text-muted); line-height:1.6;
+  border-top:1px solid var(--hairline); margin-top:1.1rem; padding-top:0.9rem;
+}
+.rule-note b{ color:var(--text-primary); }
+
+.start-btn{
+  font-family:var(--font-display);
+  font-size:1.15rem;
+  letter-spacing:0.08em;
+  background:linear-gradient(180deg, #e6c65b, var(--accent-gold));
+  color:#1a1508;
+  border:none;
+  border-radius:8px;
+  padding:0.95rem 2.6rem;
+  cursor:pointer;
+  font-weight:700;
+  box-shadow:0 8px 24px rgba(212,175,55,0.25);
+  transition:transform .15s, box-shadow .15s;
+  margin-top:0.6rem;
+}
+.start-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(212,175,55,0.35); }
+.start-btn:active{ transform:translateY(0); }
+
+/* ---------------- Game screen ---------------- */
+#screen-game{
+  padding:3vmin 3vmin 6vmin;
+  max-width:1180px;
+  margin:0 auto;
+}
+.game-header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:1.4rem;
+  flex-wrap:wrap;
+  gap:0.8rem;
+}
+.game-header h1{
+  font-family:var(--font-display);
+  font-size:1.3rem;
+  margin:0;
+  letter-spacing:0.03em;
+}
+.game-header h1 .jp{ color:var(--accent-gold); font-size:0.75em; margin-left:0.5rem; }
+.game-header h1 .en{ color:var(--accent-gold); font-size:0.6em; margin-left:0.5rem; letter-spacing:0.05em; }
+.menu-btn{
+  background:transparent;
+  border:1px solid var(--hairline);
+  color:var(--text-muted);
+  padding:0.5rem 1rem;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:0.82rem;
+  font-family:var(--font-mono);
+}
+.menu-btn:hover{ color:var(--text-primary); border-color:var(--accent-gold-dim); }
+
+.game-layout{
+  display:flex; gap:2rem; align-items:flex-start;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.board-wrap{ position:relative; }
+#board{
+  display:grid;
+  grid-template-columns:repeat(8, 1fr);
+  grid-template-rows:repeat(8, 1fr);
+  width:min(82vmin, 560px);
+  height:min(82vmin, 560px);
+  border:2px solid var(--hairline);
+  border-radius:6px;
+  overflow:hidden;
+  box-shadow:0 20px 50px rgba(0,0,0,0.45);
+}
+.sq{
+  position:relative;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  user-select:none;
+}
+.sq.light{ background:var(--board-light); }
+.sq.dark{ background:var(--board-dark); }
+.sq.selected{ box-shadow:inset 0 0 0 3px var(--accent-gold); }
+.sq.move-dot::after{
+  content:"";
+  position:absolute;
+  width:22%; height:22%;
+  border-radius:50%;
+  background:rgba(212,175,55,0.55);
+}
+.sq.move-capture::after{
+  content:"";
+  position:absolute; inset:8%;
+  border-radius:50%;
+  border:3px solid rgba(166,67,44,0.75);
+  background:transparent;
+}
+.sq.move-pastlife.move-dot::after{ background:rgba(76,140,107,0.65); }
+.sq.move-pastlife.move-capture::after{ border-color:rgba(76,140,107,0.85); }
+
+.sq .piece{
+  font-size:min(6.6vmin, 44px);
+  line-height:1;
+  transition:transform .12s;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+}
+.sq .piece.white{ color:#f2ecd9; }
+.sq .piece.black{ color:#caa06b; }
+.sq .piece.enlightened{
+  filter:drop-shadow(0 0 6px var(--accent-gold)) drop-shadow(0 0 12px rgba(212,175,55,0.6));
+}
+.sq .badge{
+  position:absolute;
+  font-size:0.62rem;
+  font-family:var(--font-mono);
+  line-height:1;
+  padding:1px 3px;
+  border-radius:3px;
+  pointer-events:none;
+}
+.badge.bond{ top:3px; left:3px; color:var(--accent-jade); }
+.badge.pastlife{ bottom:3px; right:3px; color:var(--accent-vermillion); }
+.badge.count{ bottom:3px; left:3px; color:var(--text-muted); }
+
+@keyframes reincarnRing{
+  0%{ box-shadow:inset 0 0 0 2px rgba(212,175,55,0.9), 0 0 0 0 rgba(212,175,55,0.6); }
+  100%{ box-shadow:inset 0 0 0 2px rgba(212,175,55,0), 0 0 0 22px rgba(212,175,55,0); }
+}
+.sq.pulse{ animation:reincarnRing 900ms ease-out; }
+
+.side-panel{
+  width:min(340px, 92vw);
+  display:flex; flex-direction:column; gap:1rem;
+}
+.turn-indicator{
+  background:var(--bg-panel);
+  border:1px solid var(--hairline);
+  border-radius:8px;
+  padding:0.9rem 1.1rem;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.turn-indicator .dot{
+  width:12px; height:12px; border-radius:50%;
+  background:var(--accent-gold);
+  box-shadow:0 0 8px var(--accent-gold);
+}
+.turn-indicator.black .dot{ background:#caa06b; box-shadow:0 0 8px #caa06b; }
+.turn-indicator .label{ font-family:var(--font-mono); font-size:0.85rem; color:var(--text-muted); }
+.turn-indicator .value{ font-family:var(--font-display); font-size:1.05rem; }
+
+.meter-box{
+  background:var(--bg-panel);
+  border:1px solid var(--hairline);
+  border-radius:8px;
+  padding:0.9rem 1.1rem;
+}
+.meter-box h3{
+  margin:0 0 0.7rem;
+  font-family:var(--font-mono);
+  font-size:0.72rem;
+  letter-spacing:0.1em;
+  color:var(--text-muted);
+  text-transform:uppercase;
+}
+.meter-row{ display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem; font-size:0.8rem; }
+.meter-row:last-child{ margin-bottom:0; }
+.meter-row .mlabel{ width:3.4rem; color:var(--text-muted); font-family:var(--font-mono); font-size:0.72rem; }
+.meter-track{ flex:1; height:8px; background:var(--bg-panel-2); border-radius:4px; overflow:hidden; }
+.meter-fill{ height:100%; background:var(--accent-vermillion); transition:width .3s; }
+.meter-fill.black{ background:var(--accent-jade); }
+
+.pastlife-controls{
+  background:var(--bg-panel);
+  border:1px solid var(--accent-gold-dim);
+  border-radius:8px;
+  padding:0.85rem 1.1rem;
+  display:none;
+}
+.pastlife-controls.active{ display:block; }
+.pastlife-controls p{ margin:0 0 0.6rem; font-size:0.82rem; color:var(--text-muted); line-height:1.5; }
+.pastlife-controls b{ color:var(--accent-gold); }
+.toggle-btn{
+  width:100%;
+  background:var(--bg-panel-2);
+  border:1px solid var(--hairline);
+  color:var(--text-primary);
+  padding:0.55rem;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:0.82rem;
+}
+.toggle-btn.on{ border-color:var(--accent-gold); color:var(--accent-gold); }
+
+.log-box{
+  background:var(--bg-panel);
+  border:1px solid var(--hairline);
+  border-radius:8px;
+  padding:0.9rem 1.1rem;
+  flex:1;
+  min-height:180px;
+  max-height:320px;
+  overflow-y:auto;
+}
+.log-box h3{
+  margin:0 0 0.6rem;
+  font-family:var(--font-mono);
+  font-size:0.72rem;
+  letter-spacing:0.1em;
+  color:var(--text-muted);
+  text-transform:uppercase;
+}
+.log-entry{
+  font-size:0.78rem;
+  line-height:1.5;
+  color:var(--text-muted);
+  padding:0.4rem 0;
+  border-bottom:1px solid var(--hairline);
+}
+.log-entry:last-child{ border-bottom:none; }
+.log-entry.reborn{ color:var(--text-primary); }
+.log-entry.gone{ color:var(--text-muted); font-style:italic; }
+.log-entry.enlighten{ color:var(--accent-gold); }
+.log-entry.bond{ color:var(--accent-jade); }
+.log-entry.win{ color:var(--accent-vermillion); font-weight:700; }
+
+.overlay{
+  position:fixed; inset:0;
+  background:rgba(10,9,18,0.86);
+  display:none;
+  align-items:center; justify-content:center;
+  z-index:50;
+  padding:2rem;
+}
+.overlay.active{ display:flex; }
+.overlay-card{
+  background:var(--bg-panel);
+  border:1px solid var(--accent-gold-dim);
+  border-radius:12px;
+  padding:2.4rem 2.6rem;
+  text-align:center;
+  max-width:420px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.6);
+}
+.overlay-card h2{
+  font-family:var(--font-display);
+  font-size:1.8rem;
+  margin:0 0 0.6rem;
+  color:var(--accent-gold);
+}
+.overlay-card p{ color:var(--text-muted); line-height:1.6; margin-bottom:1.6rem; font-size:0.9rem; }
+.overlay-card .start-btn{ font-size:1rem; padding:0.75rem 2rem; }
+
+footer.credit{
+  text-align:center;
+  color:var(--text-muted);
+  font-family:var(--font-mono);
+  font-size:0.7rem;
+  margin-top:2rem;
+  letter-spacing:0.05em;
+}
+
+@media (max-width:720px){
+  .panel{ padding:1.2rem 1.1rem; }
+}
+</style>
+</head>
+<body>
+
+<button class="lang-toggle" id="lang-toggle">日本語</button>
+
+<!-- ============ SELECTION SCREEN ============ -->
+<section id="screen-select" class="screen active">
+
+  <div class="wheel-wrap">
+    <div class="wheel-glow"></div>
+    <div class="wheel" id="wheel">
+      <div class="wheel-core" id="wheel-core-label">SAMSARA</div>
+    </div>
+  </div>
+
+  <h1 class="title"><span id="app-title-main">Reincarnation Chess</span><span class="jp" id="app-title-sub">輪廻転生チェス</span></h1>
+  <p class="subtitle" id="lbl-subtitle">
+    Every captured piece is cast back onto the Wheel. It may return as something
+    <strong>stronger</strong>, something <strong>weaker</strong>, on <strong>either side</strong> of the
+    board — or it may simply <strong>escape the cycle</strong> for good. Only the King stands outside
+    samsara: it never returns.
+  </p>
+
+  <div class="panel">
+    <h2><span class="eyebrow">01</span> <span id="lbl-diff-heading">Choose your opponent's strength</span></h2>
+    <div class="row-choice" id="difficulty-choice">
+      <button class="choice-btn selected" data-value="easy"><span id="diff-easy-label">Easy</span><small id="diff-easy-small">Mostly instinctual</small></button>
+      <button class="choice-btn" data-value="normal"><span id="diff-normal-label">Normal</span><small id="diff-normal-small">Greedy, calculating</small></button>
+      <button class="choice-btn" data-value="hard"><span id="diff-hard-label">Hard</span><small id="diff-hard-small">Plans ahead</small></button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="eyebrow">02</span> <span id="lbl-color-heading">Choose your side</span></h2>
+    <div class="row-choice" id="color-choice">
+      <button class="choice-btn selected" data-value="w"><span id="color-w-label">White ♔</span><small id="color-w-small">Moves first</small></button>
+      <button class="choice-btn" data-value="b"><span id="color-b-label">Black ♚</span><small id="color-b-small">Responds</small></button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="eyebrow">03</span> <span id="lbl-rules-heading">Laws of Rebirth</span> <span class="optional-tag" id="lbl-rules-optional">— optional</span></h2>
+    <div class="option-list">
+      <label class="option-toggle karma">
+        <input type="checkbox" id="opt-karma" checked>
+        <span class="otext"><strong id="opt-karma-label">Karma</strong>
+        <span id="opt-karma-desc">The more a side captures, the worse its own reincarnations become. Restraint is rewarded with stronger rebirths.</span></span>
+      </label>
+      <label class="option-toggle bond">
+        <input type="checkbox" id="opt-bond" checked>
+        <span class="otext"><strong id="opt-bond-label">Bond</strong>
+        <span id="opt-bond-desc">Reincarnated pieces that appear next to one another form a bond, making them slightly more likely to return again if captured.</span></span>
+      </label>
+      <label class="option-toggle enlight">
+        <input type="checkbox" id="opt-enlightenment" checked>
+        <span class="otext"><strong id="opt-enlight-label">Enlightenment</strong>
+        <span id="opt-enlight-desc">A piece that has reincarnated 3 times attains Enlightenment and can never be captured again.</span></span>
+      </label>
+    </div>
+    <div class="rule-note" id="lbl-rule-note">
+      <b>Always active:</b> any captured piece (except the King) may fail to reincarnate at all, escaping
+      the Wheel permanently. And any reincarnated piece has a small chance to carry a <b>Past-Life Memory</b>
+      — the ability to move once using its previous form's rules, before that memory fades forever.
+      <br><br>
+      <b>Victory:</b> capture the enemy King. There is no check or checkmate — only the final blow matters.
+    </div>
+  </div>
+
+  <button class="start-btn" id="start-btn">Enter the Wheel</button>
+  <footer class="credit" id="footer-credit">REINCARNATION CHESS · A BROWSER GAME OF SAMSARA</footer>
+</section>
+
+<!-- ============ GAME SCREEN ============ -->
+<section id="screen-game" class="screen">
+  <div class="game-header">
+    <h1><span id="game-title-main">Reincarnation Chess</span><span class="jp" id="game-title-sub">輪廻転生チェス</span></h1>
+    <button class="menu-btn" id="back-btn">◂ Back to Menu</button>
+  </div>
+
+  <div class="game-layout">
+    <div class="board-wrap">
+      <div id="board"></div>
+    </div>
+
+    <div class="side-panel">
+      <div class="turn-indicator" id="turn-indicator">
+        <div>
+          <div class="label" id="turn-label">TURN</div>
+          <div class="value" id="turn-value">White</div>
+        </div>
+        <div class="dot" id="turn-dot"></div>
+      </div>
+
+      <div class="meter-box" id="karma-box">
+        <h3 id="karma-heading">Karma</h3>
+        <div class="meter-row">
+          <span class="mlabel" id="karma-label-w">White</span>
+          <div class="meter-track"><div class="meter-fill" id="karma-w" style="width:0%"></div></div>
+        </div>
+        <div class="meter-row">
+          <span class="mlabel" id="karma-label-b">Black</span>
+          <div class="meter-track"><div class="meter-fill black" id="karma-b" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="pastlife-controls" id="pastlife-controls">
+        <p id="pastlife-default-text">This piece carries a <b>Past-Life Memory</b>. You may move it once using its former form's rules instead of its current ones.</p>
+        <button class="toggle-btn" id="pastlife-toggle">Use Past-Life Move: OFF</button>
+      </div>
+
+      <div class="log-box">
+        <h3 id="log-heading">Chronicle of Rebirth</h3>
+        <div id="log-list"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-card">
+    <h2 id="overlay-title">Victory</h2>
+    <p id="overlay-text">The King has fallen.</p>
+    <button class="start-btn" id="overlay-btn">Return to the Wheel</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   CORE LOGIC (board, movement, reincarnation) — language-independent
+   ============================================================ */
+const ROOK_DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+const BISHOP_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const QUEEN_DIRS = ROOK_DIRS.concat(BISHOP_DIRS);
+const KNIGHT_OFFSETS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const PIECE_VALUE = {P:1,N:3,B:3,R:5,Q:9,K:1000};
+const GLYPH = {
+  w:{K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙'},
+  b:{K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'}
+};
+
+function inBounds(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
+function opposite(color){ return color==='w'?'b':'w'; }
+
+let idCounter = 1;
+function nextId(){ return idCounter++; }
+
+function makePiece(type,color,extra){
+  extra = extra || {};
+  return Object.assign({
+    id: nextId(), type, color, hasMoved:false,
+    reincarnationCount:0, pastLifeType:null, pastLifeUsed:false,
+    bonded:false, enlightened:false
+  }, extra);
+}
+
+function initialBoard(){
+  const b = Array.from({length:8},()=>Array(8).fill(null));
+  const backRank = ['R','N','B','Q','K','B','N','R'];
+  for(let c=0;c<8;c++){
+    b[0][c] = makePiece(backRank[c],'b');
+    b[1][c] = makePiece('P','b');
+    b[6][c] = makePiece('P','w');
+    b[7][c] = makePiece(backRank[c],'w');
+  }
+  return b;
+}
+
+function pieceMoves(board, r, c, opts){
+  opts = opts || {};
+  const piece = board[r][c];
+  if(!piece) return [];
+  const type = opts.pastLife ? piece.pastLifeType : piece.type;
+  if(!type) return [];
+  const moves = [];
+
+  if(type==='P'){
+    const dir = piece.color==='w' ? -1 : 1;
+    const startRow = piece.color==='w' ? 6 : 1;
+    let nr=r+dir, nc=c;
+    if(inBounds(nr,nc) && !board[nr][nc]){
+      moves.push({r:nr,c:nc,capture:false});
+      if(r===startRow){
+        let nr2=r+2*dir;
+        if(inBounds(nr2,nc) && !board[nr2][nc]) moves.push({r:nr2,c:nc,capture:false});
+      }
+    }
+    for(const dc of [-1,1]){
+      nr=r+dir; nc=c+dc;
+      if(inBounds(nr,nc)){
+        const target=board[nr][nc];
+        if(target && target.color!==piece.color && !target.enlightened) moves.push({r:nr,c:nc,capture:true});
+      }
+    }
+  } else if(type==='N'){
+    for(const off of KNIGHT_OFFSETS){
+      const nr=r+off[0],nc=c+off[1];
+      if(!inBounds(nr,nc)) continue;
+      const target=board[nr][nc];
+      if(!target) moves.push({r:nr,c:nc,capture:false});
+      else if(target.color!==piece.color && !target.enlightened) moves.push({r:nr,c:nc,capture:true});
+    }
+  } else if(type==='B'||type==='R'||type==='Q'){
+    const dirs = type==='B'?BISHOP_DIRS:type==='R'?ROOK_DIRS:QUEEN_DIRS;
+    for(const d of dirs){
+      let nr=r+d[0],nc=c+d[1];
+      while(inBounds(nr,nc)){
+        const target=board[nr][nc];
+        if(!target){ moves.push({r:nr,c:nc,capture:false}); nr+=d[0]; nc+=d[1]; continue; }
+        if(target.color===piece.color) break;
+        if(target.enlightened) break;
+        moves.push({r:nr,c:nc,capture:true});
+        break;
+      }
+    }
+  } else if(type==='K'){
+    for(const d of QUEEN_DIRS){
+      const nr=r+d[0],nc=c+d[1];
+      if(!inBounds(nr,nc)) continue;
+      const target=board[nr][nc];
+      if(!target) moves.push({r:nr,c:nc,capture:false});
+      else if(target.color!==piece.color && !target.enlightened) moves.push({r:nr,c:nc,capture:true});
+    }
+  }
+  return moves;
+}
+
+function getAllMoves(board,color){
+  const all=[];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p = board[r][c];
+    if(p && p.color===color){
+      const mv = pieceMoves(board,r,c);
+      for(const m of mv) all.push({from:{r,c},to:{r:m.r,c:m.c},capture:m.capture});
+    }
+  }
+  return all;
+}
+
+function emptySquares(board){
+  const out=[];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++) if(!board[r][c]) out.push({r,c});
+  return out;
+}
+
+function weightedPick(weights){
+  const entries = Object.entries(weights);
+  const total = entries.reduce((s,e)=>s+e[1],0);
+  let x = Math.random()*total;
+  for(const e of entries){ if(x<e[1]) return e[0]; x-=e[1]; }
+  return entries[entries.length-1][0];
+}
+
+const NEUTRAL_W = {P:40,N:20,B:15,R:15,Q:10};
+const GOOD_W    = {P:10,N:20,B:20,R:20,Q:30};
+const BAD_W     = {P:70,N:15,B:8,R:5,Q:2};
+
+function lerpWeights(a,b,t){
+  const out={};
+  for(const k of Object.keys(a)) out[k] = a[k] + (b[k]-a[k])*t;
+  return out;
+}
+
+function reincarnationWeights(karmaValue, karmaEnabled){
+  if(!karmaEnabled) return NEUTRAL_W;
+  const factor = Math.max(-1, Math.min(1, karmaValue/20));
+  if(factor >= 0) return lerpWeights(NEUTRAL_W, BAD_W, factor);
+  return lerpWeights(NEUTRAL_W, GOOD_W, -factor);
+}
+
+// Log entries are stored as {type, key, args} — structured, language-free data.
+// The actual text is generated at render time from the current language's
+// message templates (see I18N below), so switching language mid-game
+// retranslates the entire history, not just new messages.
+function resolveReincarnation(board, captured, options, karma, log){
+  if(captured.type==='K') return null;
+  let noReincarnChance = 0.25;
+  if(options.bond && captured.bonded) noReincarnChance -= 0.1;
+  noReincarnChance = Math.max(0.05, Math.min(0.9, noReincarnChance));
+  if(Math.random() < noReincarnChance){
+    log.push({type:'gone', key:'gone', args:{color:captured.color, piece:captured.type}});
+    return {kind:'gone'};
+  }
+  const newColor = Math.random()<0.5 ? captured.color : opposite(captured.color);
+  const weights = reincarnationWeights(karma[newColor]||0, options.karma);
+  const newType = weightedPick(weights);
+  const empties = emptySquares(board);
+  if(empties.length===0){
+    log.push({type:'gone', key:'noVessel', args:{color:captured.color, piece:captured.type}});
+    return {kind:'gone'};
+  }
+  const sq = empties[Math.floor(Math.random()*empties.length)];
+
+  const pastLifeType = Math.random() < 0.2 ? captured.type : null;
+  const newPiece = makePiece(newType, newColor, {
+    hasMoved:true,
+    reincarnationCount: (captured.reincarnationCount||0)+1,
+    pastLifeType, pastLifeUsed:false
+  });
+
+  let enlightened = false;
+  if(options.enlightenment && newPiece.reincarnationCount >= 3){
+    newPiece.enlightened = true;
+    enlightened = true;
+  }
+
+  let bonded = false;
+  if(options.bond){
+    for(const d of QUEEN_DIRS){
+      const nr=sq.r+d[0], nc=sq.c+d[1];
+      if(!inBounds(nr,nc)) continue;
+      const np = board[nr][nc];
+      if(np && np.reincarnationCount>0){
+        newPiece.bonded = true;
+        np.bonded = true;
+        bonded = true;
+      }
+    }
+  }
+
+  board[sq.r][sq.c] = newPiece;
+  log.push({type:'reborn', key:'reborn', args:{color:captured.color, piece:captured.type, newColor, newPiece:newType, pastLife: !!pastLifeType}});
+  if(enlightened) log.push({type:'enlighten', key:'enlighten', args:{piece:newType, count:newPiece.reincarnationCount}});
+  if(bonded) log.push({type:'bond', key:'bond', args:{}});
+
+  return {kind:'reborn', piece:newPiece, sq};
+}
+
+/* ============================================================
+   AI
+   ============================================================ */
+function cloneBoard(board){
+  const nb = Array.from({length:8},()=>Array(8).fill(null));
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++) if(board[r][c]) nb[r][c] = Object.assign({}, board[r][c]);
+  return nb;
+}
+
+function applySimMove(board, mv){
+  const piece = board[mv.from.r][mv.from.c];
+  const captured = board[mv.to.r][mv.to.c];
+  board[mv.to.r][mv.to.c] = piece;
+  board[mv.from.r][mv.from.c] = null;
+  if(piece.type==='P' && (mv.to.r===0 || mv.to.r===7)) piece.type='Q';
+  return captured;
+}
+
+function evaluate(board, color){
+  let score = 0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p = board[r][c];
+    if(!p) continue;
+    let v = PIECE_VALUE[p.type] || 0;
+    if(p.enlightened) v += 2;
+    score += (p.color===color ? v : -v);
+  }
+  return score;
+}
+
+// Captures (and especially high-value captures) are explored first so that
+// alpha-beta pruning cuts off far more branches. This matters a lot once
+// reincarnation has scattered many pieces across a busy board.
+function orderMoves(board, moves){
+  return moves.slice().sort((a,b)=>{
+    const av = a.capture ? (PIECE_VALUE[board[a.to.r][a.to.c].type]||0) : -1;
+    const bv = b.capture ? (PIECE_VALUE[board[b.to.r][b.to.c].type]||0) : -1;
+    return bv - av;
+  });
+}
+
+// deadline is a shared Date.now()-based cutoff (ms). Once passed, remaining
+// sibling moves at a node are skipped and whatever has been found so far is
+// returned, bounding worst-case latency on busy boards.
+function minimax(board, color, depth, alpha, beta, maximizingColor, deadline){
+  const moves = orderMoves(board, getAllMoves(board, color));
+  if(depth===0 || moves.length===0) return evaluate(board, maximizingColor);
+  if(color===maximizingColor){
+    let best = -Infinity;
+    for(const mv of moves){
+      const nb = cloneBoard(board);
+      const captured = applySimMove(nb, mv);
+      if(captured && captured.type==='K'){ best = Math.max(best, 100000 + depth); continue; }
+      const val = minimax(nb, opposite(color), depth-1, alpha, beta, maximizingColor, deadline);
+      best = Math.max(best, val);
+      alpha = Math.max(alpha, val);
+      if(beta<=alpha) break;
+      if(Date.now() > deadline) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for(const mv of moves){
+      const nb = cloneBoard(board);
+      const captured = applySimMove(nb, mv);
+      if(captured && captured.type==='K'){ best = Math.min(best, -100000 - depth); continue; }
+      const val = minimax(nb, opposite(color), depth-1, alpha, beta, maximizingColor, deadline);
+      best = Math.min(best, val);
+      beta = Math.min(beta, val);
+      if(beta<=alpha) break;
+      if(Date.now() > deadline) break;
+    }
+    return best;
+  }
+}
+
+function chooseAiMove(board, color, difficulty){
+  const moves = getAllMoves(board, color);
+  if(moves.length===0) return null;
+
+  if(difficulty==='easy'){
+    if(Math.random() < 0.25){
+      const captures = moves.filter(m=>m.capture);
+      if(captures.length) return captures[Math.floor(Math.random()*captures.length)];
+    }
+    return moves[Math.floor(Math.random()*moves.length)];
+  }
+
+  if(difficulty==='normal'){
+    let best = null, bestScore = -Infinity;
+    for(const mv of moves){
+      const nb = cloneBoard(board);
+      applySimMove(nb, mv);
+      const score = evaluate(nb, color) + Math.random()*0.6;
+      if(score > bestScore){ bestScore = score; best = mv; }
+    }
+    return best;
+  }
+
+  // hard: time-boxed iterative deepening minimax with alpha-beta.
+  const TIME_BUDGET_MS = 700;
+  const startTime = Date.now();
+  const deadline = startTime + TIME_BUDGET_MS;
+  const ordered = orderMoves(board, moves);
+  let bestMove = ordered[0];
+  for(let depth=1; depth<=5; depth++){
+    if(Date.now() > deadline) break;
+    let best = null, bestScore = -Infinity;
+    for(const mv of ordered){
+      const nb = cloneBoard(board);
+      const captured = applySimMove(nb, mv);
+      let score;
+      if(captured && captured.type==='K') score = 100000;
+      else score = minimax(nb, opposite(color), depth, -Infinity, Infinity, color, deadline);
+      score += Math.random()*0.4;
+      if(score > bestScore){ bestScore = score; best = mv; }
+      if(Date.now() > deadline) break;
+    }
+    if(best) bestMove = best;
+  }
+  return bestMove;
+}
+
+/* ============================================================
+   I18N — all display text lives here. Everything above this line
+   is pure game logic and never touches language.
+   ============================================================ */
+const PIECE_NAME_EN = {P:'Pawn',N:'Knight',B:'Bishop',R:'Rook',Q:'Queen',K:'King'};
+const PIECE_NAME_JA = {P:'ポーン',N:'ナイト',B:'ビショップ',R:'ルーク',Q:'クイーン',K:'キング'};
+const COLOR_NAME_EN = {w:'White', b:'Black'};
+const COLOR_NAME_JA = {w:'白', b:'黒'};
+
+const I18N = {
+  en: {
+    pageTitle: "Reincarnation Chess 輪廻転生チェス",
+    labels: {
+      titleMain: "Reincarnation Chess",
+      titleSub: "輪廻転生チェス",
+      subtitleHTML: `Every captured piece is cast back onto the Wheel. It may return as something
+        <strong>stronger</strong>, something <strong>weaker</strong>, on <strong>either side</strong> of the
+        board — or it may simply <strong>escape the cycle</strong> for good. Only the King stands outside
+        samsara: it never returns.`,
+      diffHeading: "Choose your opponent's strength",
+      diffEasy: "Easy", diffEasySmall: "Mostly instinctual",
+      diffNormal: "Normal", diffNormalSmall: "Greedy, calculating",
+      diffHard: "Hard", diffHardSmall: "Plans ahead",
+      colorHeading: "Choose your side",
+      colorWhite: "White ♔", colorWhiteSmall: "Moves first",
+      colorBlack: "Black ♚", colorBlackSmall: "Responds",
+      rulesHeading: "Laws of Rebirth", rulesOptional: "— optional",
+      karmaLabel: "Karma",
+      karmaDesc: "The more a side captures, the worse its own reincarnations become. Restraint is rewarded with stronger rebirths.",
+      bondLabel: "Bond",
+      bondDesc: "Reincarnated pieces that appear next to one another form a bond, making them slightly more likely to return again if captured.",
+      enlightLabel: "Enlightenment",
+      enlightDesc: "A piece that has reincarnated 3 times attains Enlightenment and can never be captured again.",
+      ruleNoteHTML: `<b>Always active:</b> any captured piece (except the King) may fail to reincarnate at all, escaping
+        the Wheel permanently. And any reincarnated piece has a small chance to carry a <b>Past-Life Memory</b>
+        — the ability to move once using its previous form's rules, before that memory fades forever.
+        <br><br>
+        <b>Victory:</b> capture the enemy King. There is no check or checkmate — only the final blow matters.`,
+      startBtn: "Enter the Wheel",
+      footer: "REINCARNATION CHESS · A BROWSER GAME OF SAMSARA",
+      gameTitleMain: "Reincarnation Chess",
+      gameTitleSub: "輪廻転生チェス",
+      backBtn: "◂ Back to Menu",
+      turnLabel: "TURN",
+      karmaHeading: "Karma",
+      karmaLabelW: "White", karmaLabelB: "Black",
+      pastlifeDefaultHTML: "This piece carries a <b>Past-Life Memory</b>. You may move it once using its former form's rules instead of its current ones.",
+      logHeading: "Chronicle of Rebirth",
+      overlayBtn: "Return to the Wheel",
+      wheelCore: "SAMSARA",
+      langToggle: "日本語"
+    },
+    colorName: COLOR_NAME_EN,
+    pieceName: PIECE_NAME_EN,
+    turnValue(colorCode, isAiTurn){
+      return COLOR_NAME_EN[colorCode] + (isAiTurn ? ' (AI thinking…)' : ' (Your move)');
+    },
+    pastlifeParagraph(pieceType){
+      return `This piece was once a <b>${PIECE_NAME_EN[pieceType]}</b>. You may move it once using that form's rules.`;
+    },
+    pastlifeToggleText(isOn){
+      return 'Use Past-Life Move: ' + (isOn ? 'ON' : 'OFF');
+    },
+    overlayTitle(won){ return won ? 'Victory' : 'Defeat'; },
+    msg: {
+      gone: a => `${COLOR_NAME_EN[a.color]} ${PIECE_NAME_EN[a.piece]} was released from samsara — it will not return.`,
+      noVessel: a => `${COLOR_NAME_EN[a.color]} ${PIECE_NAME_EN[a.piece]} found no vessel to return to.`,
+      reborn: a => `${COLOR_NAME_EN[a.color]} ${PIECE_NAME_EN[a.piece]} reincarnated as ${COLOR_NAME_EN[a.newColor]} ${PIECE_NAME_EN[a.newPiece]}${a.pastLife ? ' (retains a Past-Life Memory)' : ''}.`,
+      enlighten: a => `✨ The reborn ${PIECE_NAME_EN[a.piece]} has reincarnated ${a.count} times and attained Enlightenment — it can never be captured again.`,
+      bond: () => `🔗 A bond has formed between two reincarnated souls.`,
+      pastLifeMove: a => `${COLOR_NAME_EN[a.color]} ${PIECE_NAME_EN[a.piece]} moved with a flicker of its former life as a ${PIECE_NAME_EN[a.pastPiece]}.`,
+      promotion: a => `${COLOR_NAME_EN[a.color]} Pawn reached the far shore and became a Queen.`,
+      kingFallen: a => `${COLOR_NAME_EN[a.color]}'s King has fallen. There is no escaping this end — not even the Wheel reaches a slain King.`,
+      noMoves: a => `${COLOR_NAME_EN[a.color]} has no legal moves remaining and yields.`,
+      aiNoMoves: a => `${COLOR_NAME_EN[a.color]} (AI) has no legal moves remaining and yields.`
+    }
+  },
+  ja: {
+    pageTitle: "輪廻転生チェス Reincarnation Chess",
+    labels: {
+      titleMain: "輪廻転生チェス",
+      titleSub: "REINCARNATION CHESS",
+      subtitleHTML: `捕られた駒は、輪廻の輪へと投げ返される。より<strong>強い駒</strong>として、あるいはより<strong>弱い駒</strong>として、
+        <strong>敵味方どちらか</strong>の駒としてこの盤上に舞い戻ってくるかもしれない――あるいはそのまま
+        <strong>輪廻から抜け出して</strong>、二度と戻らないこともある。ただしキングだけは輪廻の外にある。
+        キングは決して転生しない。`,
+      diffHeading: "AIの強さを選ぶ",
+      diffEasy: "イージー", diffEasySmall: "直感的でランダム性が高い",
+      diffNormal: "ノーマル", diffNormalSmall: "目先の駒得を優先",
+      diffHard: "ハード", diffHardSmall: "数手先まで読む",
+      colorHeading: "先手・後手を選ぶ",
+      colorWhite: "白 ♔", colorWhiteSmall: "先手",
+      colorBlack: "黒 ♚", colorBlackSmall: "後手",
+      rulesHeading: "転生の掟", rulesOptional: "（オプション）",
+      karmaLabel: "カルマ",
+      karmaDesc: "駒を取れば取るほど、その陣営自身の転生の質は悪くなる。手加減すれば、より強い駒として生まれ変わりやすくなる。",
+      bondLabel: "縁",
+      bondDesc: "転生した駒同士が隣り合って現れると、その間に縁が結ばれる。縁のある駒は、取られても再び転生しやすくなる。",
+      enlightLabel: "解脱",
+      enlightDesc: "3回転生した駒は解脱に至り、二度と取られることがなくなる。",
+      ruleNoteHTML: `<b>常時有効：</b>捕られた駒（キングを除く）は、そのまま転生せずに輪廻から抜け出してしまうことがある。
+        また転生した駒は、低い確率で<b>前世の記憶</b>を宿すことがある――記憶が消え去る前に一度だけ、
+        前世の駒の動き方で指せる能力だ。
+        <br><br>
+        <b>勝利条件：</b>敵のキングを取ること。王手や詰みという概念はなく、最後の一撃がすべてを決める。`,
+      startBtn: "対局を始める",
+      footer: "輪廻転生チェス・捕った駒は、生まれ変わる。",
+      gameTitleMain: "輪廻転生チェス",
+      gameTitleSub: "REINCARNATION CHESS",
+      backBtn: "◂ メニューに戻る",
+      turnLabel: "手番",
+      karmaHeading: "カルマ",
+      karmaLabelW: "白", karmaLabelB: "黒",
+      pastlifeDefaultHTML: "この駒には<b>前世の記憶</b>が宿っている。今の動き方の代わりに、前世の駒の動き方で一度だけ指すことができる。",
+      logHeading: "輪廻の記録",
+      overlayBtn: "メニューに戻る",
+      wheelCore: "輪廻",
+      langToggle: "EN"
+    },
+    colorName: COLOR_NAME_JA,
+    pieceName: PIECE_NAME_JA,
+    turnValue(colorCode, isAiTurn){
+      return COLOR_NAME_JA[colorCode] + (isAiTurn ? '（AI思考中…）' : '（あなたの番）');
+    },
+    pastlifeParagraph(pieceType){
+      return `この駒はかつて<b>${PIECE_NAME_JA[pieceType]}</b>だった。一度だけ、その頃の動き方で指すことができる。`;
+    },
+    pastlifeToggleText(isOn){
+      return '前世の動きを使う：' + (isOn ? 'ON' : 'OFF');
+    },
+    overlayTitle(won){ return won ? '勝利' : '敗北'; },
+    msg: {
+      gone: a => `${COLOR_NAME_JA[a.color]}の${PIECE_NAME_JA[a.piece]}は輪廻から解放され、二度と戻らなかった。`,
+      noVessel: a => `${COLOR_NAME_JA[a.color]}の${PIECE_NAME_JA[a.piece]}は、転生する先を見つけられなかった。`,
+      reborn: a => `${COLOR_NAME_JA[a.color]}の${PIECE_NAME_JA[a.piece]}は、${COLOR_NAME_JA[a.newColor]}の${PIECE_NAME_JA[a.newPiece]}として転生した${a.pastLife ? '（前世の記憶を宿している）' : ''}。`,
+      enlighten: a => `✨ 転生した${PIECE_NAME_JA[a.piece]}は${a.count}回目の転生で解脱に至った。もう二度と取られることはない。`,
+      bond: () => `🔗 転生した魂同士に縁が結ばれた。`,
+      pastLifeMove: a => `${COLOR_NAME_JA[a.color]}の${PIECE_NAME_JA[a.piece]}が、前世（${PIECE_NAME_JA[a.pastPiece]}）の記憶をかすかに宿しながら動いた。`,
+      promotion: a => `${COLOR_NAME_JA[a.color]}のポーンが最奥にたどり着き、クイーンへと生まれ変わった。`,
+      kingFallen: a => `${COLOR_NAME_JA[a.color]}のキングが倒れた。この結末だけは、輪廻の輪すら届かない。`,
+      noMoves: a => `${COLOR_NAME_JA[a.color]}に合法手が無くなり、投了となった。`,
+      aiNoMoves: a => `${COLOR_NAME_JA[a.color]}（AI）に合法手が無くなり、投了となった。`
+    }
+  }
+};
+
+let currentLang = (navigator.language || 'en').toLowerCase().indexOf('ja') === 0 ? 'ja' : 'en';
+function t(){ return I18N[currentLang]; }
+function formatLogText(entry){
+  const fn = t().msg[entry.key];
+  return fn ? fn(entry.args || {}) : '';
+}
+
+function applyStaticText(){
+  const L = t().labels;
+  document.title = L.pageTitle;
+  document.documentElement.lang = currentLang;
+
+  document.getElementById('lang-toggle').textContent = L.langToggle;
+  document.getElementById('wheel-core-label').textContent = L.wheelCore;
+
+  document.getElementById('app-title-main').textContent = L.titleMain;
+  const appSub = document.getElementById('app-title-sub');
+  appSub.textContent = L.titleSub;
+  appSub.className = currentLang === 'en' ? 'jp' : 'en';
+
+  document.getElementById('lbl-subtitle').innerHTML = L.subtitleHTML;
+  document.getElementById('lbl-diff-heading').textContent = L.diffHeading;
+  document.getElementById('diff-easy-label').textContent = L.diffEasy;
+  document.getElementById('diff-easy-small').textContent = L.diffEasySmall;
+  document.getElementById('diff-normal-label').textContent = L.diffNormal;
+  document.getElementById('diff-normal-small').textContent = L.diffNormalSmall;
+  document.getElementById('diff-hard-label').textContent = L.diffHard;
+  document.getElementById('diff-hard-small').textContent = L.diffHardSmall;
+
+  document.getElementById('lbl-color-heading').textContent = L.colorHeading;
+  document.getElementById('color-w-label').textContent = L.colorWhite;
+  document.getElementById('color-w-small').textContent = L.colorWhiteSmall;
+  document.getElementById('color-b-label').textContent = L.colorBlack;
+  document.getElementById('color-b-small').textContent = L.colorBlackSmall;
+
+  document.getElementById('lbl-rules-heading').textContent = L.rulesHeading;
+  document.getElementById('lbl-rules-optional').textContent = L.rulesOptional;
+  document.getElementById('opt-karma-label').textContent = L.karmaLabel;
+  document.getElementById('opt-karma-desc').textContent = L.karmaDesc;
+  document.getElementById('opt-bond-label').textContent = L.bondLabel;
+  document.getElementById('opt-bond-desc').textContent = L.bondDesc;
+  document.getElementById('opt-enlight-label').textContent = L.enlightLabel;
+  document.getElementById('opt-enlight-desc').textContent = L.enlightDesc;
+  document.getElementById('lbl-rule-note').innerHTML = L.ruleNoteHTML;
+
+  document.getElementById('start-btn').textContent = L.startBtn;
+  document.getElementById('footer-credit').textContent = L.footer;
+
+  document.getElementById('game-title-main').textContent = L.gameTitleMain;
+  const gameSub = document.getElementById('game-title-sub');
+  gameSub.textContent = L.gameTitleSub;
+  gameSub.className = currentLang === 'en' ? 'jp' : 'en';
+
+  document.getElementById('back-btn').textContent = L.backBtn;
+  document.getElementById('turn-label').textContent = L.turnLabel;
+  document.getElementById('karma-heading').textContent = L.karmaHeading;
+  document.getElementById('karma-label-w').textContent = L.karmaLabelW;
+  document.getElementById('karma-label-b').textContent = L.karmaLabelB;
+  document.getElementById('pastlife-default-text').innerHTML = L.pastlifeDefaultHTML;
+  document.getElementById('log-heading').textContent = L.logHeading;
+  document.getElementById('overlay-btn').textContent = L.overlayBtn;
+
+  // If a game is in progress, refresh everything dynamic too so switching
+  // language mid-game retranslates the whole screen, not just the menus.
+  if(state){
+    renderSidePanel();
+    renderLog();
+    if(state.over) refreshOverlay();
+  }
+}
+
+document.getElementById('lang-toggle').addEventListener('click', ()=>{
+  currentLang = currentLang === 'en' ? 'ja' : 'en';
+  applyStaticText();
+});
+
+/* ============================================================
+   GAME STATE & UI
+   ============================================================ */
+let state = null;
+
+function newGame(settings){
+  state = {
+    board: initialBoard(),
+    turn: 'w',
+    playerColor: settings.color,
+    aiColor: settings.color==='w' ? 'b' : 'w',
+    difficulty: settings.difficulty,
+    options: settings.options,
+    karma: {w:0,b:0},
+    log: [],
+    over: false,
+    overWinner: null,
+    overReasonKey: null,
+    overReasonArgs: null,
+    selected: null,
+    normalMoves: [],
+    pastLifeMoves: [],
+    usePastLife: false,
+    aiThinking: false
+  };
+  document.getElementById('karma-box').style.display = settings.options.karma ? 'block' : 'none';
+  buildBoardDom();
+  renderBoard();
+  renderSidePanel();
+  maybeTriggerAiTurn();
+}
+
+function pushLog(entry){
+  state.log.unshift(entry);
+  renderLog();
+}
+
+function squareEl(r,c){
+  return document.querySelector(`.sq[data-r="${r}"][data-c="${c}"]`);
+}
+
+function buildBoardDom(){
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  const flip = state.playerColor === 'b';
+  for(let i=0;i<8;i++){
+    for(let j=0;j<8;j++){
+      const r = flip ? 7-i : i;
+      const c = flip ? 7-j : j;
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + (((r+c)%2===0) ? 'light' : 'dark');
+      sq.dataset.r = r;
+      sq.dataset.c = c;
+      sq.addEventListener('click', onSquareClick);
+      boardEl.appendChild(sq);
+    }
+  }
+}
+
+function renderBoard(){
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const el = squareEl(r,c);
+    if(!el) continue;
+    el.classList.remove('selected','move-dot','move-capture','move-pastlife');
+    el.querySelectorAll('.piece, .badge').forEach(n=>n.remove());
+    const p = state.board[r][c];
+    if(p){
+      const span = document.createElement('span');
+      span.className = 'piece ' + (p.color==='w'?'white':'black') + (p.enlightened?' enlightened':'');
+      span.textContent = GLYPH[p.color][p.type];
+      el.appendChild(span);
+      if(p.bonded){
+        const b = document.createElement('span'); b.className='badge bond'; b.textContent='🔗'; el.appendChild(b);
+      }
+      if(p.pastLifeType && !p.pastLifeUsed){
+        const b = document.createElement('span'); b.className='badge pastlife'; b.textContent='✦'; el.appendChild(b);
+      }
+      if(p.reincarnationCount>0){
+        const b = document.createElement('span'); b.className='badge count'; b.textContent=p.reincarnationCount; el.appendChild(b);
+      }
+    }
+  }
+  if(state.selected){
+    const sel = squareEl(state.selected.r, state.selected.c);
+    if(sel) sel.classList.add('selected');
+    const moves = state.usePastLife ? state.pastLifeMoves : state.normalMoves;
+    for(const m of moves){
+      const el = squareEl(m.r,m.c);
+      if(!el) continue;
+      el.classList.add(m.capture ? 'move-capture' : 'move-dot');
+      if(state.usePastLife) el.classList.add('move-pastlife');
+    }
+  }
+}
+
+function renderSidePanel(){
+  const turnEl = document.getElementById('turn-indicator');
+  const turnVal = document.getElementById('turn-value');
+  turnEl.classList.toggle('black', state.turn==='b');
+  turnVal.textContent = t().turnValue(state.turn, state.turn===state.aiColor);
+  if(state.options.karma){
+    const maxK = 25;
+    document.getElementById('karma-w').style.width = Math.min(100, (state.karma.w/maxK)*100) + '%';
+    document.getElementById('karma-b').style.width = Math.min(100, (state.karma.b/maxK)*100) + '%';
+  }
+  renderPastLifeControls();
+}
+
+function renderPastLifeControls(){
+  const box = document.getElementById('pastlife-controls');
+  const btn = document.getElementById('pastlife-toggle');
+  const sel = state.selected ? state.board[state.selected.r][state.selected.c] : null;
+  const eligible = sel && sel.pastLifeType && !sel.pastLifeUsed && sel.color===state.playerColor && state.turn===state.playerColor;
+  if(eligible){
+    box.classList.add('active');
+    box.querySelector('p').innerHTML = t().pastlifeParagraph(sel.pastLifeType);
+    btn.textContent = t().pastlifeToggleText(state.usePastLife);
+    btn.classList.toggle('on', state.usePastLife);
+  } else {
+    box.classList.remove('active');
+  }
+}
+
+function renderLog(){
+  const list = document.getElementById('log-list');
+  list.innerHTML = '';
+  for(const entry of state.log.slice(0,60)){
+    const div = document.createElement('div');
+    div.className = 'log-entry ' + entry.type;
+    div.textContent = formatLogText(entry);
+    list.appendChild(div);
+  }
+}
+
+document.getElementById('pastlife-toggle').addEventListener('click', ()=>{
+  state.usePastLife = !state.usePastLife;
+  renderPastLifeControls();
+  renderBoard();
+});
+
+function onSquareClick(e){
+  if(!state || state.over) return;
+  if(state.turn !== state.playerColor) return;
+  const r = parseInt(e.currentTarget.dataset.r,10);
+  const c = parseInt(e.currentTarget.dataset.c,10);
+  const clicked = state.board[r][c];
+
+  if(state.selected){
+    const moves = state.usePastLife ? state.pastLifeMoves : state.normalMoves;
+    const match = moves.find(m=>m.r===r && m.c===c);
+    if(match){
+      performMove(state.selected, {r,c}, state.usePastLife);
+      return;
+    }
+    if(clicked && clicked.color===state.playerColor){
+      selectSquare(r,c);
+      return;
+    }
+    deselect();
+    return;
+  }
+
+  if(clicked && clicked.color===state.playerColor){
+    selectSquare(r,c);
+  }
+}
+
+function selectSquare(r,c){
+  const piece = state.board[r][c];
+  state.selected = {r,c};
+  state.normalMoves = pieceMoves(state.board, r, c, {pastLife:false});
+  state.pastLifeMoves = (piece.pastLifeType && !piece.pastLifeUsed) ? pieceMoves(state.board, r, c, {pastLife:true}) : [];
+  state.usePastLife = false;
+  renderBoard();
+  renderPastLifeControls();
+}
+
+function deselect(){
+  state.selected = null;
+  state.normalMoves = [];
+  state.pastLifeMoves = [];
+  state.usePastLife = false;
+  renderBoard();
+  renderPastLifeControls();
+}
+
+function performMove(from, to, pastLife){
+  const board = state.board;
+  const piece = board[from.r][from.c];
+  const captured = board[to.r][to.c];
+
+  board[to.r][to.c] = piece;
+  board[from.r][from.c] = null;
+  piece.hasMoved = true;
+  if(pastLife){
+    piece.pastLifeUsed = true;
+    pushLog({type:'reborn', key:'pastLifeMove', args:{color:piece.color, piece:piece.type, pastPiece:piece.pastLifeType}});
+  }
+  if(piece.type==='P' && (to.r===0 || to.r===7)){
+    piece.type = 'Q';
+    pushLog({type:'reborn', key:'promotion', args:{color:piece.color}});
+  }
+
+  deselect();
+
+  if(captured){
+    state.karma[piece.color] += (PIECE_VALUE[captured.type]||1);
+
+    if(captured.type==='K'){
+      renderBoard();
+      renderSidePanel();
+      endGame(piece.color, 'kingFallen', {color:captured.color});
+      return;
+    }
+    const result = resolveReincarnation(board, captured, state.options, state.karma, state.log);
+    renderLog();
+    renderBoard();
+    if(result && result.kind==='reborn'){
+      const el = squareEl(result.sq.r, result.sq.c);
+      if(el){ el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 900); }
+    }
+  } else {
+    renderBoard();
+  }
+
+  renderSidePanel();
+  switchTurn();
+}
+
+function switchTurn(){
+  state.turn = opposite(state.turn);
+  const moves = getAllMoves(state.board, state.turn);
+  if(moves.length===0){
+    endGame(opposite(state.turn), 'noMoves', {color:state.turn});
+    return;
+  }
+  renderSidePanel();
+  maybeTriggerAiTurn();
+}
+
+function maybeTriggerAiTurn(){
+  if(state.over) return;
+  if(state.turn !== state.aiColor) return;
+  state.aiThinking = true;
+  renderSidePanel();
+  setTimeout(runAiTurn, 550);
+}
+
+function runAiTurn(){
+  if(state.over) return;
+  const mv = chooseAiMove(state.board, state.aiColor, state.difficulty);
+  state.aiThinking = false;
+  if(!mv){
+    endGame(state.playerColor, 'aiNoMoves', {color:state.aiColor});
+    return;
+  }
+  performMove(mv.from, mv.to, false);
+}
+
+function endGame(winnerColor, reasonKey, reasonArgs){
+  state.over = true;
+  state.overWinner = winnerColor;
+  state.overReasonKey = reasonKey;
+  state.overReasonArgs = reasonArgs;
+  renderSidePanel();
+  refreshOverlay();
+  pushLog({type:'win', key:reasonKey, args:reasonArgs});
+}
+
+// Rebuilds the overlay (and, implicitly, is safe to call again after a
+// language toggle to retranslate the victory/defeat screen in place).
+function refreshOverlay(){
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('overlay-title');
+  const text = document.getElementById('overlay-text');
+  const youWon = state.overWinner === state.playerColor;
+  title.textContent = t().overlayTitle(youWon);
+  title.style.color = youWon ? 'var(--accent-gold)' : 'var(--accent-vermillion)';
+  text.textContent = t().msg[state.overReasonKey](state.overReasonArgs || {});
+  overlay.classList.add('active');
+}
+
+/* ============================================================
+   SELECTION SCREEN WIRING
+   ============================================================ */
+let selectedDifficulty = 'easy';
+let selectedColor = 'w';
+
+function wireChoiceGroup(containerId, onPick){
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.choice-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      container.querySelectorAll('.choice-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      onPick(btn.dataset.value);
+    });
+  });
+}
+wireChoiceGroup('difficulty-choice', v=>selectedDifficulty=v);
+wireChoiceGroup('color-choice', v=>selectedColor=v);
+
+document.getElementById('start-btn').addEventListener('click', ()=>{
+  const settings = {
+    difficulty: selectedDifficulty,
+    color: selectedColor,
+    options: {
+      karma: document.getElementById('opt-karma').checked,
+      bond: document.getElementById('opt-bond').checked,
+      enlightenment: document.getElementById('opt-enlightenment').checked
+    }
+  };
+  document.getElementById('screen-select').classList.remove('active');
+  document.getElementById('screen-game').classList.add('active');
+  newGame(settings);
+});
+
+document.getElementById('back-btn').addEventListener('click', backToMenu);
+document.getElementById('overlay-btn').addEventListener('click', backToMenu);
+
+function backToMenu(){
+  document.getElementById('overlay').classList.remove('active');
+  document.getElementById('screen-game').classList.remove('active');
+  document.getElementById('screen-select').classList.add('active');
+  state = null;
+}
+
+/* ---- decorate the samsara wheel with piece glyphs ---- */
+(function decorateWheel(){
+  const wheel = document.getElementById('wheel');
+  const glyphs = ['♔','♕','♖','♗','♘','♙','♚','♛'];
+  const n = glyphs.length;
+  const radius = 42; // percent
+  for(let i=0;i<n;i++){
+    const angle = (i/n) * 2 * Math.PI;
+    const x = 50 + radius * Math.cos(angle);
+    const y = 50 + radius * Math.sin(angle);
+    const g = document.createElement('div');
+    g.className = 'glyph';
+    g.style.left = x + '%';
+    g.style.top = y + '%';
+    g.textContent = glyphs[i];
+    wheel.appendChild(g);
+  }
+})();
+
+applyStaticText();
+</script>
+</body>
+</html>
