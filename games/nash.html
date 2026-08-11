@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NASH -Winner's Curse-</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --felt-0:#081C16;
+    --felt-1:#0B2B22;
+    --felt-2:#123527;
+    --ivory:#EDE6D6;
+    --ivory-dim:#B9B0A0;
+    --gold:#C9A227;
+    --gold-bright:#E4C158;
+    --navy:#1E3A5F;
+    --navy-bright:#3E6EA5;
+    --wax:#7A2E2E;
+    --wax-bright:#A64444;
+    --line:rgba(201,162,39,0.18);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(201,162,39,0.08), transparent 55%),
+      radial-gradient(ellipse at 50% 50%, var(--felt-2), var(--felt-0) 75%);
+    color:var(--ivory);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:20px 14px 60px;
+    display:flex;
+    justify-content:center;
+  }
+
+  .app{width:100%;max-width:640px;}
+
+  .masthead{
+    text-align:center;
+    margin-bottom:14px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  .top-controls{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .pill-btn{
+    background:transparent;
+    border:1px solid var(--gold);
+    color:var(--gold-bright);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:0.05em;
+    padding:5px 12px;
+    border-radius:20px;
+    cursor:pointer;
+  }
+  .pill-btn.active{background:var(--gold);color:#1c1305;}
+  .masthead .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.28em;
+    color:var(--gold);
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .masthead h1{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:36px;
+    letter-spacing:0.05em;
+    margin:0;
+    color:var(--ivory);
+  }
+  .masthead h1 span{color:var(--gold-bright);font-style:italic;font-weight:500;}
+  .masthead .sub{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:14px;
+    color:var(--ivory-dim);
+    margin-top:4px;
+  }
+
+  .round-strip{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ivory-dim);
+    letter-spacing:0.08em;
+    margin-bottom:16px;
+  }
+  .round-strip b{color:var(--gold-bright);font-weight:600;}
+
+  .meta-bar-wrap{margin-bottom:16px;}
+  .meta-bar-label{
+    display:flex;
+    justify-content:space-between;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.06em;
+    color:var(--ivory-dim);
+    margin-bottom:5px;
+  }
+  .meta-bar{
+    display:flex;
+    height:8px;
+    border-radius:5px;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .meta-bar .seg-aggr{background:linear-gradient(90deg,var(--wax),var(--wax-bright));}
+  .meta-bar .seg-safe{background:linear-gradient(90deg,#1E3A5F,#3E6EA5);}
+
+  /* Role card */
+  .card-stage{
+    position:relative;
+    margin-bottom:20px;
+    padding-top:6px;
+  }
+  .card-stack{position:relative;}
+  .card-stack::before,
+  .card-stack::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    border-radius:14px;
+    border:1px solid rgba(201,162,39,0.15);
+  }
+  .card-stack::before{
+    top:-4px; transform:translateX(-50%) rotate(-2.5deg);
+    width:calc(100% - 10px); height:100%;
+    background:linear-gradient(160deg,#152c22,#0c2018);
+    z-index:1;
+  }
+  .card-stack::after{
+    top:-8px; transform:translateX(-50%) rotate(2deg);
+    width:calc(100% - 20px); height:100%;
+    background:linear-gradient(160deg,#122519,#0a1c15);
+    z-index:0;
+  }
+  .card{
+    position:relative;
+    z-index:2;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(201,162,39,0.10), transparent 60%),
+      linear-gradient(165deg, #1a3527, #0d2119 65%);
+    border:1px solid rgba(201,162,39,0.5);
+    border-radius:14px;
+    padding:22px 20px 20px;
+    box-shadow:
+      0 2px 0 rgba(0,0,0,0.4),
+      0 14px 30px -10px rgba(0,0,0,0.65),
+      inset 0 0 0 1px rgba(237,230,214,0.04);
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    inset:7px;
+    border:1px solid rgba(201,162,39,0.28);
+    border-radius:9px;
+    pointer-events:none;
+  }
+  .card.hidden-card{border-color:rgba(166,68,68,0.55);}
+  .card.hidden-card::before{border-color:rgba(166,68,68,0.3);}
+  .card-icon{width:52px;height:52px;margin:2px auto 8px;display:block;opacity:0.92;}
+  .card-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    color:var(--ivory-dim);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .seal{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    background:rgba(122,46,46,0.28);
+    border:1px solid var(--wax-bright);
+    color:#E8B9B9;
+    padding:3px 9px 3px 7px;
+    border-radius:20px;
+    font-size:9.5px;
+    letter-spacing:0.08em;
+  }
+  .card-title{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:700;
+    font-size:27px;
+    margin:6px 0 2px;
+    text-align:center;
+    color:var(--gold-bright);
+    letter-spacing:0.01em;
+  }
+  .card-type{
+    font-size:11px;
+    color:var(--ivory-dim);
+    text-align:center;
+    margin-bottom:4px;
+    letter-spacing:0.03em;
+  }
+  .card-classic{
+    font-size:10.5px;
+    color:var(--gold);
+    text-align:center;
+    margin-bottom:12px;
+    font-style:italic;
+  }
+  .card-desc{
+    font-size:12.5px;
+    line-height:1.7;
+    color:var(--ivory);
+    border-top:1px dashed rgba(201,162,39,0.3);
+    padding-top:12px;
+  }
+  .matrix{
+    margin-top:14px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px 10px;
+    color:var(--ivory-dim);
+    background:rgba(0,0,0,0.18);
+    border-radius:6px;
+    padding:10px 12px;
+  }
+  .matrix div span{color:var(--gold);}
+  .ne-line{
+    margin-top:8px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--gold-bright);
+    text-align:center;
+    background:rgba(201,162,39,0.08);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:6px 8px;
+  }
+  .ne-line b{color:var(--ivory);font-weight:600;}
+
+  .wax-stamp{
+    position:absolute;
+    top:14px;
+    right:14px;
+    width:46px;
+    height:46px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #A64444, #5E2222 70%);
+    box-shadow:0 3px 6px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(255,255,255,0.06);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform:rotate(-8deg);
+    z-index:3;
+  }
+  .wax-stamp svg{width:22px;height:22px;}
+
+  /* Seats */
+  .seats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .seat{
+    background:rgba(18,53,39,0.55);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:12px 12px 10px;
+    position:relative;
+    transition:box-shadow .5s ease, border-color .5s ease;
+  }
+  .seat.you{border-color:rgba(201,162,39,0.4);}
+  .seat .name{
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ivory);
+  }
+  .seat .tag{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:11px;
+    line-height:1.5;
+    color:var(--ivory-dim);
+    margin-top:3px;
+    min-height:16px;
+  }
+  .resources{display:flex;gap:10px;margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .res{display:flex;align-items:center;gap:4px;}
+  .res.gold-r{color:var(--gold-bright);}
+  .res.navy-r{color:#7FA7DE;}
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block;}
+  .dot.gold-d{background:var(--gold);}
+  .dot.navy-d{background:var(--navy-bright);}
+
+  .seat.rank-1{border-color:var(--gold-bright);box-shadow:0 0 0 1px var(--gold-bright), 0 0 18px rgba(228,193,88,0.35);}
+  .seat.rank-2{border-color:rgba(228,193,88,0.4);box-shadow:0 0 10px rgba(228,193,88,0.12);}
+  .badge{position:absolute;top:-8px;right:10px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.08em;padding:2px 7px;border-radius:10px;}
+  .badge.first{background:var(--gold-bright);color:#1c1305;}
+  .badge.second{background:rgba(228,193,88,0.25);color:var(--gold-bright);border:1px solid var(--gold);}
+
+  /* Bid controls */
+  .bidbox{background:rgba(8,28,22,0.6);border:1px solid var(--line);border-radius:4px;padding:16px;margin-bottom:16px;}
+  .bidbox h3{margin:0 0 12px;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--ivory);}
+
+  .chip-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+  .chip-stack-wrap{position:relative;width:52px;height:52px;flex-shrink:0;}
+  .chip{position:absolute;left:50%;width:38px;height:38px;border-radius:50%;transform:translateX(-50%);box-shadow:0 2px 3px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.25), inset 0 0 0 4px rgba(255,255,255,0.08);}
+  .chip.gold-c{background:radial-gradient(circle at 35% 30%, #E4C158, #B4860E 75%);}
+  .chip.navy-c{background:radial-gradient(circle at 35% 30%, #5C8FCB, #1E3A5F 75%);}
+  .chip-count-badge{position:absolute;bottom:-2px;right:-2px;background:var(--felt-0);border:1px solid var(--gold);color:var(--gold-bright);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;border-radius:8px;padding:1px 5px;z-index:5;}
+  .chip-controls{flex:1;}
+  .chip-controls .top-row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--ivory-dim);margin-bottom:6px;}
+  .chip-controls .top-row b{font-family:'IBM Plex Mono',monospace;color:var(--gold-bright);font-size:15px;}
+  .chip-btns{display:flex;gap:6px;}
+  .chip-btn{flex:1;padding:7px 0;background:rgba(201,162,39,0.1);border:1px solid var(--gold);border-radius:4px;color:var(--gold-bright);font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;cursor:pointer;}
+  .chip-btn:disabled{opacity:0.3;}
+  .chip-btn.wide{flex:1.8;}
+  .chip-remain{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ivory-dim);margin-top:5px;line-height:1.5;}
+  .resource-note{
+    font-size:11px;
+    line-height:1.7;
+    color:var(--ivory-dim);
+    background:rgba(0,0,0,0.15);
+    border-left:2px solid var(--gold);
+    padding:8px 10px;
+    margin-bottom:14px;
+  }
+  .resource-note b{color:var(--gold-bright);}
+
+  .total-row{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--ivory-dim);}
+  .total-row b{font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--gold-bright);}
+
+  button.primary{width:100%;margin-top:14px;padding:13px;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:none;border-radius:3px;color:#1c1305;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.03em;cursor:pointer;}
+  button.primary:disabled{opacity:0.35;cursor:default;}
+  button.secondary{width:100%;margin-top:14px;padding:12px;background:transparent;border:1px solid var(--gold);border-radius:3px;color:var(--gold-bright);font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer;}
+
+  .reveal{background:rgba(18,53,39,0.55);border:1px solid var(--line);border-radius:4px;padding:16px;margin-bottom:16px;font-size:13px;line-height:1.8;}
+  .reveal .winner{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--gold-bright);margin-bottom:4px;}
+  .reveal .hint{color:var(--ivory-dim);font-size:12px;}
+
+  .log{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ivory-dim);}
+  .log summary{cursor:pointer;letter-spacing:0.1em;color:var(--gold);margin-bottom:8px;}
+  .log-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(237,230,214,0.06);gap:10px;}
+
+  .gameover{text-align:center;padding:30px 10px;}
+  .gameover h2{font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--gold-bright);}
+  .standing{display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .standing b{color:var(--gold-bright);font-family:'IBM Plex Mono',monospace;}
+
+  .overlay{position:fixed;inset:0;background:rgba(5,14,11,0.92);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;overflow-y:auto;}
+  .overlay-box{max-width:440px;max-height:88vh;overflow-y:auto;background:linear-gradient(165deg,#1a3527,#0d2119);border:1px solid var(--gold);border-radius:10px;padding:24px 22px;}
+  .overlay-box h2{font-family:'Cormorant Garamond',serif;font-size:23px;color:var(--gold-bright);margin:0 0 12px;}
+  .overlay-box h3{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold-bright);margin:16px 0 6px;}
+  .overlay-box p{font-size:12.5px;line-height:1.8;color:var(--ivory);margin:0 0 8px;}
+  .overlay-box ol{padding-left:18px;margin:0 0 4px;font-size:13px;line-height:1.9;color:var(--ivory);}
+  .overlay-box ol li b{color:var(--gold-bright);}
+  .theory-card{border-top:1px dashed var(--line);padding-top:10px;margin-top:10px;}
+  .theory-card .tname{font-weight:700;color:var(--gold-bright);font-size:13px;}
+  .theory-card .tclassic{font-size:11px;color:var(--gold);font-style:italic;margin-bottom:4px;}
+
+  .roster-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .roster-card{
+    background:rgba(18,53,39,0.55);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:12px 10px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
+  .roster-card.picked{
+    border-color:var(--gold-bright);
+    box-shadow:0 0 14px rgba(228,193,88,0.3);
+    background:rgba(201,162,39,0.1);
+  }
+  .roster-avatar{font-size:30px;margin-bottom:4px;}
+  .roster-name{font-size:12px;font-weight:600;color:var(--ivory);margin-bottom:3px;}
+  .roster-bio{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:10.5px;color:var(--ivory-dim);line-height:1.4;}
+  .pick-counter{
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--gold-bright);
+    margin-bottom:14px;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* ---------- i18n dictionary ---------- */
+const STR = {
+  ja: {
+    title1:'NASH', title2:"Winner's Curse", subtitle:'知略の座に集いし、四人の猛者たち',
+    round:'ラウンド', yourScore:'あなたの得点',
+    metaLabel:'場の気風', metaAggr:'強気', metaSafe:'手堅い',
+    roleCardOf:'役割カード',
+    hiddenSeal:'非公開オークション',
+    bidTitle:'入札額を決める(チップを積む)',
+    immediateLabel:'即時力を積む', futureLabel:'将来力を積む',
+    unit:'枚',
+    remainImmediate:'残り', remainFuture:'残り',
+    immediateHint:'回復は早いが、上限は低い',
+    futureHint:'回復は遅いが、上限は高い',
+    resourceNote:'<b>即時力</b>は毎ラウンド少しずつ回復するが、上限は低め。使わずに残しても、この先大きく積み上がることはない。<b>将来力</b>は回復こそ遅いが上限が高く、恒久的な蓄え。どちらも「使えばその分減り、勝手には戻らない」点は同じ。',
+    btnMinus1:'-1', btnPlus1:'+1', btnPlus5:'+5', btnAllIn:'有り金全部', btnReturn:'戻す',
+    totalBid:'合計入札額',
+    submitBid:'入札を確定する',
+    marginTight:'僅差での決着だった', marginMid:'そこそこの差がついた', marginWide:'大差での決着だった',
+    curseNote:'勝者の呪い:払いすぎた代償として得点',
+    curseNoneNote:'僅差だったため、勝者の呪いの罰則なし',
+    neMatch:'この一戦は、理論上の均衡通りの結果になった。',
+    neMismatch:'理論上の均衡は',
+    neMismatchTail:'だったが、実際はそれとは違う手が選ばれた——読みどころだったかもしれない。',
+    hiddenResultNote:'非公開ラウンドのため、他者の入札額・順位は分からない。',
+    secondPlace:'2位',
+    amountHidden:'額は非公開',
+    got:'を獲得',
+    goToBattle:'対戦の行方を見る',
+    battleWith:'との対戦',
+    battleRule:'入札で2番手につけた者が、この一戦の挑戦者として相まみえる。',
+    battleOpponentIf:'相手が',
+    battleThen:'なら',
+    skippedBattle:'対戦相手が不在のため、このラウンドの対戦は行われなかった。',
+    points:'点',
+    nextRound:'次のラウンドへ',
+    seeResult:'結果を見る',
+    logTitle:'これまでの記録',
+    finalResult:'最終結果',
+    restart:'もう一度試す',
+    startIntro:'はじめる',
+    introTitle:"NASH — Winner's Curse",
+    introStep1:'<b>入札</b> — 場に出た役割カードを、即時力と将来力を使って秘密裏に競り合う',
+    introStep2:'<b>対戦</b> — 勝者と2番手が、獲得した役割カードの利得構造に沿って選択を行う',
+    introStep3:'<b>繰り返す</b> — 全6ラウンドの得点で、最後に勝敗が決まる',
+    langBtn:'EN',
+    helpBtn:'ゲーム理論について',
+    helpTitle:'ゲーム理論について',
+    helpIntro:'ゲーム理論とは、複数の当事者が互いの出方を読み合いながら意思決定する状況を分析する学問です。役割カードは、その中でも特によく知られた4つの状況をそれぞれ模しています。',
+    won:'勝'
+  },
+  en: {
+    title1:'NASH', title2:"Winner's Curse", subtitle:'Four sharp minds, gathered at the table',
+    round:'Round', yourScore:'Your Score',
+    metaLabel:'Table Mood', metaAggr:'Aggressive', metaSafe:'Cautious',
+    roleCardOf:'Role Card',
+    hiddenSeal:'Sealed Auction',
+    bidTitle:'Place Your Bid (stack your chips)',
+    immediateLabel:'Immediate Power', futureLabel:'Future Power',
+    unit:'',
+    remainImmediate:'Remaining', remainFuture:'Remaining',
+    immediateHint:'regenerates fast, low ceiling',
+    futureHint:'regenerates slowly, high ceiling',
+    resourceNote:'<b>Immediate Power</b> regenerates a little each round, but its ceiling is low — hoarding it won\'t get you far. <b>Future Power</b> regenerates slowly but has a much higher ceiling and lasts. Either way: spend it and it\'s gone, it doesn\'t bounce back on its own.',
+    btnMinus1:'-1', btnPlus1:'+1', btnPlus5:'+5', btnAllIn:'All In', btnReturn:'Return',
+    totalBid:'Total Bid',
+    submitBid:'Confirm Bid',
+    marginTight:'a razor-thin margin', marginMid:'a modest gap', marginWide:'a wide margin',
+    curseNote:"Winner's Curse: paid too much, score",
+    curseNoneNote:"Margin was razor-thin — no Winner's Curse penalty this time",
+    neMatch:'This hand played out exactly as the theoretical equilibrium predicted.',
+    neMismatch:'The theoretical equilibrium was',
+    neMismatchTail:' — but that\'s not what happened here. Perhaps a read worth remembering.',
+    hiddenResultNote:'This was a sealed round — no bid amounts or standings are revealed.',
+    secondPlace:'Runner-up',
+    amountHidden:'amount undisclosed',
+    got:'claims',
+    goToBattle:'See the Confrontation',
+    battleWith:'faces off against',
+    battleRule:'The runner-up in the bidding becomes the challenger for this confrontation.',
+    battleOpponentIf:'If they choose',
+    battleThen:'you get',
+    skippedBattle:'No challenger emerged — no confrontation this round.',
+    points:'pts',
+    nextRound:'Next Round',
+    seeResult:'See Results',
+    logTitle:'Round History',
+    finalResult:'Final Results',
+    restart:'Play Again',
+    startIntro:'Begin',
+    introTitle:"NASH — Winner's Curse",
+    introStep1:'<b>Bid</b> — secretly compete for the role card using Immediate and Future Power',
+    introStep2:'<b>Confront</b> — the winner and runner-up act according to the card\'s payoff structure',
+    introStep3:'<b>Repeat</b> — after 6 rounds, the highest score wins',
+    langBtn:'日本語',
+    helpBtn:'About Game Theory',
+    helpTitle:'About Game Theory',
+    helpIntro:'Game theory studies how multiple parties make decisions while trying to anticipate one another\'s choices. Each role card here models one of four especially well-known such situations.',
+    won:'wins'
+  }
+};
+
+let lang = 'ja';
+function t(key){ return STR[lang][key]; }
+function setLang(l){ lang = l; render(); }
+
+const ACTION_LABELS = {
+  ja:{'協調':'協調','強気':'強気','静観':'静観'},
+  en:{'協調':'Cooperate','強気':'Aggressive','静観':'Wait'}
+};
+function aLabel(a){ return ACTION_LABELS[lang][a]; }
+
+/* ---------- Icons ---------- */
+const ICONS = {
+  kyobo: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="19" cy="24" r="12" stroke="#C9A227" stroke-width="2"/>
+    <circle cx="29" cy="24" r="12" stroke="#E4C158" stroke-width="2"/>
+  </svg>`,
+  mentsu: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <line x1="10" y1="10" x2="38" y2="38" stroke="#C9A227" stroke-width="2"/>
+    <line x1="38" y1="10" x2="10" y2="38" stroke="#E4C158" stroke-width="2"/>
+    <circle cx="10" cy="10" r="3" fill="#C9A227"/>
+    <circle cx="38" cy="10" r="3" fill="#E4C158"/>
+    <circle cx="10" cy="38" r="3" fill="#E4C158"/>
+    <circle cx="38" cy="38" r="3" fill="#C9A227"/>
+  </svg>`,
+  dokusen: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <line x1="24" y1="8" x2="24" y2="34" stroke="#C9A227" stroke-width="2"/>
+    <line x1="8" y1="16" x2="40" y2="16" stroke="#C9A227" stroke-width="2"/>
+    <path d="M8 16 L4 26 A6 6 0 0 0 16 26 Z" stroke="#E4C158" stroke-width="1.6"/>
+    <path d="M40 16 L44 30 A6 6 0 0 1 32 30 Z" stroke="#E4C158" stroke-width="1.6"/>
+    <line x1="16" y1="40" x2="32" y2="40" stroke="#C9A227" stroke-width="2"/>
+  </svg>`,
+  gokei: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 24 L20 24 L24 19 L28 29 L32 22 L40 22" stroke="#E4C158" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="8" cy="24" r="3" fill="#C9A227"/>
+    <circle cx="40" cy="22" r="3" fill="#C9A227"/>
+  </svg>`
+};
+const WAX_SEAL_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 3 L14 9 L20 9 L15 13 L17 19 L12 15 L7 19 L9 13 L4 9 L10 9 Z" stroke="#EDE6D6" stroke-width="1.2" stroke-linejoin="round"/>
+</svg>`;
+const TYPE_EMOJI = {kyobo:'🦌', mentsu:'🚗', dokusen:'⚖️', gokei:'🤝'};
+
+/* ---------- Role types (with classic game-theory mapping) ---------- */
+const ROLE_TYPES = [
+  {
+    key:'kyobo',
+    name:{ja:'共謀の盟約', en:'The Stag Pact'},
+    type:{ja:'鹿狩り型', en:'Stag Hunt type'},
+    classic:{ja:'ゲーム理論で「鹿狩りゲーム」と呼ばれる型', en:'Known in game theory as a "Stag Hunt"'},
+    desc:{
+      ja:'両者「協調」なら共に大きな利。片方だけ「強気」に出れば裏切った側が総取りし、協調側は損をする。',
+      en:'If both cooperate, both profit greatly. If only one turns aggressive, they take everything while the cooperator loses.'
+    },
+    actions:['協調','強気'],
+    payoff:(a,b)=>{
+      if(a==='協調'&&b==='協調') return [6,6];
+      if(a==='強気'&&b==='協調') return [4,-2];
+      if(a==='協調'&&b==='強気') return [-2,4];
+      return [1,1];
+    },
+    theoryNote:{
+      ja:'二人が共に「協調」を選べば、大きな獲物(鹿)を確実に仕留められる。しかし一方が抜け駆けして「強気」に出れば、単独でも小さな獲物(兎)を確実に得られる。獲物の大小より、相手を信頼できるかどうかが分かれ目になる。',
+      en:'If both choose to cooperate, they are guaranteed to bring down the stag together. But either hunter could instead defect and walk away with a smaller, equally guaranteed hare. The real question isn\'t the size of the prize — it\'s whether you can trust your partner.'
+    },
+    nashNote:{
+      ja:'純粋戦略の均衡は「協調×協調」と「強気×強気」の2つ存在する。協調の方が双方にとって望ましいが(6&gt;1)、相手を信頼できなければ、より安全な強気に流れやすい。',
+      en:'There are two pure-strategy equilibria: mutual cooperation and mutual defection. Cooperation is better for both (6 vs 1), but without trust, the safer defection equilibrium can win out.'
+    }
+  },
+  {
+    key:'mentsu',
+    name:{ja:'面子の掛け金', en:'The Wager of Pride'},
+    type:{ja:'チキンゲーム型', en:'Chicken Game type'},
+    classic:{ja:'ゲーム理論で「チキンゲーム」と呼ばれる型', en:'Known in game theory as a "Chicken Game"'},
+    desc:{
+      ja:'両者「強気」を選べば共倒れで大損。片方が「静観」に折れれば、強気側が勝つが静観側の損は小さい。',
+      en:'If both go aggressive, both crash and lose badly. If one yields, the aggressor wins while the yielder loses only a little.'
+    },
+    actions:['静観','強気'],
+    payoff:(a,b)=>{
+      if(a==='静観'&&b==='静観') return [2,2];
+      if(a==='強気'&&b==='静観') return [7,0];
+      if(a==='静観'&&b==='強気') return [0,7];
+      return [-5,-5];
+    },
+    theoryNote:{
+      ja:'互いに引かなければ正面衝突して共倒れになるが、先に折れた方は面目を失う、という度胸比べの状況。互いに強気を貫くことの危うさを描く。',
+      en:'Neither driver wants to swerve first — but if neither does, both crash. Whoever yields loses face, but survives.'
+    },
+    nashNote:{
+      ja:'純粋戦略の均衡は、どちらか一方が「強気」でもう一方が「静観」に回る組み合わせが2つ存在する。両者が同時に強気を貫く均衡は存在しない——それは共倒れするだけだからだ。',
+      en:'There are two pure-strategy equilibria, each with one side going aggressive and the other yielding. There is no equilibrium where both push at once — that combination only ends in mutual disaster.'
+    }
+  },
+  {
+    key:'dokusen',
+    name:{ja:'独占の証書', en:'Deed of Monopoly'},
+    type:{ja:'純ゼロサム型', en:'Zero-Sum type'},
+    classic:{ja:'ゲーム理論で「ゼロサムゲーム」と呼ばれる型', en:'Known in game theory as a "Zero-Sum Game"'},
+    desc:{
+      ja:'選択の組み合わせによらず得点の総和は常に一定。誰かの得は誰かの損となる、最も殺伐とした役割。',
+      en:'Whatever the combination, the total always balances to zero. One\'s gain is strictly another\'s loss.'
+    },
+    actions:['協調','強気'],
+    payoff:(a,b)=>{
+      if(a==='協調'&&b==='協調') return [0,0];
+      if(a==='強気'&&b==='協調') return [5,-5];
+      if(a==='協調'&&b==='強気') return [-5,5];
+      return [2,-2];
+    },
+    theoryNote:{
+      ja:'一方の得点が必ずもう一方の損失と等しくなる、純粋な奪い合いの状況。妥協の余地がなく、駆け引きは最も殺伐としたものになる。',
+      en:'Every point gained by one side is a point lost by the other. There is no mutually beneficial outcome — only who takes more.'
+    },
+    nashNote:{
+      ja:'この行列では「強気×強気」が唯一の純粋戦略均衡となる。零和ゲームであるがゆえに、相手を出し抜こうとする力学が常に働き、双方が守りに回る余地がない。',
+      en:'In this matrix, mutual aggression is the unique pure-strategy equilibrium. Being zero-sum, there is constant pressure to outmaneuver the other — neither side can afford to simply play it safe.'
+    }
+  },
+  {
+    key:'gokei',
+    name:{ja:'互恵の握手', en:'The Mutual Handshake'},
+    type:{ja:'囚人のジレンマ型', en:"Prisoner's Dilemma type"},
+    classic:{ja:'ゲーム理論で「囚人のジレンマ」と呼ばれる型', en:'Known in game theory as the "Prisoner\'s Dilemma"'},
+    desc:{
+      ja:'双方「協調」なら安定した中利益。「強気」に出た側は目先の得を得るが、以降の心証に悪影響が出る。',
+      en:'Mutual cooperation yields a stable, moderate gain. Defecting brings a short-term edge — at a lasting cost to trust.'
+    },
+    actions:['協調','強気'],
+    payoff:(a,b)=>{
+      if(a==='協調'&&b==='協調') return [6,6];
+      if(a==='強気'&&b==='協調') return [9,0];
+      if(a==='協調'&&b==='強気') return [0,9];
+      return [2,2];
+    },
+    theoryNote:{
+      ja:'互いに協力すれば双方が得をするが、相手を出し抜く誘惑が常に存在する、ゲーム理論で最も有名な状況。信頼と裏切りの緊張がテーマとなる。',
+      en:'Mutual cooperation benefits both, yet the temptation to betray never disappears. The most famous scenario in game theory — a study in trust and betrayal.'
+    },
+    nashNote:{
+      ja:'唯一の均衡は「強気×強気」(各+2)。双方「協調」を選べば各+6でどちらも得をするのに、互いに出し抜こうとして、結局は劣った結果に落ち着いてしまう——これが囚人のジレンマの核心。',
+      en:'The unique equilibrium is mutual defection (+2 each) — even though mutual cooperation (+6 each) would leave both better off. Both sides, trying to outdo the other, land on the worse outcome. That is the heart of the Prisoner\'s Dilemma.'
+    }
+  }
+];
+
+const ROSTER = [
+  {id:'trader', avatar:'📈', name:{ja:'元先物トレーダー',en:'Former Futures Trader'}, bio:{ja:'一夜で財を成し、一夜で失った。慎重という言葉とは、あまり縁がない。', en:'Made a fortune overnight, lost it just as fast. "Caution" was never in the vocabulary.'}},
+  {id:'actuary', avatar:'📐', name:{ja:'保険数理士',en:'The Actuary'}, bio:{ja:'リスクを計算し尽くすことを信条とする。動く時にはもう、勝算が立っている。', en:'Lives by calculating every risk. By the time she moves, the odds are already settled.'}},
+  {id:'poker', avatar:'🃏', name:{ja:'元ポーカープレイヤー',en:'Former Poker Player'}, bio:{ja:'対面の呼吸を読むことに長けている。誰かに似ているようで、掴みどころがない。', en:'Reads the room better than most. Seems to mirror whoever sits across — yet remains hard to pin down.'}},
+  {id:'negotiator', avatar:'🤝', name:{ja:'元交渉人',en:'Former Negotiator'}, bio:{ja:'受けた借りは、静かに、しかし長く記憶する質らしい。', en:'Debts owed are remembered quietly — and for a very long time.'}},
+  {id:'dealer', avatar:'🎰', name:{ja:'元カジノディーラー',en:'Former Casino Dealer'}, bio:{ja:'何千もの手札を配ってきた。誰よりも動じず、誰よりも中庸を貫く。', en:'Has dealt thousands of hands. Nothing rattles them, and they rarely stray from the middle.'}},
+  {id:'diplomat', avatar:'🕊️', name:{ja:'引退した外交官',en:'Retired Diplomat'}, bio:{ja:'対立よりも合意を好む。裏切られても、声を荒げることはない。', en:'Prefers agreement to conflict. Even betrayed, the voice never rises.'}},
+  {id:'banker', avatar:'💼', name:{ja:'元投資銀行家',en:'Former Investment Banker'}, bio:{ja:'手元の金より、先々の利回りに賭ける質。大きく張ることを恐れない。', en:'Bets on future returns more than what\'s in hand. Never afraid of a big position.'}},
+  {id:'illusionist', avatar:'🎩', name:{ja:'元奇術師',en:'Former Illusionist'}, bio:{ja:'何を考えているのか、最後まで読めない。それこそが芸のうち。', en:'What they\'re thinking remains unreadable to the very end. That\'s the whole act.'}},
+  {id:'mathematician', avatar:'🧮', name:{ja:'数学者',en:'The Mathematician'}, bio:{ja:'均衡点を弾き出すことに長けている。ただし、それに従うとは限らない。', en:'Skilled at calculating the equilibrium point. Whether they follow it is another matter.'}},
+  {id:'politician', avatar:'🗳️', name:{ja:'元政治家',en:'Former Politician'}, bio:{ja:'風向きを読むことにかけては右に出る者がいない。自分の信念より、場の空気を優先する。', en:'No one reads which way the wind is blowing better than they do. The room\'s mood matters more than personal conviction.'}}
+];
+
+const TOTAL_ROUNDS = 6;
+const IMMEDIATE_START = 12;
+const IMMEDIATE_REGEN = 5;
+const IMMEDIATE_CAP = 24;
+const FUTURE_START = 18;
+const FUTURE_REGEN = 1;
+const FUTURE_CAP = 60;
+
+let state = null;
+
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+
+function initState(){
+  state = {
+    round: 1,
+    phase: 'select', // select | bidding | resolved | battle | battle-resolved | gameover
+    card: null,
+    meta: {aggressive:50, safe:50},
+    introSeen: false,
+    helpOpen: false,
+    selectedAI: [],
+    players: [],
+    bidImmediate: 0,
+    bidFuture: 0,
+    result: null,
+    battle: null,
+    log: []
+  };
+  render();
+}
+
+function toggleSelectAI(id){
+  const i = state.selectedAI.indexOf(id);
+  if(i >= 0){
+    state.selectedAI.splice(i,1);
+  } else if(state.selectedAI.length < 3){
+    state.selectedAI.push(id);
+  }
+  render();
+}
+
+function confirmSelection(){
+  if(state.selectedAI.length !== 3) return;
+  const chosen = ROSTER.filter(a=>state.selectedAI.includes(a.id));
+  state.players = [
+    {id:'you', avatar:'🎯', name:{ja:'あなた',en:'You'}, isYou:true, immediate:IMMEDIATE_START, future:FUTURE_START, score:0, lastBidTotal:6, lastBattleAction:null, lastLostTo:null},
+    ...chosen.map(a => ({...a, isYou:false, immediate:IMMEDIATE_START, future:FUTURE_START, score:0, lastLostTo:null, lastBattleAction:null}))
+  ];
+  state.round = 1;
+  state.card = drawCard();
+  state.meta = {aggressive:50, safe:50};
+  state.bidImmediate = 0;
+  state.bidFuture = 0;
+  state.result = null;
+  state.battle = null;
+  state.log = [];
+  state.phase = 'bidding';
+  render();
+}
+
+function pName(p){ return p.isYou ? (lang==='ja'?'あなた':'You') : p.name[lang]; }
+
+function drawCard(){
+  const base = ROLE_TYPES[Math.floor(Math.random()*ROLE_TYPES.length)];
+  const hidden = Math.random() < 0.28;
+  return {...base, hidden};
+}
+
+function aiBid(ai, card, players, round){
+  const you = players.find(p=>p.isYou);
+  let ratio;
+  let useFuture = 0;
+
+  if(ai.id === 'trader'){
+    ratio = 0.7 + Math.random()*0.25;
+    if(Math.random() < 0.3) useFuture = Math.floor(ai.future * (0.15 + Math.random()*0.15));
+  } else if(ai.id === 'actuary'){
+    if(card.hidden){ ratio = 0.05 + Math.random()*0.1; }
+    else { ratio = 0.25 + Math.random()*0.15; }
+    useFuture = 0;
+  } else if(ai.id === 'poker'){
+    const mimicTarget = you.lastBidTotal || 6;
+    const noisy = mimicTarget * (0.9 + Math.random()*0.2);
+    ratio = Math.min(0.95, noisy / Math.max(ai.immediate,1));
+  } else if(ai.id === 'negotiator'){
+    const grudge = ai.lastLostTo === 'you';
+    ratio = grudge ? (0.75 + Math.random()*0.2) : (0.4 + Math.random()*0.15);
+    if(grudge) useFuture = Math.floor(ai.future * 0.2);
+  } else if(ai.id === 'dealer'){
+    ratio = 0.45 + Math.random()*0.15;
+  } else if(ai.id === 'diplomat'){
+    ratio = 0.22 + Math.random()*0.12;
+  } else if(ai.id === 'banker'){
+    ratio = 0.6 + Math.random()*0.2;
+    if(Math.random() < 0.5) useFuture = Math.floor(ai.future * (0.2 + Math.random()*0.2));
+  } else if(ai.id === 'illusionist'){
+    ratio = 0.1 + Math.random()*0.8;
+    if(Math.random() < 0.25) useFuture = Math.floor(ai.future * Math.random()*0.3);
+  } else if(ai.id === 'mathematician'){
+    ratio = 0.5 + Math.random()*0.15;
+  } else if(ai.id === 'politician'){
+    ratio = 0.3 + (state.meta.aggressive/100)*0.5 + Math.random()*0.1;
+  } else {
+    ratio = 0.4 + Math.random()*0.2;
+  }
+
+  let immSpend = Math.min(ai.immediate, Math.round(ai.immediate * ratio));
+  let futSpend = Math.min(ai.future, useFuture);
+  if(card.hidden && ai.id !== 'trader' && ai.id !== 'negotiator'){
+    immSpend = Math.round(immSpend * 0.6);
+  }
+  return {immediate: Math.max(0,immSpend), future: Math.max(0,futSpend)};
+}
+
+function updateMeta(aAction, bAction){
+  let shift = 0;
+  shift += (aAction==='強気') ? 3 : -3;
+  shift += (bAction==='強気') ? 3 : -3;
+  state.meta.aggressive = clamp(state.meta.aggressive + shift, 8, 92);
+  state.meta.safe = 100 - state.meta.aggressive;
+}
+
+function mixedNEProb(card){
+  const safeA = card.actions[0], aggrA = card.actions[1];
+  const aggrSafe = card.payoff(aggrA, safeA)[1];
+  const aggrAggr = card.payoff(aggrA, aggrA)[1];
+  const safeSafe = card.payoff(safeA, safeA)[1];
+  const safeAggr = card.payoff(safeA, aggrA)[1];
+  const A = aggrSafe - aggrAggr;
+  const B = safeSafe - safeAggr;
+  const denom = (B - A);
+  if(Math.abs(denom) < 1e-6) return 0.5;
+  return clamp(B/denom, 0.05, 0.95);
+}
+
+function aiBattleDecision(ai, card, opponentId){
+  const safeAction = card.actions[0];
+  const aggroAction = card.actions[1];
+
+  if(ai.id === 'mathematician'){
+    const ne = findPureNE(card);
+    const uniqueAggr = ne.length===1 && ne[0][0]===aggroAction && ne[0][1]===aggroAction;
+    const p = uniqueAggr ? 0.92 : mixedNEProb(card);
+    let leansAggr = Math.random() < p;
+    if(Math.random() < 0.3) leansAggr = !leansAggr; // deliberately deviates sometimes
+    return leansAggr ? aggroAction : safeAction;
+  }
+
+  if(ai.id === 'politician'){
+    const prob = clamp(0.15 + (state.meta.aggressive/100)*0.8, 0.05, 0.95);
+    return Math.random() < prob ? aggroAction : safeAction;
+  }
+
+  let base;
+  if(ai.id === 'trader') base = 0.72;
+  else if(ai.id === 'actuary') base = 0.22;
+  else if(ai.id === 'poker'){
+    const you = state.players.find(p=>p.isYou);
+    base = you.lastBattleAction === aggroAction ? 0.75 : (you.lastBattleAction === safeAction ? 0.2 : 0.45);
+  } else if(ai.id === 'negotiator'){
+    base = (ai.lastLostTo === opponentId) ? 0.85 : 0.32;
+  } else if(ai.id === 'dealer'){
+    base = 0.45;
+  } else if(ai.id === 'diplomat'){
+    base = (ai.lastLostTo === opponentId) ? 0.35 : 0.12;
+  } else if(ai.id === 'banker'){
+    base = 0.68;
+  } else if(ai.id === 'illusionist'){
+    base = 0.5;
+  } else base = 0.4;
+
+  const metaPull = state.meta.aggressive/100;
+  const prob = clamp(base*0.7 + metaPull*0.3, 0.05, 0.95);
+  return Math.random() < prob ? aggroAction : safeAction;
+}
+
+function beginBattle(){
+  const r = state.result;
+  const card = state.card;
+  const a = state.players.find(p=>p.id===r.winnerId);
+  const b = r.secondId ? state.players.find(p=>p.id===r.secondId) : null;
+
+  if(!b){
+    state.phase = 'battle-resolved';
+    state.battle = {a:a.id, b:null, aAction:null, bAction:null, delta:[0,0], skipped:true};
+    render();
+    return;
+  }
+
+  state.battle = {a:a.id, b:b.id};
+
+  if(!a.isYou && !b.isYou){
+    const aAction = aiBattleDecision(a, card, b.id);
+    const bAction = aiBattleDecision(b, card, a.id);
+    finishBattle(aAction, bAction);
+  } else {
+    state.phase = 'battle';
+    render();
+  }
+}
+
+function chooseBattleAction(action){
+  const card = state.card;
+  const a = state.players.find(p=>p.id===state.battle.a);
+  const b = state.players.find(p=>p.id===state.battle.b);
+  let aAction, bAction;
+  if(a.isYou){
+    aAction = action;
+    bAction = aiBattleDecision(b, card, a.id);
+  } else {
+    bAction = action;
+    aAction = aiBattleDecision(a, card, b.id);
+  }
+  finishBattle(aAction, bAction);
+}
+
+function finishBattle(aAction, bAction){
+  const card = state.card;
+  const a = state.players.find(p=>p.id===state.battle.a);
+  const b = state.players.find(p=>p.id===state.battle.b);
+  const [da, db] = card.payoff(aAction, bAction);
+  a.score += da;
+  b.score += db;
+  a.lastBattleAction = aAction;
+  b.lastBattleAction = bAction;
+
+  if(da > db){ a.lastLostTo = null; b.lastLostTo = a.id; }
+  else if(db > da){ b.lastLostTo = null; a.lastLostTo = b.id; }
+
+  updateMeta(aAction, bAction);
+
+  const neList = findPureNE(card);
+  const isNE = neList.some(([x,y])=> x===aAction && y===bAction);
+
+  state.battle = { a:a.id, b:b.id, aAction, bAction, delta:[da,db], skipped:false, neList, isNE };
+  if(state.log[0]) state.log[0].battleAction = `${pName(a)} ${aLabel(aAction)} / ${pName(b)} ${aLabel(bAction)}`;
+  state.phase = 'battle-resolved';
+  render();
+}
+
+function submitBid(){
+  const you = state.players.find(p=>p.isYou);
+  const bids = {};
+  bids['you'] = {immediate: state.bidImmediate, future: state.bidFuture};
+
+  state.players.filter(p=>!p.isYou).forEach(ai=>{
+    bids[ai.id] = aiBid(ai, state.card, state.players, state.round);
+  });
+
+  const totals = Object.entries(bids).map(([id,b])=>({id, total:b.immediate+b.future, b}));
+  totals.sort((a,b)=>b.total-a.total);
+
+  const winnerEntry = totals[0];
+  const winner = state.players.find(p=>p.id===winnerEntry.id);
+  const winBid = bids[winnerEntry.id];
+  winner.immediate -= winBid.immediate;
+  winner.future -= winBid.future;
+
+  state.players.filter(p=>!p.isYou).forEach(ai=>{
+    ai.lastLostTo = (ai.id !== winnerEntry.id) ? winnerEntry.id : null;
+  });
+
+  you.lastBidTotal = bids['you'].immediate + bids['you'].future;
+
+  const diff = totals[1] ? totals[0].total - totals[1].total : null;
+  let marginKey = '';
+  let cursePenalty = 0;
+  if(diff !== null){
+    if(diff <= 2){ marginKey = 'marginTight'; cursePenalty = 0; }
+    else if(diff <= 6){ marginKey = 'marginMid'; cursePenalty = 1; }
+    else { marginKey = 'marginWide'; cursePenalty = 3; }
+  }
+  winner.score -= cursePenalty;
+
+  state.result = {
+    winnerId: winnerEntry.id,
+    secondId: totals[1] ? totals[1].id : null,
+    hidden: state.card.hidden,
+    marginKey,
+    cursePenalty
+  };
+
+  state.log.unshift({
+    round: state.round,
+    cardKey: state.card.key,
+    hidden: state.card.hidden,
+    winnerId: winner.id,
+    battleAction: null
+  });
+
+  state.phase = 'resolved';
+  render();
+}
+
+function nextRound(){
+  if(state.round >= TOTAL_ROUNDS){
+    state.phase = 'gameover';
+    render();
+    return;
+  }
+  state.players.forEach(p=>{
+    p.immediate = Math.min(p.immediate + IMMEDIATE_REGEN, IMMEDIATE_CAP);
+    p.future = Math.min(p.future + FUTURE_REGEN, FUTURE_CAP);
+  });
+  state.round += 1;
+  state.card = drawCard();
+  state.bidImmediate = 0;
+  state.bidFuture = 0;
+  state.result = null;
+  state.battle = null;
+  state.phase = 'bidding';
+  render();
+}
+
+function restart(){ initState(); }
+
+function adjustBid(kind, delta){
+  const you = state.players.find(p=>p.isYou);
+  const cap = kind==='immediate' ? you.immediate : you.future;
+  const cur = kind==='immediate' ? state.bidImmediate : state.bidFuture;
+  const next = clamp(cur + delta, 0, cap);
+  if(kind==='immediate') state.bidImmediate = next; else state.bidFuture = next;
+  render();
+}
+function setBidMax(kind){
+  const you = state.players.find(p=>p.isYou);
+  if(kind==='immediate') state.bidImmediate = you.immediate;
+  else state.bidFuture = you.future;
+  render();
+}
+function resetBidKind(kind){
+  if(kind==='immediate') state.bidImmediate = 0; else state.bidFuture = 0;
+  render();
+}
+
+function toggleHelp(){ state.helpOpen = !state.helpOpen; render(); }
+function dismissIntro(){ state.introSeen = true; render(); }
+
+function seatClass(p){
+  let cls = 'seat';
+  if(p.isYou) cls += ' you';
+  if(state.phase==='resolved' && state.result){
+    if(!state.result.hidden){
+      if(p.id===state.result.winnerId) cls += ' rank-1';
+      else if(p.id===state.result.secondId) cls += ' rank-2';
+    } else if(p.id===state.result.winnerId){
+      cls += ' rank-1';
+    }
+  }
+  if((state.phase==='battle' || state.phase==='battle-resolved') && state.battle){
+    if(p.id===state.battle.a || p.id===state.battle.b) cls += ' rank-2';
+  }
+  return cls;
+}
+
+function findPureNE(card){
+  const [s,a] = card.actions;
+  const combos = [[s,s],[a,s],[s,a],[a,a]];
+  const results = [];
+  combos.forEach(([x,y])=>{
+    const [px,py] = card.payoff(x,y);
+    const altX = x===s?a:s;
+    const [paltX] = card.payoff(altX,y);
+    const altY = y===s?a:s;
+    const [,paltY] = card.payoff(x,altY);
+    if(px >= paltX && py >= paltY) results.push([x,y]);
+  });
+  return results;
+}
+
+function buildMatrixRows(card){
+  const acts = card.actions;
+  const fmt = (pair)=>{
+    const [x,y] = pair;
+    if(x===y) return (lang==='ja'?'各':'each ') + (x>=0?'+':'') + x;
+    return `${x>=0?'+':''}${x} / ${y>=0?'+':''}${y}`;
+  };
+  return [
+    { label: aLabel(acts[0])+'\u00d7'+aLabel(acts[0]), val: fmt(card.payoff(acts[0],acts[0])) },
+    { label: aLabel(acts[1])+'\u00d7'+aLabel(acts[0]), val: fmt(card.payoff(acts[1],acts[0])) },
+    { label: aLabel(acts[1])+'\u00d7'+aLabel(acts[1]), val: fmt(card.payoff(acts[1],acts[1])) }
+  ];
+}
+
+function helpPanelHtml(){
+  const blottoJa = 'また、即時力と将来力という2種類の資源配分の仕組みは、ゲーム理論で「コロネル・ブロット・ゲーム」と呼ばれる型に着想を得ています。限られた資源を複数の戦場(ここでは複数のラウンド)にどう配り分けるかを競う古典的な問題で、一箇所に注ぎ込むか、分散して温存するかの判断が勝敗を分けます。';
+  const blottoEn = 'The two-resource system (Immediate and Future Power) also draws on what game theory calls a "Colonel Blotto Game" — a classic problem of allocating limited resources across multiple battlefields (here, rounds). Committing everything now versus spreading and saving is the core tension.';
+  const curseJa = '入札で誰かが落札した際に見える「勝者の呪い」とは、本来「価値が不確かなものに対して、一番強気に見積もった者ほど、実は払いすぎている可能性が高い」という現象です。このゲームでは、2位との差が僅差なら罰則なし、そこそこの差で-1点、大差になると-3点と、払いすぎの度合いに応じて得点にペナルティが入ります。';
+  const curseEn = 'The "Winner\'s Curse" you may see after an auction refers to a real phenomenon: when a value is uncertain, whoever bids most aggressively is often the one who overpaid. Here, a razor-thin margin over second place costs nothing, a modest gap costs -1, and a wide margin costs -3 — the price scales with how much you overpaid.';
+  return `
+    <div class="overlay" onclick="if(event.target===this) toggleHelp()">
+      <div class="overlay-box">
+        <h2>${t('helpTitle')}</h2>
+        <p>${t('helpIntro')}</p>
+        <p>${lang==='ja'?blottoJa:blottoEn}</p>
+        <p>${lang==='ja'?curseJa:curseEn}</p>
+        ${ROLE_TYPES.map(rt=>`
+          <div class="theory-card">
+            <div class="tname">${rt.name[lang]} &mdash; ${rt.type[lang]}</div>
+            <div class="tclassic">${rt.classic[lang]}</div>
+            <p>${rt.theoryNote[lang]}</p>
+            <p style="color:var(--ivory-dim);"><b style="color:var(--gold-bright);">${lang==='ja'?'ナッシュ均衡':'Nash Equilibrium'}:</b> ${rt.nashNote[lang]}</p>
+          </div>
+        `).join('')}
+        <button class="primary" onclick="toggleHelp()">✖️ ${lang==='ja'?'閉じる':'Close'}</button>
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  const you = state.players.find(p=>p.isYou);
+
+  if(!state.introSeen){
+    app.innerHTML = `
+      <div class="overlay">
+        <div class="overlay-box">
+          <h2>NASH &mdash; Winner's Curse</h2>
+          <ol>
+            <li><b>入札 / Bid</b><br>場に出た役割カードを、即時力と将来力を使って秘密裏に競り合う。<br>Secretly compete for the role card using Immediate and Future Power.</li>
+            <li style="margin-top:8px;"><b>対戦 / Confront</b><br>勝者と2番手が、獲得した役割カードの利得構造に沿って選択を行う。<br>The winner and runner-up act according to the card's payoff structure.</li>
+            <li style="margin-top:8px;"><b>繰り返す / Repeat</b><br>全6ラウンドの得点で、最後に勝敗が決まる。<br>After 6 rounds, the highest score wins.</li>
+          </ol>
+          <button class="primary" onclick="dismissIntro()">▶️ はじめる / Begin</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(state.phase === 'select'){
+    app.innerHTML = `
+      <div class="masthead">
+        <div class="top-controls">
+          <button class="pill-btn" onclick="setLang('${lang==='ja'?'en':'ja'}')">${t('langBtn')}</button>
+        </div>
+        <div class="eyebrow">${t('title1')} &mdash; ${t('title2')}</div>
+        <h1>🃏 ${lang==='ja'?'対戦相手を選ぶ':'Choose Your Rivals'} 🎲</h1>
+        <div class="sub">${lang==='ja'?'席に着く3人を選んでください':'Pick 3 to join the table'}</div>
+      </div>
+      <div class="pick-counter">${lang==='ja'?'選択中':'Selected'}: ${state.selectedAI.length} / 3</div>
+      <div class="roster-grid">
+        ${ROSTER.map(a=>`
+          <div class="roster-card${state.selectedAI.includes(a.id)?' picked':''}" onclick="toggleSelectAI('${a.id}')">
+            <div class="roster-avatar">${a.avatar}</div>
+            <div class="roster-name">${a.name[lang]}</div>
+            <div class="roster-bio">&ldquo;${a.bio[lang]}&rdquo;</div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="primary" onclick="confirmSelection()" ${state.selectedAI.length!==3?'disabled':''}>♠️ ${lang==='ja'?'対局を始める':'Begin the Game'} ♣️</button>
+    `;
+    return;
+  }
+
+  if(state.phase === 'gameover'){
+    const ranked = [...state.players].sort((a,b)=>b.score-a.score);
+    const medals = ['🥇','🥈','🥉','🎫'];
+    app.innerHTML = `
+      <div class="masthead">
+        <div class="eyebrow">${t('title1')} &mdash; ${t('title2')}</div>
+        <h1>🏆 ${lang==='ja'?'最終結果':'Final Results'} 🏆</h1>
+      </div>
+      <div class="gameover">
+        <h2>${t('finalResult')}</h2>
+        ${ranked.map((p,i)=>`<div class="standing"><span>${medals[i]||'🎫'} ${p.avatar} ${pName(p)}</span><b>${p.score>=0?'+':''}${p.score}${lang==='ja'?'点':' '+t('points')}</b></div>`).join('')}
+      </div>
+      <button class="primary" onclick="restart()">🔁 ${t('restart')}</button>
+    `;
+    return;
+  }
+
+  const seatsHtml = state.players.map(p=>{
+    let badge = '';
+    if(state.phase==='resolved' && state.result){
+      if(!state.result.hidden){
+        if(p.id===state.result.winnerId) badge = `<div class="badge first">1</div>`;
+        else if(p.id===state.result.secondId) badge = `<div class="badge second">2</div>`;
+      } else if(p.id===state.result.winnerId){
+        badge = `<div class="badge first">&#9679;</div>`;
+      }
+    }
+    return `
+      <div class="${seatClass(p)}">
+        ${badge}
+        <div class="name">${p.avatar} ${pName(p)} <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold-bright);">${p.score>=0?'+':''}${p.score}</span></div>
+        <div class="tag">${p.isYou ? '' : `&ldquo;${p.bio[lang]}&rdquo;`}</div>
+        <div class="resources">
+          <span class="res gold-r"><span class="dot gold-d"></span>${p.immediate}</span>
+          <span class="res navy-r"><span class="dot navy-d"></span>${p.future}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const metaBarHtml = `
+    <div class="meta-bar-wrap">
+      <div class="meta-bar-label">
+        <span>${t('metaLabel')} 🌡️</span>
+        <span>🔥 ${t('metaAggr')} ${state.meta.aggressive}% / 🛡️ ${t('metaSafe')} ${state.meta.safe}%</span>
+      </div>
+      <div class="meta-bar">
+        <div class="seg-aggr" style="width:${state.meta.aggressive}%;"></div>
+        <div class="seg-safe" style="width:${state.meta.safe}%;"></div>
+      </div>
+    </div>
+  `;
+
+  const card = state.card;
+  const matrixRows = buildMatrixRows(card);
+  const showMatrix = state.phase !== 'bidding';
+  let matrixHtml;
+  if(showMatrix){
+    const neList = findPureNE(card).map(([x,y])=>`${aLabel(x)}\u00d7${aLabel(y)}`).join(' / ');
+    matrixHtml = `
+      <div class="matrix">${matrixRows.map(m=>`<div>${m.label}: <span>${m.val}</span></div>`).join('')}</div>
+      <div class="ne-line"><b>Nash:</b> ${neList}</div>
+    `;
+  } else {
+    matrixHtml = `<div class="matrix" style="text-align:center;color:var(--ivory-dim);font-style:italic;">${lang==='ja'?'正確な価値は、この一戦を終えるまで分からない':'The true value remains unknown until this hand concludes'}</div>`;
+  }
+  const cardHtml = `
+    <div class="card-stage">
+      <div class="card-stack">
+        <div class="card${card.hidden ? ' hidden-card' : ''}">
+          ${card.hidden ? `<div class="wax-stamp">${WAX_SEAL_SVG}</div>` : ''}
+          <div class="card-eyebrow">
+            <span>${t('roleCardOf')} &middot; ${t('round')} ${state.round}</span>
+            ${card.hidden ? `<span class="seal">🔒 ${t('hiddenSeal')}</span>` : ''}
+          </div>
+          <div class="card-icon">${ICONS[card.key]}</div>
+          <div class="card-title">${card.name[lang]}</div>
+          <div class="card-type">${TYPE_EMOJI[card.key]} ${card.type[lang]}</div>
+          <div class="card-classic">${card.classic[lang]}</div>
+          <div class="card-desc">${card.desc[lang]}</div>
+          ${matrixHtml}
+        </div>
+      </div>
+    </div>
+  `;
+
+  let bottomHtml = '';
+  if(state.phase === 'bidding'){
+    const maxImm = you.immediate;
+    const maxFut = you.future;
+    const total = state.bidImmediate + state.bidFuture;
+    const chipStack = (count, colorClass) => {
+      const shown = Math.min(count, 5);
+      let layers = '';
+      for(let i=0;i<shown;i++){
+        layers += `<div class="chip ${colorClass}" style="bottom:${i*7}px;z-index:${i};"></div>`;
+      }
+      return `<div class="chip-stack-wrap">${layers}${count>0?`<div class="chip-count-badge">${count}</div>`:''}</div>`;
+    };
+    bottomHtml = `
+      <div class="bidbox">
+        <h3>🃏 ${t('bidTitle')}</h3>
+        <div class="resource-note">💡 ${t('resourceNote')}</div>
+
+        <div class="chip-row">
+          ${chipStack(state.bidImmediate, 'gold-c')}
+          <div class="chip-controls">
+            <div class="top-row"><span>🪙 ${t('immediateLabel')}</span><b>${state.bidImmediate}${t('unit')}</b></div>
+            <div class="chip-btns">
+              <button class="chip-btn" onclick="adjustBid('immediate',-1)" ${state.bidImmediate<=0?'disabled':''}>${t('btnMinus1')}</button>
+              <button class="chip-btn" onclick="adjustBid('immediate',1)" ${state.bidImmediate>=maxImm?'disabled':''}>${t('btnPlus1')}</button>
+              <button class="chip-btn" onclick="adjustBid('immediate',5)" ${state.bidImmediate>=maxImm?'disabled':''}>${t('btnPlus5')}</button>
+              <button class="chip-btn wide" onclick="setBidMax('immediate')" ${state.bidImmediate>=maxImm?'disabled':''}>🔥 ${t('btnAllIn')}</button>
+            </div>
+            <div class="chip-remain">${t('remainImmediate')} ${maxImm - state.bidImmediate}${t('unit')} &middot; ${t('immediateHint')}</div>
+          </div>
+        </div>
+
+        <div class="chip-row">
+          ${chipStack(state.bidFuture, 'navy-c')}
+          <div class="chip-controls">
+            <div class="top-row"><span>⏳ ${t('futureLabel')}</span><b>${state.bidFuture}${t('unit')}</b></div>
+            <div class="chip-btns">
+              <button class="chip-btn" onclick="adjustBid('future',-1)" ${state.bidFuture<=0?'disabled':''}>${t('btnMinus1')}</button>
+              <button class="chip-btn" onclick="adjustBid('future',1)" ${state.bidFuture>=maxFut?'disabled':''}>${t('btnPlus1')}</button>
+              <button class="chip-btn" onclick="adjustBid('future',5)" ${state.bidFuture>=maxFut?'disabled':''}>${t('btnPlus5')}</button>
+              <button class="chip-btn wide" onclick="resetBidKind('future')" ${state.bidFuture<=0?'disabled':''}>↩️ ${t('btnReturn')}</button>
+            </div>
+            <div class="chip-remain">${t('remainFuture')} ${maxFut - state.bidFuture}${t('unit')} &middot; ${t('futureHint')}</div>
+          </div>
+        </div>
+
+        <div class="total-row"><span>${t('totalBid')}</span><b>${total}</b></div>
+        <button class="primary" onclick="submitBid()">🎲 ${t('submitBid')}</button>
+      </div>
+    `;
+  } else if(state.phase === 'resolved'){
+    const r = state.result;
+    const winner = state.players.find(p=>p.id===r.winnerId);
+    const second = r.secondId ? state.players.find(p=>p.id===r.secondId) : null;
+    let text;
+    if(r.hidden){
+      text = `<div class="hint">${t('hiddenResultNote')} (${t(r.marginKey)})</div>`;
+    } else {
+      text = `<div class="hint">${t('secondPlace')}: ${second?pName(second):'&mdash;'} (${t('amountHidden')} &middot; ${t(r.marginKey)})</div>`;
+    }
+    const curseHtml = r.cursePenalty > 0
+      ? `<div class="hint" style="margin-top:4px;color:#E8B9B9;">😖 ${t('curseNote')} -${r.cursePenalty}</div>`
+      : `<div class="hint" style="margin-top:4px;">👍 ${t('curseNoneNote')}</div>`;
+    const winnerLine = lang==='ja'
+      ? `🏆 ${pName(winner)}が「${card.name.ja}」を獲得`
+      : `🏆 ${pName(winner)} claims &ldquo;${card.name.en}&rdquo;`;
+    bottomHtml = `
+      <div class="reveal">
+        <div class="winner">${winnerLine}</div>
+        ${text}
+        ${curseHtml}
+      </div>
+      <button class="primary" onclick="beginBattle()">⚔️ ${t('goToBattle')}</button>
+    `;
+  } else if(state.phase === 'battle'){
+    const a = state.players.find(p=>p.id===state.battle.a);
+    const b = state.players.find(p=>p.id===state.battle.b);
+    const youIsA = a.isYou;
+    const opponent = youIsA ? b : a;
+    const actA = card.actions[0], actB = card.actions[1];
+    const previewFor = (myAction) => {
+      const pOpp0 = youIsA ? card.payoff(myAction, actA) : card.payoff(actA, myAction);
+      const pOpp1 = youIsA ? card.payoff(myAction, actB) : card.payoff(actB, myAction);
+      const mine0 = youIsA ? pOpp0[0] : pOpp0[1];
+      const mine1 = youIsA ? pOpp1[0] : pOpp1[1];
+      return `${t('battleOpponentIf')} ${aLabel(actA)} ${t('battleThen')} ${mine0>=0?'+':''}${mine0} / ${aLabel(actB)} ${t('battleThen')} ${mine1>=0?'+':''}${mine1}`;
+    };
+    bottomHtml = `
+      <div class="bidbox">
+        <h3>⚔️ ${pName(opponent)} ${t('battleWith')}</h3>
+        <div class="hint" style="margin-bottom:12px;">${t('battleRule')}</div>
+        <button class="primary" style="margin-top:0;" onclick="chooseBattleAction('${actA}')">🤝 ${aLabel(actA)}</button>
+        <div class="hint" style="margin:4px 0 10px;">${previewFor(actA)}</div>
+        <button class="secondary" style="margin-top:0;" onclick="chooseBattleAction('${actB}')">🔥 ${aLabel(actB)}</button>
+        <div class="hint" style="margin-top:6px;">${previewFor(actB)}</div>
+      </div>
+    `;
+  } else if(state.phase === 'battle-resolved'){
+    const b = state.battle;
+    let inner;
+    if(b.skipped){
+      inner = `<div class="hint">🤷 ${t('skippedBattle')}</div>`;
+    } else {
+      const pa = state.players.find(p=>p.id===b.a);
+      const pb = state.players.find(p=>p.id===b.b);
+      inner = `
+        <div class="winner">🎭 ${pName(pa)} "${aLabel(b.aAction)}" / ${pName(pb)} "${aLabel(b.bAction)}"</div>
+        <div class="hint">${pName(pa)} ${b.delta[0]>=0?'+':''}${b.delta[0]}${lang==='ja'?'点':' '+t('points')} &nbsp;/&nbsp; ${pName(pb)} ${b.delta[1]>=0?'+':''}${b.delta[1]}${lang==='ja'?'点':' '+t('points')}</div>
+        <div class="hint" style="margin-top:6px;font-style:italic;">${
+          b.isNE
+            ? '♟️ ' + t('neMatch')
+            : '♟️ ' + t('neMismatch') + ' ' + b.neList.map(([x,y])=>`${aLabel(x)}\u00d7${aLabel(y)}`).join(' / ') + t('neMismatchTail')
+        }</div>
+      `;
+    }
+    bottomHtml = `
+      <div class="reveal">${inner}</div>
+      <button class="primary" onclick="nextRound()">${state.round>=TOTAL_ROUNDS ? '🏁 '+t('seeResult') : '➡️ '+t('nextRound')}</button>
+    `;
+  }
+
+  const logHtml = state.log.length ? `
+    <details class="log">
+      <summary>&#9662; 📜 ${t('logTitle')}</summary>
+      ${state.log.map(l=>{
+        const cardDef = ROLE_TYPES.find(rt=>rt.key===l.cardKey);
+        const winnerP = state.players.find(p=>p.id===l.winnerId);
+        return `
+        <div class="log-row">
+          <span>R${l.round} &middot; ${cardDef.name[lang]}${l.hidden?' 🔒':''}</span>
+          <span>🏆 ${pName(winnerP)}${l.battleAction?' &middot; '+l.battleAction:''}</span>
+        </div>
+      `;}).join('')}
+    </details>
+  ` : '';
+
+  app.innerHTML = `
+    <div class="masthead">
+      <div class="top-controls">
+        <button class="pill-btn" onclick="toggleHelp()">📖 ${t('helpBtn')}</button>
+        <button class="pill-btn" onclick="setLang('${lang==='ja'?'en':'ja'}')">🌐 ${t('langBtn')}</button>
+      </div>
+      <div class="eyebrow">♠️ ${t('title1')} &mdash; ${t('title2')} ♦️</div>
+      <h1>${lang==='ja'?'入札<span>フェーズ</span>試作':'Bidding <span>Phase</span> Demo'}</h1>
+      <div class="sub">${t('subtitle')}</div>
+    </div>
+    <div class="round-strip">
+      <span>${t('round').toUpperCase()} <b>${state.round}</b> / ${TOTAL_ROUNDS}</span>
+      <span>${t('yourScore')} <b>${you.score>=0?'+':''}${you.score}</b></span>
+    </div>
+    ${metaBarHtml}
+    ${cardHtml}
+    <div class="seats">${seatsHtml}</div>
+    ${bottomHtml}
+    ${logHtml}
+    ${state.helpOpen ? helpPanelHtml() : ''}
+  `;
+}
+
+initState();
+</script>
+</body>
+</html>
