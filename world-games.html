@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>世界のゲーム | World Games — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
+    --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6; --text-dim: #9fae9f;
+    --parchment: #c9a76a;
+  }
+  body.light-mode{
+    --bg: #f2ead9; --bg-panel: #fbf6ea; --moss: #8fae82; --moss-light: #a3c294;
+    --brass: #a97f45; --brass-bright: #8a6530; --cream: #2c2417; --text-dim: #6b5f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1400px 700px at 20% -10%, rgba(217,180,124,0.07), transparent 60%),
+      radial-gradient(1100px 800px at 100% 15%, rgba(79,111,86,0.16), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh;
+  }
+  a{color:inherit;}
+  .nav{display:flex; justify-content:space-between; align-items:center; padding:18px 32px; border-bottom:1px solid rgba(185,146,90,0.2); flex-wrap:wrap; gap:12px;}
+  .nav-brand{font-family:'Fraunces',serif; font-weight:700; font-size:18px; letter-spacing:0.02em;}
+  .nav-links{display:flex; gap:6px; flex-wrap:wrap;}
+  .nav-links a{font-size:13px; padding:7px 14px; border-radius:999px; border:1px solid rgba(185,146,90,0.3); text-decoration:none; color:var(--text-dim); transition:all .15s;}
+  .nav-links a:hover{border-color:var(--brass); color:var(--brass-bright);}
+  .nav-links a.current{background:var(--brass); color:#1b2a22; border-color:var(--brass); font-weight:600;}
+  .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:13px; padding:7px 14px; border-radius:999px; cursor:pointer;}
+
+  .hero{max-width:900px; margin:0 auto; padding:64px 32px 40px; text-align:center;}
+  .hero .eyebrow{font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:var(--parchment); margin-bottom:14px;}
+  .hero h1{font-family:'Fraunces',serif; font-weight:700; font-size:clamp(34px,6vw,56px); margin:0 0 16px; line-height:1.1;}
+  .hero h1 .en{display:block; font-style:italic; font-weight:500; font-size:0.4em; color:var(--brass-bright); margin-top:10px;}
+  .hero p{font-size:15px; line-height:1.8; color:var(--text-dim); max-width:640px; margin:0 auto;}
+
+  .globe{max-width:1080px; margin:0 auto 20px; padding:0 32px;}
+  .globe svg{width:100%; height:auto; opacity:0.55;}
+
+  main{max-width:1080px; margin:0 auto; padding:20px 32px 100px;}
+  .region{margin-bottom:56px;}
+  .region-head{display:flex; align-items:baseline; gap:14px; margin-bottom:6px; border-bottom:1px solid rgba(185,146,90,0.22); padding-bottom:12px;}
+  .region-mark{width:8px; height:8px; border-radius:50%; background:var(--brass-bright); flex-shrink:0;}
+  .region-head h2{font-family:'Fraunces',serif; font-weight:600; font-size:20px; margin:0;}
+  .region-head .sub{font-size:12px; color:var(--text-dim); font-style:italic;}
+  .region-note{font-size:12.5px; color:var(--text-dim); margin:10px 0 22px; line-height:1.7; max-width:640px;}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px;}
+  .card{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:22px 22px 20px; text-decoration:none; display:block; transition:transform .15s, border-color .15s;}
+  .card:hover{transform:translateY(-3px); border-color:var(--brass);}
+  .card .kicker{font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--parchment); margin-bottom:8px;}
+  .card h3{font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin:0 0 4px; color:var(--cream);}
+  .card .en-name{font-size:12.5px; font-style:italic; color:var(--brass-bright); margin-bottom:10px;}
+  .card p{font-size:12.5px; line-height:1.65; color:var(--text-dim); margin:0;}
+
+  .card.placeholder{border-style:dashed; opacity:0.55; cursor:default;}
+  .card.placeholder:hover{transform:none; border-color:rgba(185,146,90,0.18);}
+  .card.placeholder h3{color:var(--text-dim);}
+
+  footer{text-align:center; padding:40px 32px 60px; font-size:12px; color:var(--text-dim); border-top:1px solid rgba(185,146,90,0.15);}
+  .other-games{max-width:1080px; margin:0 auto; padding:0 32px 20px;}
+  .other-games-box{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.25); border-radius:12px; padding:32px; text-align:center;}
+  .other-games-box h3{font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin:0 0 8px; color:var(--cream);}
+  .other-games-box p{font-size:13px; color:var(--text-dim); margin:0 0 20px; line-height:1.7;}
+  .other-games-links{display:flex; justify-content:center; gap:10px; flex-wrap:wrap;}
+  .other-games-links a{font-size:13px; padding:9px 18px; border-radius:999px; border:1px solid var(--brass); text-decoration:none; color:var(--brass-bright); transition:all .15s;}
+  .other-games-links a:hover{background:var(--brass); color:#1b2a22;}
+  .other-games-links a.home{background:var(--brass); color:#1b2a22; font-weight:600;}
+  .other-games-links a.home:hover{background:var(--brass-bright);}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Mossgreen</div>
+  <div class="nav-links">
+    <a href="index.html">ホーム / Home</a>
+    <a href="chess-variants.html">チェスバリアント / Chess Variants</a>
+    <a href="shogi-variants.html">変則将棋 / Shogi Variants</a>
+    <a href="world-games.html" class="current">世界のゲーム / World Games</a>
+  </div>
+  <button class="langtoggle" id="langBtn">EN / 日本語</button>
+</nav>
+
+<div class="hero">
+  <div class="eyebrow lang-ja">チェスでも将棋でもない、盤上の旅</div>
+  <div class="eyebrow lang-en">A board-game journey beyond chess and shogi</div>
+  <h1>世界のゲーム<span class="en">World Games</span></h1>
+  <p class="lang-ja">世界各地の歴史に残る、チェスとも将棋とも異なる系統の盤上ゲームを再現しています。捕獲のルールも、勝利条件も、盤の形さえも、それぞれの文化圏でまったく違う発想から生まれています。</p>
+  <p class="lang-en">Traditional board games from around the world that belong to neither the chess nor the shogi family. Capture rules, victory conditions, even the shape of the board itself spring from entirely different ideas in each culture.</p>
+</div>
+
+<main>
+
+  <section class="region">
+    <div class="region-head">
+      <span class="region-mark"></span>
+      <h2><span class="lang-ja">北欧・ブリテン諸島</span><span class="lang-en">Scandinavia &amp; the British Isles</span></h2>
+      <span class="sub">Tafl family</span>
+    </div>
+    <p class="region-note lang-ja">非対称の陣営（王と守備隊 対 攻撃側）、挟み込みによる捕獲というタフル系ゲームの系譜。チェスの祖先の一つとも言われる。</p>
+    <p class="region-note lang-en">The Tafl family: asymmetric sides (a king and his defenders versus a ring of attackers), capture by flanking. Sometimes called one of chess's own distant ancestors.</p>
+    <div class="cards">
+      <a class="card" href="games/hnefatafl.html">
+        <div class="kicker">Norse · c. 400–1000 CE</div>
+        <h3>フネファタル</h3>
+        <div class="en-name">Hnefatafl</div>
+        <p class="lang-ja">11x11盤。王と12体の守備兵が中央から脱出を図り、24体の攻撃兵がそれを阻む。挟み撃ちによる捕獲。</p>
+        <p class="lang-en">An 11×11 board. The King and 12 defenders try to break out from the centre while 24 attackers close in. Capture by sandwiching.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="region">
+    <div class="region-head">
+      <span class="region-mark"></span>
+      <h2><span class="lang-ja">中世ドイツ・デンマーク国境地域</span><span class="lang-en">The German–Danish Borderlands</span></h2>
+      <span class="sub">Schleswig-Holstein</span>
+    </div>
+    <p class="region-note lang-ja">城・戦場・聖域という3つの領域で駒の動きが変わる、独自の地理的発想を持つゲーム。</p>
+    <p class="region-note lang-en">A game built on its own geography: piece movement changes depending on whether you stand in a castle, the open battlefield, or the holy centre.</p>
+    <div class="cards">
+      <a class="card" href="games/gala.html">
+        <div class="kicker">Schleswig-Holstein · medieval</div>
+        <h3>ガラ</h3>
+        <div class="en-name">Gala</div>
+        <p class="lang-ja">10x10盤、四隅の「城」と中央の「聖域」。駒は領域を越えるたびに動き方が変わる。</p>
+        <p class="lang-en">A 10×10 board with four corner "castles" and a central "holy area." Every piece's movement rules change as it crosses each boundary.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="region">
+    <div class="region-head">
+      <span class="region-mark"></span>
+      <h2><span class="lang-ja">中世ヨーロッパの数学者たち</span><span class="lang-en">Medieval Europe's Mathematicians</span></h2>
+      <span class="sub">The Philosophers' Game</span>
+    </div>
+    <p class="region-note lang-ja">駒の価値がそのまま数そのものであるという、修道院や大学で遊ばれた異色のゲーム。</p>
+    <p class="region-note lang-en">A game once played in monasteries and universities, where a piece's power is simply the number written on it.</p>
+    <div class="cards">
+      <a class="card" href="games/rithmomachy.html">
+        <div class="kicker">Europe · 11th century</div>
+        <h3>リトモマキア</h3>
+        <div class="en-name">Rithmomachy</div>
+        <p class="lang-ja">円・三角・四角・ピラミッドという4種の駒を、会敵・侵食・待ち伏せ・包囲という4通りの方法で捕獲する。</p>
+        <p class="lang-en">Round, Triangle, Square, and Pyramid pieces, captured through four distinct mechanisms: Meeting, Eruption, Ambush, and Siege.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="region">
+    <div class="region-head">
+      <span class="region-mark"></span>
+      <h2><span class="lang-ja">今後追加予定</span><span class="lang-en">More to come</span></h2>
+      <span class="sub">In progress</span>
+    </div>
+    <p class="region-note lang-ja">世界にはまだまだ知られざる盤上ゲームが眠っている。このページは少しずつ広がっていく予定。</p>
+    <p class="region-note lang-en">There are still many lesser-known board games waiting to be rediscovered. This page will keep growing.</p>
+    <div class="cards">
+      <div class="card placeholder">
+        <div class="kicker">?</div>
+        <h3 class="lang-ja">近日公開</h3>
+        <h3 class="lang-en">Coming soon</h3>
+      </div>
+      <div class="card placeholder">
+        <div class="kicker">?</div>
+        <h3 class="lang-ja">近日公開</h3>
+        <h3 class="lang-en">Coming soon</h3>
+      </div>
+      <div class="card placeholder">
+        <div class="kicker">?</div>
+        <h3 class="lang-ja">近日公開</h3>
+        <h3 class="lang-en">Coming soon</h3>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="other-games">
+  <div class="other-games-box">
+    <h3><span class="lang-ja">他のゲームも見てみる</span><span class="lang-en">Looking for something else?</span></h3>
+    <p class="lang-ja">チェスバリアントや変則将棋、その他のオリジナル作品も公開しています。</p>
+    <p class="lang-en">Chess variants, shogi variants, and other original projects are all part of the same collection.</p>
+    <div class="other-games-links">
+      <a href="chess-variants.html">チェスバリアント / Chess Variants</a>
+      <a href="shogi-variants.html">変則将棋 / Shogi Variants</a>
+      <a href="index.html" class="home"><span class="lang-ja">すべてのゲームを見る</span><span class="lang-en">See all games</span></a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Mossgreen — <span class="lang-ja">個人開発のブラウザゲーム集</span><span class="lang-en">a solo developer's collection of browser games</span>
+</footer>
+
+<style>
+  .lang-en:not(body){display:none;}
+  body.lang-en .lang-ja{display:none;}
+  body.lang-en .lang-en{display:block;}
+  body.lang-en .nav-links a{display:inline-block;}
+</style>
+<script>
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('lang-en');
+  });
+</script>
+</body>
+</html>
