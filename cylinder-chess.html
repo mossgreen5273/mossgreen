@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>円柱チェス | Cylinder Chess</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
+    --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6;
+    --square-light: #3f5445; --square-dark: #24382c; --square-move: rgba(217,180,124,0.55);
+    --danger: #b25a4a; --text-dim: #9fae9f;
+  }
+  body.light-mode{
+    --bg: #f2ead9;
+    --bg-panel: #fbf6ea;
+    --moss: #8fae82;
+    --moss-light: #a3c294;
+    --brass: #a97f45;
+    --brass-bright: #8a6530;
+    --cream: #2c2417;
+    --square-light: #e4d7b6;
+    --square-dark: #b99a66;
+    --danger: #a8402f;
+    --text-dim: #6b5f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(217,180,124,0.06), transparent 60%),
+      radial-gradient(1000px 700px at 110% 10%, rgba(79,111,86,0.18), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh; padding:32px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; border-bottom:1px solid rgba(185,146,90,0.25); padding-bottom:20px; margin-bottom:28px;}
+  h1{font-family:'Fraunces', serif; font-weight:700; font-size:clamp(26px,4.5vw,42px); margin:0; letter-spacing:0.01em; color:var(--cream);}
+  h1 .en{display:block; font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:0.42em; color:var(--brass-bright); margin-top:4px;}
+  .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:14px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s;}
+  .langtoggle:hover{background:rgba(185,146,90,0.15);}
+  .layout{display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;}
+  .board-col{flex:0 0 auto;}
+  .side-col{flex:1 1 260px; min-width:260px;}
+  .panel{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:18px 20px; margin-bottom:18px;}
+  .panel h2{font-family:'Fraunces',serif; font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:0.08em; color:var(--brass-bright); margin:0 0 12px;}
+  label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px;}
+  select, button.action{width:100%; background:var(--moss); color:var(--cream); border:1px solid rgba(217,180,124,0.3); border-radius:6px; padding:9px 12px; font-family:'Noto Sans JP',sans-serif; font-size:14px; margin-bottom:14px; cursor:pointer;}
+  select:focus, button.action:focus{outline:2px solid var(--brass-bright); outline-offset:1px;}
+  button.action{background:linear-gradient(180deg, var(--brass) 0%, #a17f4c 100%); color:#1b2a22; font-weight:700; border:none; margin-bottom:0; transition:transform .1s;}
+  button.action:hover{transform:translateY(-1px);}
+  button.action:active{transform:translateY(0);}
+  #status{font-family:'Fraunces',serif; font-size:17px; font-weight:600; padding:12px 14px; border-radius:8px; background:rgba(79,111,86,0.25); border-left:3px solid var(--brass); min-height:24px;}
+  #status.check{border-left-color:var(--danger); color:#eab3a4;}
+  #status.over{border-left-color:var(--brass-bright); color:var(--brass-bright);}
+  .board{display:grid; grid-template-columns:repeat(8, min(11vw,58px)); grid-template-rows:repeat(8, min(11vw,58px)); border:3px solid var(--brass); border-radius:4px; box-shadow:0 12px 40px rgba(0,0,0,0.45);}
+  .sq{position:relative; display:flex; align-items:center; justify-content:center; font-size:min(8vw,42px); cursor:pointer; user-select:none;}
+  .sq.light{background:var(--square-light);} .sq.dark{background:var(--square-dark);}
+  .sq.selected{outline:3px solid var(--brass-bright); outline-offset:-3px; z-index:2;}
+  .sq .dot{position:absolute; width:30%; height:30%; border-radius:50%; background:var(--brass-bright); box-shadow:0 0 10px 3px rgba(217,180,124,0.7); animation:pulse-dot 1.1s ease-in-out infinite;}
+  .sq .ring{position:absolute; inset:5%; border-radius:50%; border:5px solid var(--brass-bright); box-shadow:0 0 10px 2px rgba(217,180,124,0.6); animation:pulse-ring 1.1s ease-in-out infinite;}
+  @keyframes pulse-dot{ 0%,100%{opacity:0.65; transform:scale(0.85);} 50%{opacity:1; transform:scale(1.15);} }
+  @keyframes pulse-ring{ 0%,100%{opacity:0.55;} 50%{opacity:1;} }
+  .sq.lastmove{box-shadow:inset 0 0 0 3px rgba(217,180,124,0.5);}
+  .piece-w{color:#f5ecd8; text-shadow:0 0 3px rgba(0,0,0,0.6), 0 2px 2px rgba(0,0,0,0.5);}
+  .piece-b{color:#0f1712; text-shadow:0 1px 0 rgba(255,255,255,0.15);}
+  .coords{display:flex; justify-content:space-between; max-width:min(88vw,464px); margin-top:4px; font-size:11px; color:var(--text-dim);}
+  .captured{display:flex; flex-wrap:wrap; gap:2px; min-height:28px; font-size:20px;}
+  .movelog{max-height:220px; overflow-y:auto; font-size:13px; line-height:1.9; color:var(--text-dim);}
+  .movelog b{color:var(--cream);}
+  .modal-bg{position:fixed; inset:0; background:rgba(10,15,12,0.7); display:none; align-items:center; justify-content:center; z-index:50;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--bg-panel); border:1px solid var(--brass); border-radius:10px; padding:24px; text-align:center;}
+  .modal h3{font-family:'Fraunces',serif; margin-top:0;}
+  .promo-choices{display:flex; gap:10px; justify-content:center; margin-top:14px;}
+  .promo-choices button{font-size:32px; width:56px; height:56px; border-radius:8px; border:1px solid var(--brass); background:var(--moss); color:var(--cream); cursor:pointer;}
+  .promo-choices button:hover{background:var(--moss-light);}
+  .rule-note{font-size:12.5px; color:var(--text-dim); line-height:1.7;}
+  .setup-code{font-family:monospace; font-size:13px; color:var(--brass-bright); letter-spacing:2px;}
+  .lang-en:not(body){display:none;}
+  body.lang-en .lang-ja{display:none;}
+  body.lang-en .lang-en{display:block;}
+  footer{margin-top:40px; font-size:12px; color:var(--text-dim); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>円柱チェス<span class="en">Cylinder Chess</span></h1>
+    <div style="display:flex; gap:8px;">
+      <button class="langtoggle" id="langBtn">EN / 日本語</button>
+      <button class="langtoggle" id="themeBtn">☀️ / 🌙</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board-col">
+      <div class="board" id="board"></div>
+      <div class="coords" id="coords"></div>
+    </div>
+
+    <div class="side-col">
+      <div class="panel">
+        <h2><span class="lang-ja">対局設定</span><span class="lang-en">Game Setup</span></h2>
+        <label class="lang-ja">あなたの駒色</label>
+        <label class="lang-en">Your colour</label>
+        <select id="sideSelect">
+          <option value="w">白 / White</option>
+          <option value="b">黒 / Black</option>
+        </select>
+        <label class="lang-ja">AIの強さ</label>
+        <label class="lang-en">AI strength</label>
+        <select id="diffSelect">
+          <option value="700,3">弱い / Weak</option>
+          <option value="1500,4" selected>普通 / Normal</option>
+          <option value="3000,5">強い / Strong</option>
+        </select>
+        <button class="action" id="newGameBtn"><span class="lang-ja">新規対局</span><span class="lang-en">New Game</span></button>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">状況</span><span class="lang-en">Status</span></h2>
+        <div id="status"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">捕獲した駒</span><span class="lang-en">Captured</span></h2>
+        <div class="captured" id="capturedW"></div>
+        <div class="captured" id="capturedB"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">棋譜</span><span class="lang-en">Move Log</span></h2>
+        <div class="movelog" id="movelog"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">ルール</span><span class="lang-en">Rules</span></h2>
+        <p class="rule-note lang-ja">
+          盤の左端（a列）と右端（h列）がつながった円柱形のチェス。駒は端まで来ると反対側から出てくる形で、横方向に「壁抜け」しながら動ける。ルークやビショップ、クイーンは横・斜め方向に盤を一周でき、ナイトも端をまたいで跳べる。ポーンの前進・２歩前進は通常通り（縦方向は円柱でつながっていない）。キャスリングは通常配置のままなので、周回移動は関係しない。それ以外のルールは通常のチェスと同一。
+        </p>
+        <p class="rule-note lang-en">
+          The board wraps horizontally: the a-file and h-file are joined, like a cylinder. Rooks, bishops, and queens can slide off one edge and reappear on the other; knights can also jump across the seam. Pawns still only move forward/backward normally (ranks do not wrap). Castling uses the standard starting squares, so it never needs to cross the seam. All other rules are identical to standard chess.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer>Mossgreen — a solo-developed browser chess variant.</footer>
+</div>
+
+<div class="modal-bg" id="promoModal">
+  <div class="modal">
+    <h3><span class="lang-ja">昇格する駒を選んでください</span><span class="lang-en">Choose promotion piece</span></h3>
+    <div class="promo-choices" id="promoChoices"></div>
+  </div>
+</div>
+
+<script>
+/* ===== Engine (inlined) ===== */
+/* ===== Base standard chess engine (single board, both kings) ===== */
+'use strict';
+const FILES = 'abcdefgh';
+function algebraic(r,c){ return FILES[c] + (8-r); }
+function inBounds(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+const KNIGHT_DELTAS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KING_DELTAS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const BISHOP_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const ROOK_DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+
+function emptyBoard(){ return Array.from({length:8},()=>Array(8).fill(null)); }
+
+function standardBackRow(){ return ['R','N','B','Q','K','B','N','R']; }
+
+function initialBoard(backRow){
+  backRow = backRow || standardBackRow();
+  const b = emptyBoard();
+  for(let c=0;c<8;c++){
+    b[0][c] = {color:'b', type:backRow[c], moved:false};
+    b[1][c] = {color:'b', type:'P', moved:false};
+    b[6][c] = {color:'w', type:'P', moved:false};
+    b[7][c] = {color:'w', type:backRow[c], moved:false};
+  }
+  return b;
+}
+
+function cloneBoard(b){ return b.map(row=>row.map(p=>p?{...p}:null)); }
+function pawnDir(color){ return color==='b'?1:-1; }
+function promotionRow(color){ return color==='b'?7:0; }
+function startRow(color){ return color==='b'?1:6; }
+
+function wrapCol(c){ return ((c%8)+8)%8; }
+function rowInBounds(r){ return r>=0 && r<8; }
+
+class ChessGame {
+  constructor(backRow){
+    this.board = initialBoard(backRow);
+    this.turn = 'w';
+    this.enPassant = null;
+    this.history = [];
+    this.gameOver = false;
+    this.result = null;
+    this._searchStack = [];
+  }
+
+  findKing(color, board){
+    board = board || this.board;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p = board[r][c];
+      if(p && p.color===color && p.type==='K') return {r,c};
+    }
+    return null;
+  }
+
+  isSquareAttacked(r,c,byColor,board){
+    board = board || this.board;
+    const dir = pawnDir(byColor);
+    for(const dc of [-1,1]){
+      const pr=r-dir, pc=wrapCol(c-dc);
+      if(rowInBounds(pr)){
+        const p=board[pr][pc];
+        if(p && p.color===byColor && p.type==='P') return true;
+      }
+    }
+    for(const [dr,dc] of KNIGHT_DELTAS){
+      const nr=r+dr, nc=wrapCol(c+dc);
+      if(rowInBounds(nr)){ const p=board[nr][nc]; if(p && p.color===byColor && p.type==='N') return true; }
+    }
+    for(const [dr,dc] of KING_DELTAS){
+      const nr=r+dr, nc=wrapCol(c+dc);
+      if(rowInBounds(nr)){ const p=board[nr][nc]; if(p && p.color===byColor && p.type==='K') return true; }
+    }
+    for(const [dr,dc] of BISHOP_DIRS){
+      let nr=r+dr, nc=wrapCol(c+dc), steps=0;
+      while(rowInBounds(nr) && steps<8){
+        const p=board[nr][nc];
+        if(p){ if(p.color===byColor && (p.type==='B'||p.type==='Q')) return true; break; }
+        nr+=dr; nc=wrapCol(nc+dc); steps++;
+      }
+    }
+    for(const [dr,dc] of ROOK_DIRS){
+      let nr=r+dr, nc=wrapCol(c+dc), steps=0;
+      while(rowInBounds(nr) && steps<8){
+        const p=board[nr][nc];
+        if(p){ if(p.color===byColor && (p.type==='R'||p.type==='Q')) return true; break; }
+        nr+=dr; nc=wrapCol(nc+dc); steps++;
+      }
+    }
+    return false;
+  }
+
+  inCheck(color, board){
+    board = board || this.board;
+    const k = this.findKing(color, board);
+    if(!k) return false;
+    const opp = color==='w'?'b':'w';
+    return this.isSquareAttacked(k.r,k.c,opp,board);
+  }
+
+  pieceMoves(r,c,board){
+    board = board || this.board;
+    const p = board[r][c];
+    if(!p) return [];
+    const moves=[];
+    // straight (non-wrapping) push: used for pawn forward moves only
+    const pushStraight=(nr,nc,flags)=>{ if(rowInBounds(nr)) moves.push({fr:r,fc:c,tr:nr,tc:nc,...flags}); };
+    // wrapping push: used for every move that can cross the cylinder seam
+    const push=(nr,nc,flags)=>{ nc=wrapCol(nc); if(rowInBounds(nr)) moves.push({fr:r,fc:c,tr:nr,tc:nc,...flags}); };
+    if(p.type==='P'){
+      const dir=pawnDir(p.color);
+      const oneR=r+dir;
+      if(rowInBounds(oneR) && !board[oneR][c]){
+        if(oneR===promotionRow(p.color)) pushStraight(oneR,c,{promotion:true});
+        else pushStraight(oneR,c,{});
+        if(!p.moved && r===startRow(p.color)){
+          const twoR=r+2*dir;
+          if(rowInBounds(twoR) && !board[twoR][c]) pushStraight(twoR,c,{doubleStep:true});
+        }
+      }
+      for(const dc of [-1,1]){
+        const nr=r+dir, nc=wrapCol(c+dc);
+        if(rowInBounds(nr)){
+          const target=board[nr][nc];
+          if(target && target.color!==p.color){
+            if(nr===promotionRow(p.color)) push(nr,nc,{capture:true,promotion:true});
+            else push(nr,nc,{capture:true});
+          } else if(!target && this.enPassant && this.enPassant.r===nr && this.enPassant.c===nc){
+            push(nr,nc,{capture:true, enPassantCapture:true, capR:this.enPassant.capR, capC:this.enPassant.capC});
+          }
+        }
+      }
+    } else if(p.type==='N'){
+      for(const [dr,dc] of KNIGHT_DELTAS){
+        const nr=r+dr, nc=wrapCol(c+dc);
+        if(rowInBounds(nr)){ const target=board[nr][nc]; if(!target||target.color!==p.color) push(nr,nc,{capture:!!target}); }
+      }
+    } else if(p.type==='K'){
+      for(const [dr,dc] of KING_DELTAS){
+        const nr=r+dr, nc=wrapCol(c+dc);
+        if(rowInBounds(nr)){ const target=board[nr][nc]; if(!target||target.color!==p.color) push(nr,nc,{capture:!!target}); }
+      }
+      // Castling: standard starting squares (e/a/h files) never require crossing
+      // the cylinder seam, so this uses ordinary (non-wrapping) column logic.
+      if(!p.moved){
+        const opp = p.color==='w'?'b':'w';
+        if(!this.isSquareAttacked(r,c,opp,board)){
+          const rookK = board[r][7];
+          if(rookK && rookK.type==='R' && rookK.color===p.color && !rookK.moved &&
+             !board[r][5] && !board[r][6] &&
+             !this.isSquareAttacked(r,5,opp,board) && !this.isSquareAttacked(r,6,opp,board)){
+            pushStraight(r,6,{castle:'K'});
+          }
+          const rookQ = board[r][0];
+          if(rookQ && rookQ.type==='R' && rookQ.color===p.color && !rookQ.moved &&
+             !board[r][1] && !board[r][2] && !board[r][3] &&
+             !this.isSquareAttacked(r,3,opp,board) && !this.isSquareAttacked(r,2,opp,board)){
+            pushStraight(r,2,{castle:'Q'});
+          }
+        }
+      }
+    } else {
+      const dirs = p.type==='B'?BISHOP_DIRS : p.type==='R'?ROOK_DIRS : [...BISHOP_DIRS,...ROOK_DIRS];
+      for(const [dr,dc] of dirs){
+        let nr=r+dr, nc=wrapCol(c+dc), steps=0;
+        while(rowInBounds(nr) && steps<8){
+          const target=board[nr][nc];
+          if(!target) push(nr,nc,{});
+          else { if(target.color!==p.color) push(nr,nc,{capture:true}); break; }
+          nr+=dr; nc=wrapCol(nc+dc); steps++;
+        }
+      }
+    }
+    // On a cylinder, a sliding piece can sometimes reach the same square by
+    // going around in either direction (e.g. a rook wrapping left vs right
+    // to reach the same target). De-duplicate so the AI/UI see one move.
+    const seen = new Set();
+    return moves.filter(m=>{
+      const key = m.tr+','+m.tc+','+(m.capture?1:0)+','+(m.promotion?1:0)+','+(m.castle||'');
+      if(seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+  }
+
+  pseudoMovesFor(color, board){
+    board = board || this.board;
+    let all=[];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color===color) all=all.concat(this.pieceMoves(r,c,board));
+    }
+    return all;
+  }
+
+  applyMoveToBoard(board, m){
+    const p = board[m.fr][m.fc];
+    const captured = board[m.tr][m.tc];
+    let epCaptured=null;
+    if(m.enPassantCapture){ epCaptured = board[m.capR][m.capC]; board[m.capR][m.capC]=null; }
+    board[m.tr][m.tc] = {...p, moved:true};
+    board[m.fr][m.fc] = null;
+    if(m.promotion) board[m.tr][m.tc].type = m.promoteTo || 'Q';
+    if(m.castle==='K'){ board[m.fr][7]=null; board[m.fr][5]={color:p.color,type:'R',moved:true}; }
+    else if(m.castle==='Q'){ board[m.fr][0]=null; board[m.fr][3]={color:p.color,type:'R',moved:true}; }
+    return {captured, epCaptured};
+  }
+
+  legalMovesFor(color){
+    const pseudo = this.pseudoMovesFor(color);
+    const legal=[];
+    for(const m of pseudo){
+      const b2 = cloneBoard(this.board);
+      this.applyMoveToBoard(b2,m);
+      if(!this.inCheck(color,b2)) legal.push(m);
+    }
+    return legal;
+  }
+
+  makeMove(m){
+    const mover = this.board[m.fr][m.fc];
+    const prevEnPassant = this.enPassant;
+    const info = this.applyMoveToBoard(this.board, m);
+    this.enPassant=null;
+    if(m.doubleStep) this.enPassant={r:(m.fr+m.tr)/2,c:m.fc,capR:m.tr,capC:m.tc};
+    this.history.push({m,captured:info.captured,epCaptured:info.epCaptured,prevEnPassant,color:mover.color});
+    this.turn = this.turn==='w'?'b':'w';
+    this._checkGameOver();
+    return info;
+  }
+
+  _checkGameOver(){
+    const moves=this.legalMovesFor(this.turn);
+    if(moves.length===0){
+      if(this.inCheck(this.turn)){ this.gameOver=true; this.result = this.turn==='w'?'black_wins':'white_wins'; }
+      else { this.gameOver=true; this.result='draw'; }
+    }
+  }
+
+  evaluate(){
+    const VAL={P:100,N:320,B:330,R:500,Q:900,K:0};
+    let score=0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=this.board[r][c];
+      if(!p) continue;
+      let v=VAL[p.type];
+      if(p.type==='P'){ const adv=p.color==='w'?(6-r):(r-1); v+=Math.max(0,adv)*4; }
+      if(p.type!=='K' && p.type!=='P') v += (3.5-Math.abs(c-3.5))*1.2 + (3.5-Math.abs(r-3.5))*1.2;
+      score += p.color==='w'?v:-v;
+    }
+    if(this.inCheck('b')) score+=15;
+    if(this.inCheck('w')) score-=15;
+    return score;
+  }
+
+  orderMoves(moves){
+    return moves.slice().sort((a,b)=>{
+      const av=(a.capture?100:0)+(a.promotion?50:0);
+      const bv=(b.capture?100:0)+(b.promotion?50:0);
+      return bv-av;
+    });
+  }
+
+  makeMoveRaw(m){
+    const p = this.board[m.fr][m.fc];
+    const prevMoved = p.moved;
+    const rookSq = m.castle==='K' ? this.board[m.fr][7] : m.castle==='Q' ? this.board[m.fr][0] : null;
+    const prevRookMoved = rookSq ? rookSq.moved : null;
+    const prevEnPassant = this.enPassant;
+    const info = this.applyMoveToBoard(this.board, m);
+    this.enPassant=null;
+    if(m.doubleStep) this.enPassant={r:(m.fr+m.tr)/2,c:m.fc,capR:m.tr,capC:m.tc};
+    this._searchStack.push({m,captured:info.captured,epCaptured:info.epCaptured,prevEnPassant,prevMoved,prevRookMoved,color:p.color});
+  }
+
+  unmakeMoveRaw(){
+    const entry=this._searchStack.pop();
+    const {m,captured,epCaptured,prevEnPassant,prevMoved,prevRookMoved}=entry;
+    const moved=this.board[m.tr][m.tc];
+    let restored={...moved, moved:prevMoved};
+    if(m.promotion) restored.type='P';
+    if(m.castle==='K'){ this.board[m.fr][7]={color:moved.color,type:'R',moved:prevRookMoved}; this.board[m.fr][5]=null; }
+    else if(m.castle==='Q'){ this.board[m.fr][0]={color:moved.color,type:'R',moved:prevRookMoved}; this.board[m.fr][3]=null; }
+    this.board[m.fr][m.fc]=restored;
+    this.board[m.tr][m.tc]=captured||null;
+    if(m.enPassantCapture) this.board[m.capR][m.capC]=epCaptured;
+    this.enPassant=prevEnPassant;
+  }
+
+  negamax(depth,alpha,beta,color,deadline){
+    if(Date.now()>deadline) throw {timeout:true};
+    const moves=this.legalMovesFor(color);
+    if(moves.length===0){
+      if(this.inCheck(color)) return -100000-depth;
+      return 0;
+    }
+    if(depth===0){ const s=this.evaluate(); return color==='w'?s:-s; }
+    const ordered=this.orderMoves(moves);
+    let best=-Infinity;
+    for(const m of ordered){
+      const mv = m.promotion ? {...m,promoteTo:'Q'} : m;
+      this.makeMoveRaw(mv);
+      let val;
+      try{ val=-this.negamax(depth-1,-beta,-alpha,color==='w'?'b':'w',deadline); }
+      finally{ this.unmakeMoveRaw(); }
+      if(val>best) best=val;
+      if(best>alpha) alpha=best;
+      if(alpha>=beta) break;
+    }
+    return best;
+  }
+
+  bestMove(color, timeLimitMs, maxDepth){
+    const deadline=Date.now()+timeLimitMs;
+    let best=null,bestScore=-Infinity;
+    try{
+      for(let depth=1; depth<=maxDepth; depth++){
+        const moves=this.orderMoves(this.legalMovesFor(color));
+        if(moves.length===0) break;
+        let localBest=null,localBestScore=-Infinity,alpha=-Infinity,beta=Infinity;
+        for(const m of moves){
+          const mv = m.promotion ? {...m,promoteTo:'Q'} : m;
+          this.makeMoveRaw(mv);
+          let val;
+          try{ val=-this.negamax(depth-1,-beta,-alpha,color==='w'?'b':'w',deadline); }
+          finally{ this.unmakeMoveRaw(); }
+          if(val>localBestScore){ localBestScore=val; localBest=mv; }
+          if(val>alpha) alpha=val;
+        }
+        if(localBest){ best=localBest; bestScore=localBestScore; }
+      }
+    }catch(e){ if(!e||!e.timeout) throw e; }
+    if(!best){
+      const moves=this.legalMovesFor(color);
+      best = moves[Math.floor(Math.random()*moves.length)] || null;
+      if(best && best.promotion) best={...best,promoteTo:'Q'};
+    }
+    return best;
+  }
+}
+
+if(typeof module!=='undefined') module.exports = {ChessGame, standardBackRow, initialBoard, emptyBoard, cloneBoard, algebraic, inBounds, KNIGHT_DELTAS, KING_DELTAS, BISHOP_DIRS, ROOK_DIRS, pawnDir, promotionRow, startRow, FILES};
+
+
+/* ===== UI ===== */
+(function(){
+  const FILES='abcdefgh';
+  const WHITE_GLYPH={K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙'};
+  const BLACK_GLYPH={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'};
+
+  let game = new ChessGame();
+  let humanColor='w', aiColor='b';
+  let selected=null, legalForSelected=[], lastMove=null, pendingPromotion=null;
+  let aiThinkTime=1500, aiMaxDepth=4;
+  let capturedByWhite=[], capturedByBlack=[], moveNo=1;
+  let gameGen=0;
+
+  const boardEl=document.getElementById('board');
+  const statusEl=document.getElementById('status');
+  const coordsEl=document.getElementById('coords');
+  const movelogEl=document.getElementById('movelog');
+  const capturedWEl=document.getElementById('capturedW');
+  const capturedBEl=document.getElementById('capturedB');
+  const isEN=()=>document.body.classList.contains('lang-en');
+
+  function buildBoardDOM(){
+    boardEl.innerHTML='';
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const d=document.createElement('div');
+        d.className='sq '+(((r+c)%2===0)?'light':'dark');
+        d.dataset.r=r; d.dataset.c=c;
+        d.addEventListener('click',()=>onSquareClick(r,c));
+        boardEl.appendChild(d);
+      }
+    }
+    let s=''; for(let c=0;c<8;c++) s+='<span>'+FILES[c]+'</span>';
+    coordsEl.innerHTML=s;
+  }
+
+  function render(){
+    const cells=boardEl.children;
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const idx=r*8+c;
+        const cell=cells[idx];
+        cell.innerHTML='';
+        cell.classList.remove('selected','lastmove');
+        const p=game.board[r][c];
+        if(p){
+          const span=document.createElement('span');
+          span.className = p.color==='w' ? 'piece-w':'piece-b';
+          span.textContent = p.color==='w'?WHITE_GLYPH[p.type]:BLACK_GLYPH[p.type];
+          cell.appendChild(span);
+        }
+        if(selected && selected.r===r && selected.c===c) cell.classList.add('selected');
+        if(lastMove && ((lastMove.tr===r&&lastMove.tc===c)||(lastMove.fr===r&&lastMove.fc===c))) cell.classList.add('lastmove');
+        const mv = legalForSelected.find(m=>m.tr===r && m.tc===c);
+        if(mv){
+          const marker=document.createElement('div');
+          marker.className = game.board[r][c] ? 'ring':'dot';
+          cell.appendChild(marker);
+        }
+      }
+    }
+    renderCaptured();
+    renderStatus();
+  }
+
+  function renderCaptured(){
+    capturedWEl.innerHTML=(isEN()?'White captured: ':'白が取った駒: ')+capturedByWhite.map(t=>BLACK_GLYPH[t]).join(' ');
+    capturedBEl.innerHTML=(isEN()?'Black captured: ':'黒が取った駒: ')+capturedByBlack.map(t=>WHITE_GLYPH[t]).join(' ');
+  }
+
+  function sideLabel(color){ if(isEN()) return color==='w'?'White':'Black'; return color==='w'?'白':'黒'; }
+
+  function renderStatus(){
+    statusEl.classList.remove('check','over');
+    if(game.gameOver){
+      statusEl.classList.add('over');
+      let msg;
+      if(game.result==='draw') msg = isEN()?'Draw (stalemate).':'引き分け（ステイルメイト）。';
+      else { const winner = game.result==='white_wins'?'w':'b'; msg = isEN()? sideLabel(winner)+' wins by checkmate!' : sideLabel(winner)+'の勝利 — チェックメイト！'; }
+      statusEl.textContent=msg; return;
+    }
+    let msg=(isEN()?"Turn: ":"手番: ")+sideLabel(game.turn);
+    if(game.inCheck(game.turn)){ statusEl.classList.add('check'); msg += isEN()?'  (Check!)':'（チェック！）'; }
+    if(game.turn===aiColor) msg += isEN()?'  — thinking…':'　— 思考中…';
+    statusEl.textContent=msg;
+  }
+
+  function algebraic(r,c){ return FILES[c]+(8-r); }
+
+  function logMove(color, m, wasCapture, wasCheck, wasMate){
+    let txt;
+    if(m.castle==='K') txt='O-O';
+    else if(m.castle==='Q') txt='O-O-O';
+    else {
+      const from=algebraic(m.fr,m.fc), to=algebraic(m.tr,m.tc);
+      txt = from + (wasCapture?'x':'-') + to + (m.promotion?('='+(m.promoteTo||'Q')):'');
+    }
+    if(wasMate) txt+='#'; else if(wasCheck) txt+='+';
+    const div=document.createElement('div');
+    if(color==='w'){ div.innerHTML='<b>'+moveNo+'.</b> '+txt; }
+    else { div.innerHTML='&nbsp;&nbsp;&nbsp;&nbsp;'+txt; moveNo++; }
+    movelogEl.appendChild(div);
+    movelogEl.scrollTop=movelogEl.scrollHeight;
+  }
+
+  function onSquareClick(r,c){
+    if(game.gameOver) return;
+    if(game.turn!==humanColor) return;
+    const p=game.board[r][c];
+    if(selected){
+      const mv=legalForSelected.find(m=>m.tr===r && m.tc===c);
+      if(mv){ performMove(mv); selected=null; legalForSelected=[]; return; }
+      if(p && p.color===humanColor) selectSquare(r,c);
+      else { selected=null; legalForSelected=[]; render(); }
+      return;
+    }
+    if(p && p.color===humanColor) selectSquare(r,c);
+  }
+
+  function selectSquare(r,c){
+    selected={r,c};
+    const all=game.legalMovesFor(humanColor);
+    legalForSelected = all.filter(m=>m.fr===r && m.fc===c);
+    render();
+  }
+
+  function performMove(mv){
+    if(mv.promotion){ pendingPromotion=mv; showPromotionModal(game.board[mv.fr][mv.fc].color); return; }
+    commitMove(mv);
+  }
+
+  function commitMove(mv){
+    const mover=game.board[mv.fr][mv.fc];
+    const wasCaptureFlag=!!mv.capture;
+    const info=game.makeMove(mv);
+    if(info.captured){ if(info.captured.color==='w') capturedByBlack.push(info.captured.type); else capturedByWhite.push(info.captured.type); }
+    if(info.epCaptured){ if(info.epCaptured.color==='w') capturedByBlack.push(info.epCaptured.type); else capturedByWhite.push(info.epCaptured.type); }
+    const wasCheck=game.inCheck(game.turn);
+    const wasMate=game.gameOver && game.result!=='draw';
+    logMove(mover.color, mv, wasCaptureFlag || !!info.captured || !!info.epCaptured, wasCheck, wasMate);
+    lastMove=mv; selected=null; legalForSelected=[];
+    render();
+    if(!game.gameOver && game.turn===aiColor){
+      const myGen=gameGen;
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 260);
+    }
+  }
+
+  function showPromotionModal(color){
+    const modal=document.getElementById('promoModal');
+    const choicesEl=document.getElementById('promoChoices');
+    choicesEl.innerHTML='';
+    const glyphs=color==='w'?WHITE_GLYPH:BLACK_GLYPH;
+    for(const t of ['Q','R','B','N']){
+      const btn=document.createElement('button');
+      btn.textContent=glyphs[t];
+      btn.className=color==='w'?'piece-w':'piece-b';
+      btn.addEventListener('click',()=>{
+        modal.classList.remove('show');
+        const mv={...pendingPromotion, promoteTo:t};
+        pendingPromotion=null;
+        commitMove(mv);
+      });
+      choicesEl.appendChild(btn);
+    }
+    modal.classList.add('show');
+  }
+
+  function aiMove(myGen){
+    if(myGen===undefined) myGen=gameGen;
+    if(myGen!==gameGen) return;
+    if(game.gameOver || game.turn!==aiColor) return;
+    render();
+    setTimeout(()=>{
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      const mv=game.bestMove(aiColor, aiThinkTime, aiMaxDepth);
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      if(!mv){ render(); return; }
+      commitMove(mv);
+    }, 30);
+  }
+
+  function newGame(){
+    gameGen++;
+    const myGen=gameGen;
+    game = new ChessGame();
+    humanColor = document.getElementById('sideSelect').value;
+    aiColor = humanColor==='w' ? 'b' : 'w';
+    const [t,d]=document.getElementById('diffSelect').value.split(',').map(Number);
+    aiThinkTime=t; aiMaxDepth=d;
+    selected=null; legalForSelected=[]; lastMove=null;
+    capturedByWhite=[]; capturedByBlack=[]; moveNo=1;
+    movelogEl.innerHTML='';
+    render();
+    if(game.turn===aiColor){
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 300);
+    }
+  }
+
+  document.getElementById('newGameBtn').addEventListener('click', ()=>newGame());
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('lang-en');
+    render();
+  });
+  document.getElementById('themeBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('light-mode');
+  });
+
+
+  buildBoardDOM();
+  newGame();
+})();
+
+</script>
+</body>
+</html>
