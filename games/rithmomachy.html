@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>リトモマキア | Rithmomachy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
+    --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6;
+    --square-light: #3f5445; --square-dark: #24382c;
+    --danger: #b25a4a; --text-dim: #9fae9f;
+  }
+  body.light-mode{
+    --bg: #f2ead9; --bg-panel: #fbf6ea; --moss: #8fae82; --moss-light: #a3c294;
+    --brass: #a97f45; --brass-bright: #8a6530; --cream: #2c2417;
+    --square-light: #e4d7b6; --square-dark: #b99a66; --danger: #a8402f; --text-dim: #6b5f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(217,180,124,0.06), transparent 60%),
+      radial-gradient(1000px 700px at 110% 10%, rgba(79,111,86,0.18), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh; padding:32px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; border-bottom:1px solid rgba(185,146,90,0.25); padding-bottom:20px; margin-bottom:28px;}
+  h1{font-family:'Fraunces', serif; font-weight:700; font-size:clamp(26px,4.5vw,42px); margin:0; letter-spacing:0.01em; color:var(--cream);}
+  h1 .en{display:block; font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:0.42em; color:var(--brass-bright); margin-top:4px;}
+  .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:14px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s;}
+  .langtoggle:hover{background:rgba(185,146,90,0.15);}
+  .layout{display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;}
+  .board-col{flex:0 0 auto;}
+  .side-col{flex:1 1 260px; min-width:260px;}
+  .panel{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:18px 20px; margin-bottom:18px;}
+  .panel h2{font-family:'Fraunces',serif; font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:0.08em; color:var(--brass-bright); margin:0 0 12px;}
+  label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px;}
+  select, button.action{width:100%; background:var(--moss); color:var(--cream); border:1px solid rgba(217,180,124,0.3); border-radius:6px; padding:9px 12px; font-family:'Noto Sans JP',sans-serif; font-size:14px; margin-bottom:14px; cursor:pointer;}
+  select:focus, button.action:focus{outline:2px solid var(--brass-bright); outline-offset:1px;}
+  button.action{background:linear-gradient(180deg, var(--brass) 0%, #a17f4c 100%); color:#1b2a22; font-weight:700; border:none; margin-bottom:0; transition:transform .1s;}
+  button.action:hover{transform:translateY(-1px);}
+  button.action:active{transform:translateY(0);}
+  #status{font-family:'Fraunces',serif; font-size:16px; font-weight:600; padding:12px 14px; border-radius:8px; background:rgba(79,111,86,0.25); border-left:3px solid var(--brass); min-height:24px;}
+  #status.over{border-left-color:var(--brass-bright); color:var(--brass-bright);}
+  .board{display:grid; grid-template-columns:repeat(8, min(9vw,46px)); grid-template-rows:repeat(16, min(9vw,46px)); border:3px solid var(--brass); border-radius:4px; box-shadow:0 12px 40px rgba(0,0,0,0.45);}
+  .sq{position:relative; display:flex; align-items:center; justify-content:center; font-size:min(2.6vw,13px); cursor:pointer; user-select:none;}
+  .sq.light{background:var(--square-light);} .sq.dark{background:var(--square-dark);}
+  .sq.selected{outline:2px solid var(--brass-bright); outline-offset:-2px; z-index:2;}
+  .sq .dot{position:absolute; width:22%; height:22%; border-radius:50%; background:var(--brass-bright); box-shadow:0 0 6px 2px rgba(217,180,124,0.7); animation:pulse-dot 1.1s ease-in-out infinite; z-index:1;}
+  .sq .ring{position:absolute; inset:8%; border-radius:50%; border:2px solid var(--brass-bright); box-shadow:0 0 6px 2px rgba(217,180,124,0.6); animation:pulse-ring 1.1s ease-in-out infinite; z-index:1;}
+  @keyframes pulse-dot{ 0%,100%{opacity:0.65; transform:scale(0.85);} 50%{opacity:1; transform:scale(1.15);} }
+  @keyframes pulse-ring{ 0%,100%{opacity:0.55;} 50%{opacity:1;} }
+  .sq.lastmove{box-shadow:inset 0 0 0 2px rgba(217,180,124,0.5);}
+  .piece{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; width:88%; height:88%; border-radius:3px; font-weight:700; line-height:1;}
+  .piece.round{border-radius:50%;}
+  .piece.triangle{clip-path:polygon(50% 0%, 0% 100%, 100% 100%);}
+  .piece.square{border-radius:2px;}
+  .piece.pyramid{
+    clip-path:polygon(50% 0%, 0% 100%, 100% 100%);
+    border:2px solid var(--brass-bright);
+    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 22%, rgba(0,0,0,0.35) 22%, rgba(0,0,0,0.35) 26%);
+    box-shadow: 0 0 0 2px rgba(217,180,124,0.35), 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .piece.pyramid .val{ font-weight:900; text-shadow:0 0 3px rgba(0,0,0,0.6); }
+  .piece-w{background:#f5ecd8; color:#1b2a22; border-color:#f5ecd8;}
+  .piece-b{background:#26201a; color:#f0e6d2; border-color:#26201a;}
+  .piece .val{font-size:min(2.2vw,10px);}
+  .captured{display:flex; flex-wrap:wrap; gap:2px; min-height:20px; font-size:12px; color:var(--text-dim);}
+  .movelog{max-height:200px; overflow-y:auto; font-size:12.5px; line-height:1.8; color:var(--text-dim);}
+  .movelog b{color:var(--cream);}
+  .rule-note{font-size:12.5px; color:var(--text-dim); line-height:1.7;}
+  .piece-table{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px;}
+  .piece-table td, .piece-table th{padding:4px 6px; text-align:left; border-bottom:1px solid rgba(185,146,90,0.15); color:var(--text-dim);}
+  .piece-table th{color:var(--brass-bright); font-weight:600;}
+  .lang-en:not(body){display:none;}
+  body.lang-en .lang-ja{display:none;}
+  body.lang-en .lang-en{display:block;}
+  footer{margin-top:40px; font-size:12px; color:var(--text-dim); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>リトモマキア<span class="en">Rithmomachy</span></h1>
+    <div style="display:flex; gap:8px;">
+      <button class="langtoggle" id="langBtn">EN / 日本語</button>
+      <button class="langtoggle" id="themeBtn">☀️ / 🌙</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board-col">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="side-col">
+      <div class="panel">
+        <h2><span class="lang-ja">対局設定</span><span class="lang-en">Game Setup</span></h2>
+        <label class="lang-ja">あなたの駒色</label>
+        <label class="lang-en">Your colour</label>
+        <select id="sideSelect">
+          <option value="w">白（偶数軍） / White (Evens)</option>
+          <option value="b">黒（奇数軍） / Black (Odds)</option>
+        </select>
+        <label class="lang-ja">AIの強さ</label>
+        <label class="lang-en">AI strength</label>
+        <select id="diffSelect">
+          <option value="900,2">弱い / Weak</option>
+          <option value="1800,2" selected>普通 / Normal</option>
+          <option value="3000,3">強い / Strong</option>
+        </select>
+        <label class="lang-ja">デ・コルポレ（勝利に必要な捕獲数）</label>
+        <label class="lang-en">De Corpore (pieces to capture for victory)</label>
+        <select id="corporeSelect">
+          <option value="5">5（短め / Short）</option>
+          <option value="8" selected>8（標準 / Standard）</option>
+          <option value="12">12（長め / Long）</option>
+          <option value="16">16（じっくり / Marathon）</option>
+          <option value="999">無効・全滅制 / Off — annihilation only</option>
+        </select>
+        <button class="action" id="newGameBtn"><span class="lang-ja">新規対局</span><span class="lang-en">New Game</span></button>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">状況</span><span class="lang-en">Status</span></h2>
+        <div id="status"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">捕獲した駒</span><span class="lang-en">Captures</span></h2>
+        <div class="captured" id="capturedW"></div>
+        <div class="captured" id="capturedB"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">棋譜</span><span class="lang-en">Move Log</span></h2>
+        <div class="movelog" id="movelog"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">ルール</span><span class="lang-en">Rules</span></h2>
+        <p class="rule-note lang-ja">
+          11世紀ヨーロッパで生まれた「哲学者のゲーム」。チェスと違い、駒の価値は数そのもの — 円（対角に1マス）・三角（縦横2マス、または桂馬状の跳躍）・四角（縦横3マス、またはより長い桂馬状の跳躍）・ピラミッド（内部に残っている円・三角・四角の動きをすべて使える積み駒）。捕獲方法は4種類：①同値の相手駒へ移動する「会敵」、②自分の駒の数値×距離が相手駒の数値と等しくなる「侵食」、③盤上の既存の味方駒と今動かした駒の数値を四則演算した結果が、両者に挟まれた敵駒の数値と一致する「待ち伏せ」、④敵駒の四方（または斜め四方）をすべて自軍の駒または盤端で囲む「包囲」。勝利条件は史料通りの「デ・コルポレ」——対局前に目標の捕獲数を決めておき、先に到達した側の勝ち（対局設定で選択可、無効化して全滅制にすることもできる）。歴史的な「栄光の勝利」（相手のピラミッドを崩した上で、相手陣内に算術・幾何・調和数列を並べる）は非常に複雑なため、このバージョンでは実装していない。
+        </p>
+        <p class="rule-note lang-en">
+          The "Philosophers' Game," born in 11th-century Europe. Unlike chess, a piece's power lies purely in its number. Rounds move one square diagonally; Triangles move exactly two squares orthogonally or diagonally, or make a knight-shaped leap; Squares move exactly three squares, or a longer knight-shaped leap; Pyramids are stacks that can move using any movement type still present among their remaining internal layers. There are four ways to capture: <b>Meeting</b> (moving onto an enemy piece of equal value), <b>Eruption</b> (your piece's value times the distance to an enemy piece equals that enemy's value), <b>Ambush</b> (the moved piece and an already-positioned friendly piece flank an enemy piece such that some combination of their two values — sum, difference, product, or quotient — equals it), and <b>Siege</b> (an enemy piece fully surrounded on all four orthogonal or all four diagonal sides by your pieces or the board edge). Victory follows the historical "De Corpore" rule as written — the two players agree beforehand on a target number of captures, and whoever reaches it first wins (set the target in Game Setup, or turn it off for annihilation-only play). The historical "Glorious Victories" — arranging arithmetic, geometric, or harmonic progressions on the opponent's side of the board after destroying their Pyramid — are considerably more intricate and aren't implemented in this version.
+        </p>
+        <table class="piece-table lang-ja">
+          <tr><th>駒</th><th>動き</th></tr>
+          <tr><td>円 (Round)</td><td>斜め1マス</td></tr>
+          <tr><td>三角 (Triangle)</td><td>縦横2マス、または桂馬跳躍</td></tr>
+          <tr><td>四角 (Square)</td><td>縦横3マス、または長い桂馬跳躍</td></tr>
+          <tr><td>ピラミッド (Pyramid)</td><td>内部に残る駒種の動きをすべて使用可</td></tr>
+        </table>
+        <table class="piece-table lang-en">
+          <tr><th>Piece</th><th>Movement</th></tr>
+          <tr><td>Round</td><td>1 square diagonally</td></tr>
+          <tr><td>Triangle</td><td>2 squares orthogonally, or a knight's leap</td></tr>
+          <tr><td>Square</td><td>3 squares orthogonally, or a longer knight's leap</td></tr>
+          <tr><td>Pyramid</td><td>Any movement type still present in its remaining layers</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>Mossgreen — a solo-developed browser board game.</footer>
+</div>
+
+<script>
+'use strict';
+const ROWS=16, COLS=8;
+function inBounds(r,c){ return r>=0 && r<ROWS && c>=0 && c<COLS; }
+
+const ORTHO = [[-1,0],[1,0],[0,-1],[0,1]];
+const DIAG = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const ALL8 = [...ORTHO,...DIAG];
+
+// Piece values (documented in the Boissiere/Fulke tradition, via boardspace.net).
+const WHITE_ROUNDS=[2,4,4,6,8,16,36,64];
+const WHITE_TRIANGLES=[6,9,20,25,42,49,72,81];
+const WHITE_SQUARES=[15,25,45,81,169,153,289];
+const WHITE_PYRAMID={R:[1,4],T:[9,16],S:[25,36]}; // total 91
+
+const BLACK_ROUNDS=[3,5,7,9,9,25,29,81];
+const BLACK_TRIANGLES=[12,16,30,36,56,64,90,100];
+const BLACK_SQUARES=[28,49,66,120,121,225,361];
+const BLACK_PYRAMID={R:[16],T:[25,36],S:[49,64]}; // total 190
+
+function emptyBoard(){ return Array.from({length:ROWS},()=>Array(COLS).fill(null)); }
+function cloneBoard(b){ return b.map(row=>row.map(p=>p?{...p}:null)); }
+
+function pyramidValue(p){
+  let v=0;
+  for(const k of ['R','T','S']) for(const x of p.layers[k]) v+=x;
+  return v;
+}
+
+function initialBoard(){
+  const b=emptyBoard();
+  // White: row0=Rounds, row1=Triangles, row2=Squares(+Pyramid at col7)
+  for(let c=0;c<8;c++) b[0][c]={color:'w', kind:'R', value:WHITE_ROUNDS[c]};
+  for(let c=0;c<8;c++) b[1][c]={color:'w', kind:'T', value:WHITE_TRIANGLES[c]};
+  for(let c=0;c<7;c++) b[2][c]={color:'w', kind:'S', value:WHITE_SQUARES[c]};
+  b[2][7]={color:'w', kind:'P', layers:{R:[...WHITE_PYRAMID.R],T:[...WHITE_PYRAMID.T],S:[...WHITE_PYRAMID.S]}};
+  // Black: row15=Rounds, row14=Triangles, row13=Squares(+Pyramid at col7), mirrored column order
+  for(let c=0;c<8;c++) b[15][7-c]={color:'b', kind:'R', value:BLACK_ROUNDS[c]};
+  for(let c=0;c<8;c++) b[14][7-c]={color:'b', kind:'T', value:BLACK_TRIANGLES[c]};
+  for(let c=0;c<7;c++) b[13][7-c]={color:'b', kind:'S', value:BLACK_SQUARES[c]};
+  b[13][0]={color:'b', kind:'P', layers:{R:[...BLACK_PYRAMID.R],T:[...BLACK_PYRAMID.T],S:[...BLACK_PYRAMID.S]}};
+  return b;
+}
+
+function pieceMovementKinds(p){
+  if(p.kind!=='P') return [p.kind];
+  const out=[];
+  if(p.layers.R.length) out.push('R');
+  if(p.layers.T.length) out.push('T');
+  if(p.layers.S.length) out.push('S');
+  return out;
+}
+function pieceValue(p){ return p.kind==='P' ? pyramidValue(p) : p.value; }
+
+class RithmomachyGame {
+  constructor(corpore){
+    this.board = initialBoard();
+    this.turn = 'w';
+    this.history = [];
+    this.gameOver = false;
+    this.result = null;
+    this.captured = {w:[], b:[]}; // pieces captured BY this color
+    this._searchStack = [];
+    this.corpore = corpore || 8; // De Corpore threshold (pieces captured) -- historically
+    // agreed between the two players before the game; configurable in Game Setup here
+  }
+
+  // ----- Movement -----
+  slideTargets(r,c,dirs,dist,board){
+    const out=[];
+    for(const [dr,dc] of dirs){
+      let nr=r+dr*dist, nc=c+dc*dist;
+      if(!inBounds(nr,nc)) continue;
+      // path must be clear except at the final square
+      let clear=true;
+      for(let s=1;s<dist;s++){ if(board[r+dr*s][c+dc*s]){ clear=false; break; } }
+      if(!clear) continue;
+      out.push([nr,nc]);
+    }
+    return out;
+  }
+
+  pieceMoves(r,c,board){
+    board = board || this.board;
+    const p = board[r][c];
+    if(!p) return [];
+    const moves=[];
+    const kinds = pieceMovementKinds(p);
+    const seen = new Set();
+    const tryPush=(nr,nc)=>{
+      if(!inBounds(nr,nc)) return;
+      const key=nr+','+nc;
+      if(seen.has(key)) return;
+      const t=board[nr][nc];
+      if(!t){ moves.push({fr:r,fc:c,tr:nr,tc:nc,capture:'none'}); seen.add(key); }
+      else if(t.color!==p.color && pieceValue(t)===pieceValue(p)){
+        moves.push({fr:r,fc:c,tr:nr,tc:nc,capture:'equality'}); seen.add(key);
+      }
+    };
+    for(const k of kinds){
+      if(k==='R'){
+        for(const [dr,dc] of DIAG) tryPush(r+dr,c+dc);
+      } else if(k==='T'){
+        for(const [dr,dc] of ALL8){
+          for(const [nr,nc] of this.slideTargets(r,c,[[dr,dc]],2,board)) tryPush(nr,nc);
+        }
+        // "flying" knight move
+        const KN=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+        for(const [dr,dc] of KN) tryPush(r+dr,c+dc);
+      } else if(k==='S'){
+        for(const [dr,dc] of ALL8){
+          for(const [nr,nc] of this.slideTargets(r,c,[[dr,dc]],3,board)) tryPush(nr,nc);
+        }
+        // "longer" flying move for squares
+        const KN2=[[-3,-1],[-3,1],[-1,-3],[-1,3],[1,-3],[1,3],[3,-1],[3,1]];
+        for(const [dr,dc] of KN2) tryPush(r+dr,c+dc);
+      }
+    }
+    return moves;
+  }
+
+  pseudoMovesFor(color, board){
+    board = board || this.board;
+    let all=[];
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const p=board[r][c];
+      if(p && p.color===color) all=all.concat(this.pieceMoves(r,c,board));
+    }
+    return all;
+  }
+  legalMovesFor(color){ return this.pseudoMovesFor(color); }
+
+  // ----- Capture resolution (triggered by the piece that just moved to tr,tc) -----
+  resolveCaptures(board, mover, tr, tc){
+    const captured=[];
+    const enemyColor = mover.color==='w' ? 'b' : 'w';
+    const mval = pieceValue(mover);
+
+    // Eruption / Assault: mover vs any enemy on a straight line (ortho or diag),
+    // clear path, where mover.value * distance === enemy.value.
+    for(const [dr,dc] of ALL8){
+      let dist=1, nr=tr+dr, nc=tc+dc;
+      while(inBounds(nr,nc)){
+        const t=board[nr][nc];
+        if(t){
+          if(t.color===enemyColor){
+            const d=dist+1; // "distance must include both occupied squares"
+            if(mval*d===pieceValue(t)) captured.push({r:nr,c:nc});
+          }
+          break; // path blocked beyond first piece encountered
+        }
+        dist++; nr+=dr; nc+=dc;
+      }
+    }
+
+    // Ambush: mover + another friendly piece adjacent (ortho/diag) to a shared
+    // enemy, where some arithmetic combination of their values equals the enemy.
+    for(const [dr,dc] of ALL8){
+      const er=tr+dr, ec=tc+dc;
+      if(!inBounds(er,ec)) continue;
+      const enemy=board[er][ec];
+      if(!enemy || enemy.color!==enemyColor) continue;
+      const ev=pieceValue(enemy);
+      for(const [dr2,dc2] of ALL8){
+        const fr2=er+dr2, fc2=ec+dc2;
+        if(!inBounds(fr2,fc2)) continue;
+        if(fr2===tr && fc2===tc) continue;
+        const f=board[fr2][fc2];
+        if(!f || f.color!==mover.color) continue;
+        const fv=pieceValue(f);
+        if(mval+fv===ev || Math.abs(mval-fv)===ev || mval*fv===ev ||
+           (fv!==0 && mval/fv===ev) || (mval!==0 && fv/mval===ev)){
+          captured.push({r:er,c:ec});
+        }
+      }
+    }
+
+    // Siege: any enemy adjacent to the mover's new square that is now fully
+    // surrounded (all 4 orthogonal, or all 4 diagonal) by enemies-of-its-own (i.e. our colour) or the board edge.
+    for(const [dr,dc] of ALL8){
+      const er=tr+dr, ec=tc+dc;
+      if(!inBounds(er,ec)) continue;
+      const enemy=board[er][ec];
+      if(!enemy || enemy.color!==enemyColor) continue;
+      const orthoSurrounded = ORTHO.every(([odr,odc])=>{
+        const rr=er+odr, cc=ec+odc;
+        if(!inBounds(rr,cc)) return true; // edge counts as hostile
+        const q=board[rr][cc];
+        return q && q.color===mover.color;
+      });
+      const diagSurrounded = DIAG.every(([odr,odc])=>{
+        const rr=er+odr, cc=ec+odc;
+        if(!inBounds(rr,cc)) return true;
+        const q=board[rr][cc];
+        return q && q.color===mover.color;
+      });
+      if(orthoSurrounded || diagSurrounded) captured.push({r:er,c:ec});
+    }
+
+    // De-duplicate
+    const uniq=[]; const seen=new Set();
+    for(const cap of captured){ const k=cap.r+','+cap.c; if(!seen.has(k)){ seen.add(k); uniq.push(cap); } }
+    return uniq;
+  }
+
+  applyMoveToBoard(board, m){
+    const p = board[m.fr][m.fc];
+    let equalityCaptured=null;
+    if(m.capture==='equality') equalityCaptured = board[m.tr][m.tc];
+    board[m.fr][m.fc]=null;
+    board[m.tr][m.tc]=p;
+    const extra = this.resolveCaptures(board, p, m.tr, m.tc);
+    const removed=[];
+    if(equalityCaptured) removed.push({r:m.tr,c:m.tc,piece:equalityCaptured});
+    for(const cap of extra){
+      const piece=board[cap.r][cap.c];
+      if(piece){ removed.push({r:cap.r,c:cap.c,piece}); board[cap.r][cap.c]=null; }
+    }
+    return {removed, moverPiece:p};
+  }
+
+  makeMove(m){
+    const mover=this.board[m.fr][m.fc];
+    const info=this.applyMoveToBoard(this.board,m);
+    this.history.push({m,removed:info.removed,color:mover.color});
+    for(const cap of info.removed) this.captured[mover.color].push(cap.piece);
+    this.turn = mover.color==='w' ? 'b' : 'w';
+    this._checkGameOver();
+    return info;
+  }
+
+  totalPiecesOnBoard(color){
+    let n=0;
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const p=this.board[r][c]; if(p&&p.color===color) n++; }
+    return n;
+  }
+
+  _checkGameOver(){
+    if(this.totalPiecesOnBoard('w')===0){ this.gameOver=true; this.result='black_wins'; return; }
+    if(this.totalPiecesOnBoard('b')===0){ this.gameOver=true; this.result='white_wins'; return; }
+    if(this.captured.w.length>=this.corpore){ this.gameOver=true; this.result='white_wins'; return; }
+    if(this.captured.b.length>=this.corpore){ this.gameOver=true; this.result='black_wins'; return; }
+    const moves=this.legalMovesFor(this.turn);
+    if(moves.length===0){ this.gameOver=true; this.result='draw'; }
+  }
+
+  evaluate(){
+    let score=0;
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const p=this.board[r][c];
+      if(!p) continue;
+      const v=pieceValue(p);
+      score += p.color==='w' ? v : -v;
+    }
+    score += this.captured.w.reduce((s,p)=>s+pieceValue(p),0)*0.5;
+    score -= this.captured.b.reduce((s,p)=>s+pieceValue(p),0)*0.5;
+    return score;
+  }
+
+  orderMoves(moves){
+    return moves.slice().sort((a,b)=>{
+      const av=(a.capture==='equality'?50:0)+Math.random()*3;
+      const bv=(b.capture==='equality'?50:0)+Math.random()*3;
+      return bv-av;
+    });
+  }
+
+  makeMoveRaw(m){
+    const info=this.applyMoveToBoard(this.board,m);
+    this._searchStack.push({m,info});
+  }
+  unmakeMoveRaw(){
+    const entry=this._searchStack.pop();
+    const {m,info}=entry;
+    const moved=this.board[m.tr][m.tc];
+    this.board[m.fr][m.fc]=moved;
+    this.board[m.tr][m.tc]=null;
+    for(const cap of info.removed){ this.board[cap.r][cap.c]=cap.piece; }
+  }
+
+  negamax(depth,alpha,beta,color,deadline){
+    if(Date.now()>deadline) throw {timeout:true};
+    if(this.totalPiecesOnBoard(color)===0) return -50000-depth;
+    const oppColor = color==='w'?'b':'w';
+    if(this.totalPiecesOnBoard(oppColor)===0) return 50000+depth;
+    const moves=this.legalMovesFor(color);
+    if(moves.length===0) return 0;
+    if(depth===0){ const s=this.evaluate(); return color==='w'?s:-s; }
+    let best=-Infinity;
+    for(const m of moves){
+      this.makeMoveRaw(m);
+      let val;
+      try{ val=-this.negamax(depth-1,-beta,-alpha,oppColor,deadline); }
+      finally{ this.unmakeMoveRaw(); }
+      if(val>best) best=val;
+      if(best>alpha) alpha=best;
+      if(alpha>=beta) break;
+    }
+    return best;
+  }
+
+  bestMove(color, timeLimitMs, maxDepth){
+    const deadline=Date.now()+timeLimitMs;
+    let best=null,bestScore=-Infinity;
+    try{
+      for(let depth=1; depth<=maxDepth; depth++){
+        const moves=this.orderMoves(this.legalMovesFor(color));
+        if(moves.length===0) break;
+        let localBest=null,localBestScore=-Infinity,alpha=-Infinity,beta=Infinity;
+        for(const m of moves){
+          this.makeMoveRaw(m);
+          let val;
+          try{ val=-this.negamax(depth-1,-beta,-alpha,color==='w'?'b':'w',deadline); }
+          finally{ this.unmakeMoveRaw(); }
+          if(val>localBestScore){ localBestScore=val; localBest=m; }
+          if(val>alpha) alpha=val;
+        }
+        if(localBest){ best=localBest; bestScore=localBestScore; }
+      }
+    }catch(e){ if(!e||!e.timeout) throw e; }
+    if(!best){
+      const moves=this.legalMovesFor(color);
+      best = moves[Math.floor(Math.random()*moves.length)] || null;
+    }
+    return best;
+  }
+}
+
+
+if(typeof module!=='undefined') module.exports = {RithmomachyGame, pieceValue, ROWS, COLS};
+
+/* ===== UI ===== */
+(function(){
+  let game = new RithmomachyGame();
+  let humanColor='w', aiColor='b';
+  let selected=null, legalForSelected=[], lastMove=null;
+  let aiThinkTime=1800, aiMaxDepth=2;
+  let moveNo=1;
+  let gameGen=0;
+
+  const boardEl=document.getElementById('board');
+  const statusEl=document.getElementById('status');
+  const movelogEl=document.getElementById('movelog');
+  const capturedWEl=document.getElementById('capturedW');
+  const capturedBEl=document.getElementById('capturedB');
+  const isEN=()=>document.body.classList.contains('lang-en');
+
+  function buildBoardDOM(){
+    boardEl.innerHTML='';
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const d=document.createElement('div');
+        d.className='sq '+(((r+c)%2===0)?'light':'dark');
+        d.dataset.r=r; d.dataset.c=c;
+        d.addEventListener('click',()=>onSquareClick(r,c));
+        boardEl.appendChild(d);
+      }
+    }
+  }
+
+  function shapeClass(kind){
+    if(kind==='R') return 'round';
+    if(kind==='T') return 'triangle';
+    if(kind==='S') return 'square';
+    return 'pyramid';
+  }
+
+  function render(){
+    const cells=boardEl.children;
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const idx=r*COLS+c;
+        const cell=cells[idx];
+        cell.innerHTML='';
+        cell.classList.remove('selected','lastmove');
+        const p=game.board[r][c];
+        if(p){
+          const div=document.createElement('div');
+          div.className='piece '+shapeClass(p.kind)+' '+(p.color==='w'?'piece-w':'piece-b');
+          const val=document.createElement('span');
+          val.className='val';
+          val.textContent = pieceValue(p);
+          div.appendChild(val);
+          cell.appendChild(div);
+        }
+        if(selected && selected.r===r && selected.c===c) cell.classList.add('selected');
+        if(lastMove && ((lastMove.tr===r&&lastMove.tc===c)||(lastMove.fr===r&&lastMove.fc===c))) cell.classList.add('lastmove');
+        const mv = legalForSelected.find(m=>m.tr===r && m.tc===c);
+        if(mv){
+          const marker=document.createElement('div');
+          marker.className = mv.capture==='equality' ? 'ring':'dot';
+          cell.appendChild(marker);
+        }
+      }
+    }
+    renderCaptured();
+    renderStatus();
+  }
+
+  function renderCaptured(){
+    const wList = game.captured.w.map(p=>pieceValue(p)).join(', ');
+    const bList = game.captured.b.map(p=>pieceValue(p)).join(', ');
+    capturedWEl.innerHTML=(isEN()?'White captured: ':'白が捕獲: ')+(wList||(isEN()?'none':'なし'));
+    capturedBEl.innerHTML=(isEN()?'Black captured: ':'黒が捕獲: ')+(bList||(isEN()?'none':'なし'));
+  }
+
+  function sideLabel(color){ if(isEN()) return color==='w'?'White':'Black'; return color==='w'?'白':'黒'; }
+
+  function renderStatus(){
+    statusEl.classList.remove('over');
+    if(game.gameOver){
+      statusEl.classList.add('over');
+      let msg;
+      if(game.result==='draw') msg = isEN()?'Draw — no legal moves.':'引き分け（合法手なし）。';
+      else {
+        const winner = game.result==='white_wins'?'w':'b';
+        msg = isEN()? sideLabel(winner)+' wins!' : sideLabel(winner)+'の勝利！';
+      }
+      statusEl.textContent=msg; return;
+    }
+    const corporeLabel = game.corpore>=999 ? '∞' : game.corpore;
+    let msg=(isEN()?"Turn: ":"手番: ")+sideLabel(game.turn)+' ('+game.captured[game.turn==='w'?'w':'b'].length+'/'+corporeLabel+')';
+    if(game.turn===aiColor) msg += isEN()?'  — thinking…':'　— 思考中…';
+    statusEl.textContent=msg;
+  }
+
+  function algebraic(r,c){ return 'abcdefgh'[c]+(ROWS-r); }
+
+  function logMove(color, m){
+    let txt = algebraic(m.fr,m.fc)+'-'+algebraic(m.tr,m.tc);
+    if(m.capture==='equality') txt += ' (=)';
+    const div=document.createElement('div');
+    if(color==='w'){ div.innerHTML='<b>'+moveNo+'.</b> '+txt; }
+    else { div.innerHTML='&nbsp;&nbsp;&nbsp;&nbsp;'+txt; moveNo++; }
+    movelogEl.appendChild(div);
+    movelogEl.scrollTop=movelogEl.scrollHeight;
+  }
+
+  function onSquareClick(r,c){
+    if(game.gameOver) return;
+    if(game.turn!==humanColor) return;
+    const p=game.board[r][c];
+    if(selected){
+      const mv=legalForSelected.find(m=>m.tr===r && m.tc===c);
+      if(mv){ commitMove(mv); selected=null; legalForSelected=[]; return; }
+      if(p && p.color===humanColor) selectSquare(r,c);
+      else { selected=null; legalForSelected=[]; render(); }
+      return;
+    }
+    if(p && p.color===humanColor) selectSquare(r,c);
+  }
+
+  function selectSquare(r,c){
+    selected={r,c};
+    legalForSelected = game.pieceMoves(r,c);
+    render();
+  }
+
+  function commitMove(mv){
+    const mover=game.board[mv.fr][mv.fc];
+    const color=mover.color;
+    game.makeMove(mv);
+    logMove(color, mv);
+    lastMove=mv; selected=null; legalForSelected=[];
+    render();
+    if(!game.gameOver && game.turn===aiColor){
+      const myGen=gameGen;
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 260);
+    }
+  }
+
+  function aiMove(myGen){
+    if(myGen===undefined) myGen=gameGen;
+    if(myGen!==gameGen) return;
+    if(game.gameOver || game.turn!==aiColor) return;
+    render();
+    setTimeout(()=>{
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      const mv=game.bestMove(aiColor, aiThinkTime, aiMaxDepth);
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      if(!mv){ render(); return; }
+      commitMove(mv);
+    }, 30);
+  }
+
+  function newGame(){
+    gameGen++;
+    const myGen=gameGen;
+    const corporeVal = Number(document.getElementById('corporeSelect').value);
+    game = new RithmomachyGame(corporeVal);
+    humanColor = document.getElementById('sideSelect').value;
+    aiColor = humanColor==='w' ? 'b' : 'w';
+    const [t,d]=document.getElementById('diffSelect').value.split(',').map(Number);
+    aiThinkTime=t; aiMaxDepth=d;
+    selected=null; legalForSelected=[]; lastMove=null; moveNo=1;
+    movelogEl.innerHTML='';
+    render();
+    if(game.turn===aiColor){
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 300);
+    }
+  }
+
+  document.getElementById('newGameBtn').addEventListener('click', ()=>newGame());
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('lang-en');
+    render();
+  });
+  document.getElementById('themeBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('light-mode');
+  });
+
+  buildBoardDOM();
+  newGame();
+})();
+</script>
+</body>
+</html>

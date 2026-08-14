@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>スパルタンチェス | Spartan Chess</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
+    --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6;
+    --square-light: #3f5445; --square-dark: #24382c; --square-move: rgba(217,180,124,0.55);
+    --danger: #b25a4a; --text-dim: #9fae9f;
+  }
+  body.light-mode{
+    --bg: #f2ead9;
+    --bg-panel: #fbf6ea;
+    --moss: #8fae82;
+    --moss-light: #a3c294;
+    --brass: #a97f45;
+    --brass-bright: #8a6530;
+    --cream: #2c2417;
+    --square-light: #e4d7b6;
+    --square-dark: #b99a66;
+    --danger: #a8402f;
+    --text-dim: #6b5f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(217,180,124,0.06), transparent 60%),
+      radial-gradient(1000px 700px at 110% 10%, rgba(79,111,86,0.18), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh; padding:32px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; border-bottom:1px solid rgba(185,146,90,0.25); padding-bottom:20px; margin-bottom:28px;}
+  h1{font-family:'Fraunces', serif; font-weight:700; font-size:clamp(26px,4.5vw,42px); margin:0; letter-spacing:0.01em; color:var(--cream);}
+  h1 .en{display:block; font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:0.42em; color:var(--brass-bright); margin-top:4px;}
+  .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:14px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s;}
+  .langtoggle:hover{background:rgba(185,146,90,0.15);}
+  .layout{display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;}
+  .board-col{flex:0 0 auto;}
+  .side-col{flex:1 1 260px; min-width:260px;}
+  .panel{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:18px 20px; margin-bottom:18px;}
+  .panel h2{font-family:'Fraunces',serif; font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:0.08em; color:var(--brass-bright); margin:0 0 12px;}
+  label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px;}
+  select, button.action{width:100%; background:var(--moss); color:var(--cream); border:1px solid rgba(217,180,124,0.3); border-radius:6px; padding:9px 12px; font-family:'Noto Sans JP',sans-serif; font-size:14px; margin-bottom:14px; cursor:pointer;}
+  select:focus, button.action:focus{outline:2px solid var(--brass-bright); outline-offset:1px;}
+  button.action{background:linear-gradient(180deg, var(--brass) 0%, #a17f4c 100%); color:#1b2a22; font-weight:700; border:none; margin-bottom:0; transition:transform .1s;}
+  button.action:hover{transform:translateY(-1px);}
+  button.action:active{transform:translateY(0);}
+  #status{font-family:'Fraunces',serif; font-size:17px; font-weight:600; padding:12px 14px; border-radius:8px; background:rgba(79,111,86,0.25); border-left:3px solid var(--brass); min-height:24px;}
+  #status.check{border-left-color:var(--danger); color:#eab3a4;}
+  #status.over{border-left-color:var(--brass-bright); color:var(--brass-bright);}
+  .board{display:grid; grid-template-columns:repeat(8, min(11vw,58px)); grid-template-rows:repeat(8, min(11vw,58px)); border:3px solid var(--brass); border-radius:4px; box-shadow:0 12px 40px rgba(0,0,0,0.45);}
+  .sq{position:relative; display:flex; align-items:center; justify-content:center; font-size:min(7.4vw,38px); cursor:pointer; user-select:none;}
+  .sq.light{background:var(--square-light);} .sq.dark{background:var(--square-dark);}
+  .sq.selected{outline:3px solid var(--brass-bright); outline-offset:-3px; z-index:2;}
+  .sq .dot{position:absolute; width:30%; height:30%; border-radius:50%; background:var(--brass-bright); box-shadow:0 0 10px 3px rgba(217,180,124,0.7); animation:pulse-dot 1.1s ease-in-out infinite;}
+  .sq .ring{position:absolute; inset:5%; border-radius:50%; border:5px solid var(--brass-bright); box-shadow:0 0 10px 2px rgba(217,180,124,0.6); animation:pulse-ring 1.1s ease-in-out infinite;}
+  @keyframes pulse-dot{ 0%,100%{opacity:0.65; transform:scale(0.85);} 50%{opacity:1; transform:scale(1.15);} }
+  @keyframes pulse-ring{ 0%,100%{opacity:0.55;} 50%{opacity:1;} }
+  .sq.lastmove{box-shadow:inset 0 0 0 3px rgba(217,180,124,0.5);}
+  .piece-w{color:#f5ecd8; text-shadow:0 0 3px rgba(0,0,0,0.6), 0 2px 2px rgba(0,0,0,0.5);}
+  .piece-b{color:#e8dcc0; text-shadow:0 0 3px rgba(0,0,0,0.7), 0 2px 2px rgba(0,0,0,0.6);}
+  .coords{display:flex; justify-content:space-between; max-width:min(88vw,464px); margin-top:4px; font-size:11px; color:var(--text-dim);}
+  .captured{display:flex; flex-wrap:wrap; gap:2px; min-height:28px; font-size:18px;}
+  .movelog{max-height:220px; overflow-y:auto; font-size:13px; line-height:1.9; color:var(--text-dim);}
+  .movelog b{color:var(--cream);}
+  .modal-bg{position:fixed; inset:0; background:rgba(10,15,12,0.7); display:none; align-items:center; justify-content:center; z-index:50;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--bg-panel); border:1px solid var(--brass); border-radius:10px; padding:24px; text-align:center;}
+  .modal h3{font-family:'Fraunces',serif; margin-top:0;}
+  .promo-choices{display:flex; gap:10px; justify-content:center; margin-top:14px; flex-wrap:wrap;}
+  .promo-choices button{font-size:28px; width:56px; height:56px; border-radius:8px; border:1px solid var(--brass); background:var(--moss); color:var(--cream); cursor:pointer;}
+  .promo-choices button:hover{background:var(--moss-light);}
+  .rule-note{font-size:12.5px; color:var(--text-dim); line-height:1.7;}
+  .piece-table{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px;}
+  .piece-table td, .piece-table th{padding:4px 6px; text-align:left; border-bottom:1px solid rgba(185,146,90,0.15); color:var(--text-dim);}
+  .piece-table th{color:var(--brass-bright); font-weight:600;}
+  .piece-table .g{font-size:16px;}
+  .lang-en:not(body){display:none;}
+  body.lang-en .lang-ja{display:none;}
+  body.lang-en .lang-en{display:block;}
+  footer{margin-top:40px; font-size:12px; color:var(--text-dim); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>スパルタンチェス<span class="en">Spartan Chess</span></h1>
+    <div style="display:flex; gap:8px;">
+      <button class="langtoggle" id="langBtn">EN / 日本語</button>
+      <button class="langtoggle" id="themeBtn">☀️ / 🌙</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board-col">
+      <div class="board" id="board"></div>
+      <div class="coords" id="coords"></div>
+    </div>
+
+    <div class="side-col">
+      <div class="panel">
+        <h2><span class="lang-ja">対局設定</span><span class="lang-en">Game Setup</span></h2>
+        <label class="lang-ja">あなたの陣営</label>
+        <label class="lang-en">Your side</label>
+        <select id="sideSelect">
+          <option value="w">ペルシア軍 / Persians (White)</option>
+          <option value="b">スパルタ軍 / Spartans (Black)</option>
+        </select>
+        <label class="lang-ja">AIの強さ</label>
+        <label class="lang-en">AI strength</label>
+        <select id="diffSelect">
+          <option value="700,2">弱い / Weak</option>
+          <option value="1500,3" selected>普通 / Normal</option>
+          <option value="3000,4">強い / Strong</option>
+        </select>
+        <button class="action" id="newGameBtn"><span class="lang-ja">新規対局</span><span class="lang-en">New Game</span></button>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">状況</span><span class="lang-en">Status</span></h2>
+        <div id="status"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">失われた駒</span><span class="lang-en">Lost pieces</span></h2>
+        <div class="captured" id="capturedW"></div>
+        <div class="captured" id="capturedB"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">棋譜</span><span class="lang-en">Move Log</span></h2>
+        <div class="movelog" id="movelog"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">ルール</span><span class="lang-en">Rules</span></h2>
+        <p class="rule-note lang-ja">
+          白は「ペルシア軍」— 通常のチェスの駒とルール（キャスリングも可）をそのまま使う。黒は「スパルタ軍」— キングを2体持ち、それ以外は全く新しい5種の駒で構成される非対称のバリアント。スパルタの「重装歩兵（ホプリタイ）」は斜め前に1マス進み（2マス目の初手ジャンプも可）、まっすぐ前のマスにいる敵だけを捕獲する — 通常のポーンの逆。「チェック」という単一の概念はなく、代わりに「2体のキングのうち少なくとも1体が攻撃されていない状態」を保てば手を指せる。片方のキングを危険にさらしたまま指すことも合法で、実際に取られれば残り1体で継続する。最後のキングが取られる（または唯一のキングが詰まされる）とスパルタの敗北。ホプリタイが最終列に達すると、キング以外のスパルタ駒に昇格でき、スパルタのキングが1体しか残っていない場合に限りキングにも昇格できる。スパルタ軍にキャスリングやアンパッサンはない。
+        </p>
+        <p class="rule-note lang-en">
+          White plays the "Persians" — the standard chess army and rules, castling included. Black plays the "Spartans" — two Kings plus five entirely new piece types instead of the usual army. A Spartan "Hoplite" moves one square diagonally forward (with an optional two-square diagonal jump on its first move) and captures only straight ahead — the reverse of an ordinary pawn. There's no single notion of "check"; instead, a Spartan move is legal as long as at least one of the two Kings remains unattacked afterward. It's entirely legal to leave one King exposed — if it's actually captured, the Spartans simply continue with their one remaining King. Losing the last King (or being mated with the sole King) ends the game for the Spartans. A Hoplite reaching the back rank promotes to any Spartan piece except King, unless only one Spartan King remains, in which case King is also an option. The Spartans have no castling and no en passant.
+        </p>
+        <div class="lang-ja">
+        <table class="piece-table">
+          <tr><th>駒</th><th>動き</th></tr>
+          <tr><td class="g">⚔️ 将軍</td><td>ルーク＋キング（直線は何マスでも、斜めは1マス）</td></tr>
+          <tr><td class="g">🔱 将帥</td><td>ビショップ＋ナイト</td></tr>
+          <tr><td class="g">🛡️ 隊長</td><td>縦横に1〜2マス（跳躍可）</td></tr>
+          <tr><td class="g">🗡️ 中尉</td><td>斜めに1〜2マス（跳躍可）／横1マスへの非捕獲移動</td></tr>
+          <tr><td class="g">🪖 重装歩兵</td><td>斜め前1マス移動（初手2マス跳躍可）、前方1マスを捕獲</td></tr>
+        </table>
+        </div>
+        <div class="lang-en">
+        <table class="piece-table">
+          <tr><th>Piece</th><th>Movement</th></tr>
+          <tr><td class="g">⚔️ General</td><td>Rook + King (any distance orthogonal, one square diagonal)</td></tr>
+          <tr><td class="g">🔱 Warlord</td><td>Bishop + Knight</td></tr>
+          <tr><td class="g">🛡️ Captain</td><td>1–2 squares orthogonally, leaping</td></tr>
+          <tr><td class="g">🗡️ Lieutenant</td><td>1–2 squares diagonally, leaping / non-capturing 1-square sideways step</td></tr>
+          <tr><td class="g">🪖 Hoplite</td><td>Moves 1 square diagonally forward (2-square jump on first move), captures 1 square straight ahead</td></tr>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Mossgreen — a solo-developed browser chess variant.</footer>
+</div>
+
+<div class="modal-bg" id="promoModal">
+  <div class="modal">
+    <h3><span class="lang-ja">昇格する駒を選んでください</span><span class="lang-en">Choose promotion piece</span></h3>
+    <div class="promo-choices" id="promoChoices"></div>
+  </div>
+</div>
+
+<script>
+/* ===== Spartan Chess engine ===== */
+'use strict';
+const FILES = 'abcdefgh';
+function algebraic(r,c){ return FILES[c] + (8-r); }
+function inBounds(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+const KNIGHT_DELTAS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KING_DELTAS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const BISHOP_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const ROOK_DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+
+function emptyBoard(){ return Array.from({length:8},()=>Array(8).fill(null)); }
+function cloneBoard(b){ return b.map(row=>row.map(p=>p?{...p}:null)); }
+function pawnDir(color){ return color==='b'?1:-1; }
+function startRow(color){ return color==='b'?1:6; }
+function promotionRow(color){ return color==='b'?7:0; }
+
+class SpartanChessGame {
+  constructor(){
+    this.board = this.initialBoard();
+    this.turn = 'w';
+    this.enPassant = null;
+    this.history = [];
+    this.gameOver = false;
+    this.result = null;
+    this._searchStack = [];
+  }
+
+  initialBoard(){
+    const b = emptyBoard();
+    const backRow = ['R','N','B','Q','K','B','N','R'];
+    for(let c=0;c<8;c++){
+      b[7][c] = {color:'w', type:backRow[c], moved:false};
+      b[6][c] = {color:'w', type:'P', moved:false};
+    }
+    const spartanBack = ['L','G','K','C','C','K','W','L'];
+    for(let c=0;c<8;c++){
+      b[0][c] = {color:'b', type:spartanBack[c], moved:false};
+      b[1][c] = {color:'b', type:'H', moved:false};
+    }
+    return b;
+  }
+
+  findWhiteKing(board){
+    board = board || this.board;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color==='w' && p.type==='K') return {r,c};
+    }
+    return null;
+  }
+
+  findSpartanKings(board){
+    board = board || this.board;
+    const out=[];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color==='b' && p.type==='K') out.push({r,c});
+    }
+    return out;
+  }
+
+  isSquareAttacked(r,c,byColor,board){
+    board = board || this.board;
+    if(byColor==='w'){
+      const dir = pawnDir('w');
+      for(const dc of [-1,1]){
+        const pr=r-dir, pc=c-dc;
+        if(inBounds(pr,pc)){ const p=board[pr][pc]; if(p && p.color==='w' && p.type==='P') return true; }
+      }
+      for(const [dr,dc] of KNIGHT_DELTAS){
+        const nr=r+dr, nc=c+dc;
+        if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color==='w' && p.type==='N') return true; }
+      }
+      for(const [dr,dc] of KING_DELTAS){
+        const nr=r+dr, nc=c+dc;
+        if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color==='w' && p.type==='K') return true; }
+      }
+      for(const [dr,dc] of BISHOP_DIRS){
+        let nr=r+dr, nc=c+dc;
+        while(inBounds(nr,nc)){
+          const p=board[nr][nc];
+          if(p){ if(p.color==='w' && (p.type==='B'||p.type==='Q')) return true; break; }
+          nr+=dr; nc+=dc;
+        }
+      }
+      for(const [dr,dc] of ROOK_DIRS){
+        let nr=r+dr, nc=c+dc;
+        while(inBounds(nr,nc)){
+          const p=board[nr][nc];
+          if(p){ if(p.color==='w' && (p.type==='R'||p.type==='Q')) return true; break; }
+          nr+=dr; nc+=dc;
+        }
+      }
+      return false;
+    } else {
+      const dir = pawnDir('b');
+      const hr=r-dir, hc=c;
+      if(inBounds(hr,hc)){ const p=board[hr][hc]; if(p && p.color==='b' && p.type==='H') return true; }
+      for(const [dr,dc] of KING_DELTAS){
+        const nr=r+dr, nc=c+dc;
+        if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color==='b' && p.type==='K') return true; }
+      }
+      for(const [dr,dc] of ROOK_DIRS){
+        let nr=r+dr, nc=c+dc;
+        while(inBounds(nr,nc)){
+          const p=board[nr][nc];
+          if(p){ if(p.color==='b' && p.type==='G') return true; break; }
+          nr+=dr; nc+=dc;
+        }
+      }
+      for(const [dr,dc] of BISHOP_DIRS){
+        const nr=r+dr, nc=c+dc;
+        if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color==='b' && p.type==='G') return true; }
+      }
+      for(const [dr,dc] of BISHOP_DIRS){
+        let nr=r+dr, nc=c+dc;
+        while(inBounds(nr,nc)){
+          const p=board[nr][nc];
+          if(p){ if(p.color==='b' && p.type==='W') return true; break; }
+          nr+=dr; nc+=dc;
+        }
+      }
+      for(const [dr,dc] of KNIGHT_DELTAS){
+        const nr=r+dr, nc=c+dc;
+        if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color==='b' && p.type==='W') return true; }
+      }
+      for(const [dr,dc] of ROOK_DIRS){
+        for(const dist of [1,2]){
+          const nr=r+dr*dist, nc=c+dc*dist;
+          if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color==='b' && p.type==='C') return true; }
+        }
+      }
+      for(const [dr,dc] of BISHOP_DIRS){
+        for(const dist of [1,2]){
+          const nr=r+dr*dist, nc=c+dc*dist;
+          if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color==='b' && p.type==='L') return true; }
+        }
+      }
+      return false;
+    }
+  }
+
+  spartanSafeKingCount(board){
+    board = board || this.board;
+    const kings = this.findSpartanKings(board);
+    let safe=0;
+    for(const k of kings){ if(!this.isSquareAttacked(k.r,k.c,'w',board)) safe++; }
+    return safe;
+  }
+
+  spartanInCheck(board){ return this.spartanSafeKingCount(board)===0; }
+
+  whiteInCheck(board){
+    board = board || this.board;
+    const k=this.findWhiteKing(board);
+    if(!k) return false;
+    return this.isSquareAttacked(k.r,k.c,'b',board);
+  }
+
+  pieceMoves(r,c,board){
+    board = board || this.board;
+    const p = board[r][c];
+    if(!p) return [];
+    const moves=[];
+    const push=(nr,nc,flags)=>{ if(inBounds(nr,nc)) moves.push({fr:r,fc:c,tr:nr,tc:nc,...flags}); };
+
+    if(p.color==='w'){
+      if(p.type==='P'){
+        const dir=pawnDir('w');
+        const oneR=r+dir;
+        if(inBounds(oneR,c) && !board[oneR][c]){
+          if(oneR===promotionRow('w')) push(oneR,c,{promotion:true});
+          else push(oneR,c,{});
+          if(!p.moved && r===startRow('w')){
+            const twoR=r+2*dir;
+            if(!board[twoR][c]) push(twoR,c,{doubleStep:true});
+          }
+        }
+        for(const dc of [-1,1]){
+          const nr=r+dir, nc=c+dc;
+          if(inBounds(nr,nc)){
+            const target=board[nr][nc];
+            if(target && target.color!=='w'){
+              if(nr===promotionRow('w')) push(nr,nc,{capture:true,promotion:true});
+              else push(nr,nc,{capture:true});
+            } else if(!target && this.enPassant && this.enPassant.r===nr && this.enPassant.c===nc){
+              push(nr,nc,{capture:true, enPassantCapture:true, capR:this.enPassant.capR, capC:this.enPassant.capC});
+            }
+          }
+        }
+      } else if(p.type==='N'){
+        for(const [dr,dc] of KNIGHT_DELTAS){
+          const nr=r+dr, nc=c+dc;
+          if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!=='w') push(nr,nc,{capture:!!target}); }
+        }
+      } else if(p.type==='K'){
+        for(const [dr,dc] of KING_DELTAS){
+          const nr=r+dr, nc=c+dc;
+          if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!=='w') push(nr,nc,{capture:!!target}); }
+        }
+        if(!p.moved){
+          const opp='b';
+          if(!this.isSquareAttacked(r,c,opp,board)){
+            const rookK = board[r][7];
+            if(rookK && rookK.type==='R' && rookK.color==='w' && !rookK.moved &&
+               !board[r][5] && !board[r][6] &&
+               !this.isSquareAttacked(r,5,opp,board) && !this.isSquareAttacked(r,6,opp,board)){
+              push(r,6,{castle:'K'});
+            }
+            const rookQ = board[r][0];
+            if(rookQ && rookQ.type==='R' && rookQ.color==='w' && !rookQ.moved &&
+               !board[r][1] && !board[r][2] && !board[r][3] &&
+               !this.isSquareAttacked(r,3,opp,board) && !this.isSquareAttacked(r,2,opp,board)){
+              push(r,2,{castle:'Q'});
+            }
+          }
+        }
+      } else {
+        const dirs = p.type==='B'?BISHOP_DIRS : p.type==='R'?ROOK_DIRS : [...BISHOP_DIRS,...ROOK_DIRS];
+        for(const [dr,dc] of dirs){
+          let nr=r+dr, nc=c+dc;
+          while(inBounds(nr,nc)){
+            const target=board[nr][nc];
+            if(!target) push(nr,nc,{});
+            else { if(target.color!=='w') push(nr,nc,{capture:true}); break; }
+            nr+=dr; nc+=dc;
+          }
+        }
+      }
+    } else {
+      if(p.type==='H'){
+        const dir=pawnDir('b');
+        for(const dc of [-1,1]){
+          const nr=r+dir, nc=c+dc;
+          if(inBounds(nr,nc) && !board[nr][nc]){
+            if(nr===promotionRow('b')) push(nr,nc,{promotion:true});
+            else push(nr,nc,{});
+          }
+        }
+        const cr=r+dir, cc=c;
+        if(inBounds(cr,cc)){
+          const target=board[cr][cc];
+          if(target && target.color!=='b'){
+            if(cr===promotionRow('b')) push(cr,cc,{capture:true,promotion:true});
+            else push(cr,cc,{capture:true});
+          }
+        }
+        if(!p.moved && r===startRow('b')){
+          for(const dc of [-1,1]){
+            const nr=r+2*dir, nc=c+2*dc;
+            if(inBounds(nr,nc) && !board[nr][nc]) push(nr,nc,{doubleStep:true});
+          }
+        }
+      } else if(p.type==='K'){
+        for(const [dr,dc] of KING_DELTAS){
+          const nr=r+dr, nc=c+dc;
+          if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!=='b') push(nr,nc,{capture:!!target}); }
+        }
+      } else if(p.type==='G'){
+        for(const [dr,dc] of ROOK_DIRS){
+          let nr=r+dr, nc=c+dc;
+          while(inBounds(nr,nc)){
+            const target=board[nr][nc];
+            if(!target) push(nr,nc,{});
+            else { if(target.color!=='b') push(nr,nc,{capture:true}); break; }
+            nr+=dr; nc+=dc;
+          }
+        }
+        for(const [dr,dc] of BISHOP_DIRS){
+          const nr=r+dr, nc=c+dc;
+          if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!=='b') push(nr,nc,{capture:!!target}); }
+        }
+      } else if(p.type==='W'){
+        for(const [dr,dc] of BISHOP_DIRS){
+          let nr=r+dr, nc=c+dc;
+          while(inBounds(nr,nc)){
+            const target=board[nr][nc];
+            if(!target) push(nr,nc,{});
+            else { if(target.color!=='b') push(nr,nc,{capture:true}); break; }
+            nr+=dr; nc+=dc;
+          }
+        }
+        for(const [dr,dc] of KNIGHT_DELTAS){
+          const nr=r+dr, nc=c+dc;
+          if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!=='b') push(nr,nc,{capture:!!target}); }
+        }
+      } else if(p.type==='C'){
+        for(const [dr,dc] of ROOK_DIRS){
+          for(const dist of [1,2]){
+            const nr=r+dr*dist, nc=c+dc*dist;
+            if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!=='b') push(nr,nc,{capture:!!target}); }
+          }
+        }
+      } else if(p.type==='L'){
+        for(const [dr,dc] of BISHOP_DIRS){
+          for(const dist of [1,2]){
+            const nr=r+dr*dist, nc=c+dc*dist;
+            if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!=='b') push(nr,nc,{capture:!!target}); }
+          }
+        }
+        for(const dc of [-1,1]){
+          const nr=r, nc=c+dc;
+          if(inBounds(nr,nc) && !board[nr][nc]) push(nr,nc,{});
+        }
+      }
+    }
+    return moves;
+  }
+
+  pseudoMovesFor(color, board){
+    board = board || this.board;
+    let all=[];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color===color) all=all.concat(this.pieceMoves(r,c,board));
+    }
+    return all;
+  }
+
+  applyMoveToBoard(board, m){
+    const p = board[m.fr][m.fc];
+    const captured = board[m.tr][m.tc];
+    let epCaptured=null;
+    if(m.enPassantCapture){ epCaptured = board[m.capR][m.capC]; board[m.capR][m.capC]=null; }
+    board[m.fr][m.fc] = null;
+    board[m.tr][m.tc] = {...p, moved:true};
+    if(m.promotion) board[m.tr][m.tc].type = m.promoteTo || (p.color==='w'?'Q':'G');
+    if(m.castle==='K'){ board[m.fr][7]=null; board[m.fr][5]={color:p.color,type:'R',moved:true}; }
+    else if(m.castle==='Q'){ board[m.fr][0]=null; board[m.fr][3]={color:p.color,type:'R',moved:true}; }
+    return {captured, epCaptured, moverPiece:p};
+  }
+
+  legalMovesFor(color){
+    const pseudo = this.pseudoMovesFor(color);
+    const legal=[];
+    for(const m of pseudo){
+      const b2 = cloneBoard(this.board);
+      this.applyMoveToBoard(b2,m);
+      if(color==='w'){
+        if(!this.whiteInCheck(b2)) legal.push(m);
+      } else {
+        if(this.spartanSafeKingCount(b2)>0) legal.push(m);
+      }
+    }
+    return legal;
+  }
+
+  promotionChoicesFor(color, boardBeforeMove){
+    boardBeforeMove = boardBeforeMove || this.board;
+    if(color==='w') return ['Q','R','B','N'];
+    const kingCount = this.findSpartanKings(boardBeforeMove).length;
+    const choices=['G','W','C','L'];
+    if(kingCount===1) choices.push('K');
+    return choices;
+  }
+
+  makeMove(m){
+    const mover = this.board[m.fr][m.fc];
+    const prevEnPassant = this.enPassant;
+    const info = this.applyMoveToBoard(this.board, m);
+    this.enPassant=null;
+    if(m.doubleStep) this.enPassant={r:(m.fr+m.tr)/2,c:(m.fc+m.tc)/2,capR:m.tr,capC:m.tc};
+    this.history.push({m,captured:info.captured,epCaptured:info.epCaptured,prevEnPassant,color:mover.color});
+    if(mover.color==='w'){
+      if(this.findSpartanKings(this.board).length===0){
+        this.gameOver=true; this.result='white_wins'; return info;
+      }
+    } else {
+      if(!this.findWhiteKing(this.board)){
+        this.gameOver=true; this.result='black_wins'; return info;
+      }
+    }
+    this.turn = mover.color==='w' ? 'b' : 'w';
+    this._checkGameOver();
+    return info;
+  }
+
+  _checkGameOver(){
+    const moves=this.legalMovesFor(this.turn);
+    if(moves.length===0){
+      if(this.turn==='w'){
+        if(this.whiteInCheck()){ this.gameOver=true; this.result='black_wins'; }
+        else { this.gameOver=true; this.result='draw'; }
+      } else {
+        if(this.spartanInCheck()){ this.gameOver=true; this.result='white_wins'; }
+        else { this.gameOver=true; this.result='draw'; }
+      }
+    }
+  }
+
+  evaluate(){
+    const VAL={P:100,N:320,B:330,R:500,Q:900,K:0, H:100,G:700,W:800,C:300,L:300};
+    let score=0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=this.board[r][c];
+      if(!p) continue;
+      let v=VAL[p.type]||0;
+      if(p.type==='K' && p.color==='b') v=500;
+      if(p.type==='P'){ const adv=(6-r); v+=Math.max(0,adv)*4; }
+      if(p.type==='H'){ const adv=(r-1); v+=Math.max(0,adv)*4; }
+      if(p.type!=='K' && p.type!=='P' && p.type!=='H') v += (3.5-Math.abs(c-3.5))*1.0 + (3.5-Math.abs(r-3.5))*1.0;
+      score += p.color==='w'?v:-v;
+    }
+    if(this.whiteInCheck()) score-=20;
+    if(this.spartanInCheck()) score+=20;
+    return score;
+  }
+
+  orderMoves(moves){
+    return moves.slice().sort((a,b)=>{
+      const av=(a.capture?100:0)+(a.promotion?50:0);
+      const bv=(b.capture?100:0)+(b.promotion?50:0);
+      return bv-av;
+    });
+  }
+
+  makeMoveRaw(m){
+    const p = this.board[m.fr][m.fc];
+    const prevMoved = p.moved;
+    const rookSq = m.castle==='K' ? this.board[m.fr][7] : m.castle==='Q' ? this.board[m.fr][0] : null;
+    const prevRookMoved = rookSq ? rookSq.moved : null;
+    const prevEnPassant = this.enPassant;
+    const info = this.applyMoveToBoard(this.board, m);
+    this.enPassant=null;
+    if(m.doubleStep) this.enPassant={r:(m.fr+m.tr)/2,c:(m.fc+m.tc)/2,capR:m.tr,capC:m.tc};
+    this._searchStack.push({m,info,prevEnPassant,prevMoved,prevRookMoved,moverColor:p.color, promotedFrom:m.promotion?p.type:null});
+  }
+
+  unmakeMoveRaw(){
+    const entry=this._searchStack.pop();
+    const {m,info,prevEnPassant,prevMoved,prevRookMoved}=entry;
+    const moved=this.board[m.tr][m.tc];
+    let restored={...moved, moved:prevMoved};
+    if(m.promotion) restored.type = entry.promotedFrom;
+    if(m.castle==='K'){ this.board[m.fr][7]={color:moved.color,type:'R',moved:prevRookMoved}; this.board[m.fr][5]=null; }
+    else if(m.castle==='Q'){ this.board[m.fr][0]={color:moved.color,type:'R',moved:prevRookMoved}; this.board[m.fr][3]=null; }
+    this.board[m.fr][m.fc]=restored;
+    this.board[m.tr][m.tc]=info.captured || null;
+    if(m.enPassantCapture) this.board[m.capR][m.capC]=info.epCaptured;
+    this.enPassant=prevEnPassant;
+  }
+
+  negamax(depth,alpha,beta,color,deadline){
+    if(Date.now()>deadline) throw {timeout:true};
+    const wk = this.findWhiteKing(this.board);
+    const bkCount = this.findSpartanKings(this.board).length;
+    if(!wk) return color==='w' ? (-90000-depth) : (90000+depth);
+    if(bkCount===0) return color==='b' ? (-90000-depth) : (90000+depth);
+    const moves=this.legalMovesFor(color);
+    if(moves.length===0){
+      const inCheckNow = color==='w' ? this.whiteInCheck() : this.spartanInCheck();
+      if(inCheckNow) return -90000-depth;
+      return 0;
+    }
+    if(depth===0){ const s=this.evaluate(); return color==='w'?s:-s; }
+    const ordered=this.orderMoves(moves);
+    let best=-Infinity;
+    for(const m of ordered){
+      const mv = m.promotion ? {...m,promoteTo:(color==='w'?'Q':'G')} : m;
+      this.makeMoveRaw(mv);
+      let val;
+      try{ val=-this.negamax(depth-1,-beta,-alpha,color==='w'?'b':'w',deadline); }
+      finally{ this.unmakeMoveRaw(); }
+      if(val>best) best=val;
+      if(best>alpha) alpha=best;
+      if(alpha>=beta) break;
+    }
+    return best;
+  }
+
+  bestMove(color, timeLimitMs, maxDepth){
+    const deadline=Date.now()+timeLimitMs;
+    let best=null,bestScore=-Infinity;
+    try{
+      for(let depth=1; depth<=maxDepth; depth++){
+        const moves=this.orderMoves(this.legalMovesFor(color));
+        if(moves.length===0) break;
+        let localBest=null,localBestScore=-Infinity,alpha=-Infinity,beta=Infinity;
+        for(const m of moves){
+          const mv = m.promotion ? {...m,promoteTo:(color==='w'?'Q':'G')} : m;
+          this.makeMoveRaw(mv);
+          let val;
+          try{ val=-this.negamax(depth-1,-beta,-alpha,color==='w'?'b':'w',deadline); }
+          finally{ this.unmakeMoveRaw(); }
+          if(val>localBestScore){ localBestScore=val; localBest=mv; }
+          if(val>alpha) alpha=val;
+        }
+        if(localBest){ best=localBest; bestScore=localBestScore; }
+      }
+    }catch(e){ if(!e||!e.timeout) throw e; }
+    if(!best){
+      const moves=this.legalMovesFor(color);
+      best = moves[Math.floor(Math.random()*moves.length)] || null;
+      if(best && best.promotion) best={...best,promoteTo:(color==='w'?'Q':'G')};
+    }
+    return best;
+  }
+}
+
+if(typeof module!=='undefined') module.exports = {SpartanChessGame, algebraic};
+
+/* ===== UI ===== */
+(function(){
+  const FILES='abcdefgh';
+  const WHITE_GLYPH={K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙'};
+  const BLACK_GLYPH={K:'♚',G:'⚔️',W:'🔱',C:'🛡️',L:'🗡️',H:'🪖'};
+  const NAME_JA={K:'キング',G:'将軍',W:'将帥',C:'隊長',L:'中尉',H:'重装歩兵',Q:'クイーン',R:'ルーク',B:'ビショップ',N:'ナイト',P:'ポーン'};
+  const NAME_EN={K:'King',G:'General',W:'Warlord',C:'Captain',L:'Lieutenant',H:'Hoplite',Q:'Queen',R:'Rook',B:'Bishop',N:'Knight',P:'Pawn'};
+
+  let game = new SpartanChessGame();
+  let humanColor='w', aiColor='b';
+  let selected=null, legalForSelected=[], lastMove=null, pendingPromotion=null;
+  let aiThinkTime=1500, aiMaxDepth=3;
+  let removedWhite=[], removedBlack=[], moveNo=1;
+  let gameGen=0;
+
+  const boardEl=document.getElementById('board');
+  const statusEl=document.getElementById('status');
+  const coordsEl=document.getElementById('coords');
+  const movelogEl=document.getElementById('movelog');
+  const capturedWEl=document.getElementById('capturedW');
+  const capturedBEl=document.getElementById('capturedB');
+  const isEN=()=>document.body.classList.contains('lang-en');
+
+  function glyphFor(p){ return p.color==='w' ? WHITE_GLYPH[p.type] : BLACK_GLYPH[p.type]; }
+  function nameFor(type){ return isEN() ? NAME_EN[type] : NAME_JA[type]; }
+
+  function buildBoardDOM(){
+    boardEl.innerHTML='';
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const d=document.createElement('div');
+        d.className='sq '+(((r+c)%2===0)?'light':'dark');
+        d.dataset.r=r; d.dataset.c=c;
+        d.addEventListener('click',()=>onSquareClick(r,c));
+        boardEl.appendChild(d);
+      }
+    }
+    let s=''; for(let c=0;c<8;c++) s+='<span>'+FILES[c]+'</span>';
+    coordsEl.innerHTML=s;
+  }
+
+  function render(){
+    const cells=boardEl.children;
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const idx=r*8+c;
+        const cell=cells[idx];
+        cell.innerHTML='';
+        cell.classList.remove('selected','lastmove');
+        const p=game.board[r][c];
+        if(p){
+          const span=document.createElement('span');
+          span.className = p.color==='w' ? 'piece-w':'piece-b';
+          span.textContent = glyphFor(p);
+          span.title = nameFor(p.type);
+          cell.appendChild(span);
+        }
+        if(selected && selected.r===r && selected.c===c) cell.classList.add('selected');
+        if(lastMove && ((lastMove.tr===r&&lastMove.tc===c)||(lastMove.fr===r&&lastMove.fc===c))) cell.classList.add('lastmove');
+        const mv = legalForSelected.find(m=>m.tr===r && m.tc===c);
+        if(mv){
+          const marker=document.createElement('div');
+          marker.className = game.board[r][c] ? 'ring':'dot';
+          cell.appendChild(marker);
+        }
+      }
+    }
+    renderCaptured();
+    renderStatus();
+  }
+
+  function renderCaptured(){
+    capturedWEl.innerHTML=(isEN()?'Persians lost: ':'ペルシア軍が失った駒: ')+removedWhite.map(t=>WHITE_GLYPH[t]).join(' ');
+    capturedBEl.innerHTML=(isEN()?'Spartans lost: ':'スパルタ軍が失った駒: ')+removedBlack.map(t=>BLACK_GLYPH[t]).join(' ');
+  }
+
+  function sideLabel(color){
+    if(isEN()) return color==='w'?'Persians':'Spartans';
+    return color==='w'?'ペルシア軍':'スパルタ軍';
+  }
+
+  function renderStatus(){
+    statusEl.classList.remove('check','over');
+    if(game.gameOver){
+      statusEl.classList.add('over');
+      let msg;
+      if(game.result==='draw') msg = isEN()?'Draw (stalemate).':'引き分け（ステイルメイト）。';
+      else {
+        const winner = game.result==='white_wins'?'w':'b';
+        msg = isEN()? sideLabel(winner)+' win!' : sideLabel(winner)+'の勝利！';
+      }
+      statusEl.textContent=msg; return;
+    }
+    let msg=(isEN()?"Turn: ":"手番: ")+sideLabel(game.turn);
+    const inCheck = game.turn==='w' ? game.whiteInCheck() : game.spartanInCheck();
+    if(inCheck){
+      statusEl.classList.add('check');
+      if(game.turn==='b' && game.findSpartanKings().length===2) msg += isEN()?'  (Duple-check!)':'（デュプルチェック！）';
+      else msg += isEN()?'  (Check!)':'（チェック！）';
+    }
+    if(game.turn===aiColor) msg += isEN()?'  — thinking…':'　— 思考中…';
+    statusEl.textContent=msg;
+  }
+
+  function logMove(color, m){
+    let txt;
+    if(m.castle==='K') txt='O-O';
+    else if(m.castle==='Q') txt='O-O-O';
+    else {
+      const from=algebraic(m.fr,m.fc), to=algebraic(m.tr,m.tc);
+      txt = from + (m.capture?'x':'-') + to + (m.promotion?('='+(m.promoteTo||'')):'');
+    }
+    const div=document.createElement('div');
+    if(color==='w'){ div.innerHTML='<b>'+moveNo+'.</b> '+txt; }
+    else { div.innerHTML='&nbsp;&nbsp;&nbsp;&nbsp;'+txt; moveNo++; }
+    movelogEl.appendChild(div);
+    movelogEl.scrollTop=movelogEl.scrollHeight;
+  }
+
+  function onSquareClick(r,c){
+    if(game.gameOver) return;
+    if(game.turn!==humanColor) return;
+    const p=game.board[r][c];
+    if(selected){
+      const mv=legalForSelected.find(m=>m.tr===r && m.tc===c);
+      if(mv){ performMove(mv); selected=null; legalForSelected=[]; return; }
+      if(p && p.color===humanColor) selectSquare(r,c);
+      else { selected=null; legalForSelected=[]; render(); }
+      return;
+    }
+    if(p && p.color===humanColor) selectSquare(r,c);
+  }
+
+  function selectSquare(r,c){
+    selected={r,c};
+    const all=game.legalMovesFor(humanColor);
+    legalForSelected = all.filter(m=>m.fr===r && m.fc===c);
+    render();
+  }
+
+  function performMove(mv){
+    if(mv.promotion){ pendingPromotion=mv; showPromotionModal(game.board[mv.fr][mv.fc].color); return; }
+    commitMove(mv);
+  }
+
+  function commitMove(mv){
+    const mover=game.board[mv.fr][mv.fc];
+    const info=game.makeMove(mv);
+    if(info.captured){ if(info.captured.color==='w') removedWhite.push(info.captured.type); else removedBlack.push(info.captured.type); }
+    if(info.epCaptured){ if(info.epCaptured.color==='w') removedWhite.push(info.epCaptured.type); else removedBlack.push(info.epCaptured.type); }
+    logMove(mover.color, mv);
+    lastMove=mv; selected=null; legalForSelected=[];
+    render();
+    if(!game.gameOver && game.turn===aiColor){
+      const myGen=gameGen;
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 260);
+    }
+  }
+
+  function showPromotionModal(color){
+    const modal=document.getElementById('promoModal');
+    const choicesEl=document.getElementById('promoChoices');
+    choicesEl.innerHTML='';
+    const glyphs=color==='w'?WHITE_GLYPH:BLACK_GLYPH;
+    const choices = game.promotionChoicesFor(color, game.board);
+    for(const t of choices){
+      const btn=document.createElement('button');
+      btn.textContent=glyphs[t];
+      btn.title=nameFor(t);
+      btn.className=color==='w'?'piece-w':'piece-b';
+      btn.addEventListener('click',()=>{
+        modal.classList.remove('show');
+        const mv={...pendingPromotion, promoteTo:t};
+        pendingPromotion=null;
+        commitMove(mv);
+      });
+      choicesEl.appendChild(btn);
+    }
+    modal.classList.add('show');
+  }
+
+  function aiMove(myGen){
+    if(myGen===undefined) myGen=gameGen;
+    if(myGen!==gameGen) return;
+    if(game.gameOver || game.turn!==aiColor) return;
+    render();
+    setTimeout(()=>{
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      const mv=game.bestMove(aiColor, aiThinkTime, aiMaxDepth);
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      if(!mv){ render(); return; }
+      commitMove(mv);
+    }, 30);
+  }
+
+  function newGame(){
+    gameGen++;
+    const myGen=gameGen;
+    game = new SpartanChessGame();
+    humanColor = document.getElementById('sideSelect').value;
+    aiColor = humanColor==='w' ? 'b' : 'w';
+    const [t,d]=document.getElementById('diffSelect').value.split(',').map(Number);
+    aiThinkTime=t; aiMaxDepth=d;
+    selected=null; legalForSelected=[]; lastMove=null;
+    removedWhite=[]; removedBlack=[]; moveNo=1;
+    movelogEl.innerHTML='';
+    render();
+    if(game.turn===aiColor){
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 300);
+    }
+  }
+
+  document.getElementById('newGameBtn').addEventListener('click', ()=>newGame());
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('lang-en');
+    render();
+  });
+  document.getElementById('themeBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('light-mode');
+  });
+
+  buildBoardDOM();
+  newGame();
+})();
+</script>
+</body>
+</html>

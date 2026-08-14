@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ヴァーニー四人制チェス | Verney's Four-Handed Chess</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
+    --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6;
+    --square-light: #3f5445; --square-dark: #24382c;
+    --danger: #b25a4a; --text-dim: #9fae9f;
+    --ns: #d9b47c; --ew: #7fa8c9;
+  }
+  body.light-mode{
+    --bg: #f2ead9; --bg-panel: #fbf6ea; --moss: #8fae82; --moss-light: #a3c294;
+    --brass: #a97f45; --brass-bright: #8a6530; --cream: #2c2417;
+    --square-light: #e4d7b6; --square-dark: #b99a66; --danger: #a8402f; --text-dim: #6b5f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(217,180,124,0.06), transparent 60%),
+      radial-gradient(1000px 700px at 110% 10%, rgba(79,111,86,0.18), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh; padding:32px 16px 64px;
+  }
+  .wrap{max-width:1160px;margin:0 auto;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; border-bottom:1px solid rgba(185,146,90,0.25); padding-bottom:20px; margin-bottom:28px;}
+  h1{font-family:'Fraunces', serif; font-weight:700; font-size:clamp(24px,4.2vw,38px); margin:0; letter-spacing:0.01em; color:var(--cream);}
+  h1 .en{display:block; font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:0.4em; color:var(--brass-bright); margin-top:4px;}
+  .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:14px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s;}
+  .langtoggle:hover{background:rgba(185,146,90,0.15);}
+  .layout{display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;}
+  .board-col{flex:0 0 auto;}
+  .side-col{flex:1 1 260px; min-width:260px;}
+  .panel{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:18px 20px; margin-bottom:18px;}
+  .panel h2{font-family:'Fraunces',serif; font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:0.08em; color:var(--brass-bright); margin:0 0 12px;}
+  label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px;}
+  select, button.action{width:100%; background:var(--moss); color:var(--cream); border:1px solid rgba(217,180,124,0.3); border-radius:6px; padding:9px 12px; font-family:'Noto Sans JP',sans-serif; font-size:14px; margin-bottom:14px; cursor:pointer;}
+  select:focus, button.action:focus{outline:2px solid var(--brass-bright); outline-offset:1px;}
+  button.action{background:linear-gradient(180deg, var(--brass) 0%, #a17f4c 100%); color:#1b2a22; font-weight:700; border:none; margin-bottom:0; transition:transform .1s;}
+  button.action:hover{transform:translateY(-1px);}
+  button.action:active{transform:translateY(0);}
+  #status{font-family:'Fraunces',serif; font-size:16px; font-weight:600; padding:12px 14px; border-radius:8px; background:rgba(79,111,86,0.25); border-left:3px solid var(--brass); min-height:24px;}
+  #status.check{border-left-color:var(--danger); color:#eab3a4;}
+  #status.over{border-left-color:var(--brass-bright); color:var(--brass-bright);}
+  .board{display:grid; grid-template-columns:repeat(14, min(6vw,34px)); grid-template-rows:repeat(14, min(6vw,34px)); border:3px solid var(--brass); border-radius:4px; box-shadow:0 12px 40px rgba(0,0,0,0.45);}
+  .sq{position:relative; display:flex; align-items:center; justify-content:center; font-size:min(4.2vw,22px); cursor:pointer; user-select:none;}
+  .sq.light{background:var(--square-light);} .sq.dark{background:var(--square-dark);}
+  .sq.offboard{background:transparent; cursor:default;}
+  .sq.selected{outline:2px solid var(--brass-bright); outline-offset:-2px; z-index:2;}
+  .sq .dot{position:absolute; width:26%; height:26%; border-radius:50%; background:var(--brass-bright); box-shadow:0 0 8px 2px rgba(217,180,124,0.7); animation:pulse-dot 1.1s ease-in-out infinite; z-index:2;}
+  .sq .ring{position:absolute; inset:6%; border-radius:50%; border:3px solid var(--brass-bright); box-shadow:0 0 8px 2px rgba(217,180,124,0.6); animation:pulse-ring 1.1s ease-in-out infinite; z-index:2;}
+  @keyframes pulse-dot{ 0%,100%{opacity:0.65; transform:scale(0.85);} 50%{opacity:1; transform:scale(1.15);} }
+  @keyframes pulse-ring{ 0%,100%{opacity:0.55;} 50%{opacity:1;} }
+  .sq.lastmove{box-shadow:inset 0 0 0 2px rgba(217,180,124,0.5);}
+  .piece-ns{color:var(--ns); text-shadow:0 0 3px rgba(0,0,0,0.7), 0 1px 1px rgba(0,0,0,0.6); position:relative; z-index:2;}
+  .piece-ew{color:var(--ew); text-shadow:0 0 3px rgba(0,0,0,0.7), 0 1px 1px rgba(0,0,0,0.6); position:relative; z-index:2;}
+  .piece-dead{opacity:0.35;}
+  .seat-row{display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:5px 0; border-bottom:1px solid rgba(185,146,90,0.12);}
+  .seat-row:last-child{border-bottom:none;}
+  .seat-dot{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px;}
+  .seat-dot.ns{background:var(--ns);} .seat-dot.ew{background:var(--ew);}
+  .seat-dead{color:var(--text-dim); text-decoration:line-through;}
+  .movelog{max-height:200px; overflow-y:auto; font-size:12.5px; line-height:1.8; color:var(--text-dim);}
+  .movelog b{color:var(--cream);}
+  .rule-note{font-size:12.5px; color:var(--text-dim); line-height:1.7;}
+  .lang-en:not(body){display:none;}
+  body.lang-en .lang-ja{display:none;}
+  body.lang-en .lang-en{display:block;}
+  footer{margin-top:40px; font-size:12px; color:var(--text-dim); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ヴァーニー四人制チェス<span class="en">Verney's Four-Handed Chess</span></h1>
+    <div style="display:flex; gap:8px;">
+      <button class="langtoggle" id="langBtn">EN / 日本語</button>
+      <button class="langtoggle" id="themeBtn">☀️ / 🌙</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board-col">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="side-col">
+      <div class="panel">
+        <h2><span class="lang-ja">対局設定</span><span class="lang-en">Game Setup</span></h2>
+        <label class="lang-ja">あなたの席</label>
+        <label class="lang-en">Your seat</label>
+        <select id="sideSelect">
+          <option value="N">北 (N) — 金/南チーム / North — Gold team</option>
+          <option value="S">南 (S) — 金/南チーム / South — Gold team</option>
+          <option value="E">東 (E) — 青/東西チーム / East — Blue team</option>
+          <option value="W">西 (W) — 青/東西チーム / West — Blue team</option>
+        </select>
+        <label class="lang-ja">AIの強さ</label>
+        <label class="lang-en">AI strength</label>
+        <select id="diffSelect">
+          <option value="500,1">弱い / Weak</option>
+          <option value="1200,2" selected>普通 / Normal</option>
+          <option value="2200,2">強い / Strong</option>
+        </select>
+        <button class="action" id="newGameBtn"><span class="lang-ja">新規対局</span><span class="lang-en">New Game</span></button>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">状況</span><span class="lang-en">Status</span></h2>
+        <div id="status"></div>
+        <div id="seatList" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">棋譜</span><span class="lang-en">Move Log</span></h2>
+        <div class="movelog" id="movelog"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">ルール</span><span class="lang-en">Rules</span></h2>
+        <p class="rule-note lang-ja">
+          19世紀イギリスの陸軍大尉ジョージ・ホープ・ヴァーニーが考案した4人制チェス。8x8の中央に、四辺それぞれへ3マス幅の腕が伸びる十字型の盤を使う。4人が北・東・南・西に座り、それぞれ標準的なチェス一式（キング・クイーン・ルーク×2・ビショップ×2・ナイト×2・ポーン×8）を持つ。手番は時計回り（北→東→南→西）。向かい合う2人（北・南、東・西）がチームを組む。キャスリングはなく、ポーンの初手2マス前進もない。ポーンは盤の反対側の端に到達するとクイーンに昇格する。敵チームの2人とも詰み（合法手なし）に追い込んだチームの勝利。1人が詰んでも、そのプレイヤーの駒は盤上に残ったまま（それ以上動かせないだけ）。
+        </p>
+        <p class="rule-note lang-en">
+          Devised by British Army Captain George Hope Verney in the 19th century. The board is a cross shape: an 8x8 centre with a three-square-wide arm extending from each side. Four players sit North, East, South, and West, each with a full standard chess army (King, Queen, 2 Rooks, 2 Bishops, 2 Knights, 8 Pawns). Turns proceed clockwise (N→E→S→W). Players sitting opposite each other (North+South, East+West) are partners on the same team. There's no castling and no initial two-square pawn advance. A pawn promotes to a Queen upon reaching the far edge of the board. A team wins once both of its opponents have been checkmated (left with no legal move) — an eliminated player's pieces simply remain on the board as obstacles. (One historical nuance not implemented here: pawns that would reach a partner's home row are traditionally said to reverse direction rather than promote there — this version simply promotes any pawn that reaches the board's outer edge.)
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer>Mossgreen — a solo-developed browser chess variant.</footer>
+</div>
+
+<script>
+'use strict';
+const SIZE=14;
+function inBoardArray(r,c){ return r>=0 && r<SIZE && c>=0 && c<SIZE; }
+function isValidSquare(r,c){
+  if(!inBoardArray(r,c)) return false;
+  const inRowBand = r>=3 && r<=10;
+  const inColBand = c>=3 && c<=10;
+  return inRowBand || inColBand;
+}
+const KNIGHT_DELTAS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KING_DELTAS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const BISHOP_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const ROOK_DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+
+// The four seats, in clockwise turn order, and their forward pawn vector.
+const SEATS = ['N','E','S','W'];
+const FORWARD = { N:[1,0], S:[-1,0], W:[0,1], E:[0,-1] };
+const PARTNER = { N:'S', S:'N', E:'W', W:'E' };
+
+function emptyBoard(){ return Array.from({length:SIZE},()=>Array(SIZE).fill(null)); }
+function cloneBoard(b){ return b.map(row=>row.map(p=>p?{...p}:null)); }
+
+function diagDirsFor(seat){
+  const [fr,fc]=FORWARD[seat];
+  const perp=[-fc,fr];
+  return [[fr+perp[0],fc+perp[1]],[fr-perp[0],fc-perp[1]]];
+}
+
+function initialBoard(){
+  const b = emptyBoard();
+  const order=['R','N','B','Q','K','B','N','R'];
+  // North: back rank row0, pawns row1, files 3..10
+  for(let i=0;i<8;i++){
+    const c=3+i;
+    b[0][c]={seat:'N', type:order[i], moved:false};
+    b[1][c]={seat:'N', type:'P', moved:false};
+  }
+  // South: back rank row13, pawns row12 (mirrored file order so Q/K align sensibly)
+  for(let i=0;i<8;i++){
+    const c=3+i;
+    b[13][c]={seat:'S', type:order[7-i], moved:false};
+    b[12][c]={seat:'S', type:'P', moved:false};
+  }
+  // West: back rank col0, pawns col1, ranks 3..10
+  for(let i=0;i<8;i++){
+    const r=3+i;
+    b[r][0]={seat:'W', type:order[7-i], moved:false};
+    b[r][1]={seat:'W', type:'P', moved:false};
+  }
+  // East: back rank col13, pawns col12
+  for(let i=0;i<8;i++){
+    const r=3+i;
+    b[r][13]={seat:'E', type:order[i], moved:false};
+    b[r][12]={seat:'E', type:'P', moved:false};
+  }
+  return b;
+}
+
+class VerneyGame {
+  constructor(){
+    this.board = initialBoard();
+    this.turnIdx = 0; // index into SEATS
+    this.active = {N:true,E:true,S:true,W:true}; // false once checkmated/eliminated
+    this.history = [];
+    this.gameOver = false;
+    this.result = null; // 'NS_win' | 'EW_win' | 'draw'
+    this._searchStack = [];
+  }
+
+  get turn(){ return SEATS[this.turnIdx]; }
+
+  nextActiveSeat(fromIdx){
+    let idx=fromIdx;
+    for(let i=0;i<4;i++){
+      idx=(idx+1)%4;
+      if(this.active[SEATS[idx]]) return idx;
+    }
+    return fromIdx;
+  }
+
+  teamOf(seat){ return (seat==='N'||seat==='S') ? 'NS' : 'EW'; }
+
+  findKing(seat, board){
+    board = board || this.board;
+    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+      const p=board[r][c];
+      if(p && p.seat===seat && p.type==='K') return {r,c};
+    }
+    return null;
+  }
+
+  promotionRow(seat, r, c){
+    // A pawn promotes when its forward square would run off the board edge
+    // in its direction of travel (see rules note: the historical
+    // partner-row "reversal" nuance is not implemented).
+    const [fr,fc]=FORWARD[seat];
+    const nr=r+fr, nc=c+fc;
+    return !inBoardArray(nr,nc);
+  }
+
+  isSquareAttacked(r,c,bySeat,board){
+    board = board || this.board;
+    if(!this.active[bySeat]) return false;
+    const [fr,fc]=FORWARD[bySeat];
+    for(const [dr,dc] of diagDirsFor(bySeat)){
+      const pr=r-dr, pc=c-dc;
+      if(isValidSquare(pr,pc)){ const p=board[pr][pc]; if(p && p.seat===bySeat && p.type==='P') return true; }
+    }
+    for(const [dr,dc] of KNIGHT_DELTAS){
+      const nr=r+dr, nc=c+dc;
+      if(isValidSquare(nr,nc)){ const p=board[nr][nc]; if(p && p.seat===bySeat && p.type==='N') return true; }
+    }
+    for(const [dr,dc] of KING_DELTAS){
+      const nr=r+dr, nc=c+dc;
+      if(isValidSquare(nr,nc)){ const p=board[nr][nc]; if(p && p.seat===bySeat && p.type==='K') return true; }
+    }
+    for(const [dr,dc] of BISHOP_DIRS){
+      let nr=r+dr, nc=c+dc;
+      while(isValidSquare(nr,nc)){
+        const p=board[nr][nc];
+        if(p){ if(p.seat===bySeat && (p.type==='B'||p.type==='Q')) return true; break; }
+        nr+=dr; nc+=dc;
+      }
+    }
+    for(const [dr,dc] of ROOK_DIRS){
+      let nr=r+dr, nc=c+dc;
+      while(isValidSquare(nr,nc)){
+        const p=board[nr][nc];
+        if(p){ if(p.seat===bySeat && (p.type==='R'||p.type==='Q')) return true; break; }
+        nr+=dr; nc+=dc;
+      }
+    }
+    return false;
+  }
+
+  attackedByAnyEnemy(r,c,seat,board){
+    for(const s of SEATS){ if(s!==seat && this.isSquareAttacked(r,c,s,board)) return true; }
+    return false;
+  }
+
+  inCheck(seat, board){
+    board = board || this.board;
+    if(!this.active[seat]) return false;
+    const k = this.findKing(seat, board);
+    if(!k) return false;
+    return this.attackedByAnyEnemy(k.r,k.c,seat,board);
+  }
+
+  pieceMoves(r,c,board){
+    board = board || this.board;
+    const p = board[r][c];
+    if(!p) return [];
+    const moves=[];
+    const push=(nr,nc,flags)=>{ if(isValidSquare(nr,nc)) moves.push({fr:r,fc:c,tr:nr,tc:nc,...flags}); };
+    if(p.type==='P'){
+      const [fr,fc]=FORWARD[p.seat];
+      const nr=r+fr, nc=c+fc;
+      if(isValidSquare(nr,nc) && !board[nr][nc]){
+        push(nr,nc, this.promotionRow(p.seat,r,c)?{promotion:true}:{});
+        if(!p.moved){
+          const nr2=r+2*fr, nc2=c+2*fc;
+          if(isValidSquare(nr2,nc2) && !board[nr2][nc2]) push(nr2,nc2,{doubleStep:true});
+        }
+      }
+      for(const [dr,dc] of diagDirsFor(p.seat)){
+        const cr=r+dr, cc=c+dc;
+        if(isValidSquare(cr,cc)){
+          const t=board[cr][cc];
+          if(t && t.seat!==p.seat) push(cr,cc,{capture:true, promotion:this.promotionRow(p.seat,r,c)});
+        }
+      }
+    } else if(p.type==='N'){
+      for(const [dr,dc] of KNIGHT_DELTAS){
+        const nr=r+dr,nc=c+dc;
+        if(isValidSquare(nr,nc)){ const t=board[nr][nc]; if(!t||t.seat!==p.seat) push(nr,nc,{capture:!!t}); }
+      }
+    } else if(p.type==='K'){
+      for(const [dr,dc] of KING_DELTAS){
+        const nr=r+dr,nc=c+dc;
+        if(isValidSquare(nr,nc)){ const t=board[nr][nc]; if(!t||t.seat!==p.seat) push(nr,nc,{capture:!!t}); }
+      }
+    } else {
+      const dirs = p.type==='B'?BISHOP_DIRS : p.type==='R'?ROOK_DIRS : [...BISHOP_DIRS,...ROOK_DIRS];
+      for(const [dr,dc] of dirs){
+        let nr=r+dr,nc=c+dc;
+        while(isValidSquare(nr,nc)){
+          const t=board[nr][nc];
+          if(!t) push(nr,nc,{});
+          else { if(t.seat!==p.seat) push(nr,nc,{capture:true}); break; }
+          nr+=dr; nc+=dc;
+        }
+      }
+    }
+    return moves;
+  }
+
+  pseudoMovesFor(seat, board){
+    board = board || this.board;
+    let all=[];
+    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+      const p=board[r][c];
+      if(p && p.seat===seat) all=all.concat(this.pieceMoves(r,c,board));
+    }
+    return all;
+  }
+
+  applyMoveToBoard(board, m){
+    const p = board[m.fr][m.fc];
+    const captured = board[m.tr][m.tc];
+    board[m.fr][m.fc]=null;
+    board[m.tr][m.tc]={...p, moved:true};
+    if(m.promotion) board[m.tr][m.tc].type='Q';
+    return {captured, moverPiece:p};
+  }
+
+  legalMovesFor(seat){
+    if(!this.active[seat]) return [];
+    const pseudo = this.pseudoMovesFor(seat);
+    const legal=[];
+    for(const m of pseudo){
+      const b2=cloneBoard(this.board);
+      this.applyMoveToBoard(b2,m);
+      if(!this.inCheck(seat,b2)) legal.push(m);
+    }
+    return legal;
+  }
+
+  makeMove(m){
+    const mover = this.board[m.fr][m.fc];
+    const seat = mover.seat;
+    const info = this.applyMoveToBoard(this.board, m);
+    this.history.push({m,captured:info.captured,seat});
+
+    // If a king was captured outright (shouldn't normally happen under
+    // check-avoidance, but guards the AI's shallow search), eliminate that seat.
+    if(info.captured && info.captured.type==='K'){
+      this.active[info.captured.seat]=false;
+    }
+
+    this._advanceTurnAndCheckStatus(seat);
+    return info;
+  }
+
+  _advanceTurnAndCheckStatus(movedSeat){
+    // Check every other active seat for checkmate/stalemate before handing off.
+    let idx=this.turnIdx;
+    for(let i=0;i<4;i++){
+      idx=(idx+1)%4;
+      const s=SEATS[idx];
+      if(!this.active[s]) continue;
+      const moves=this.legalMovesFor(s);
+      if(moves.length===0){
+        this.active[s]=false; // checkmated or stalemated -> eliminated
+      }
+    }
+    const nsAlive = this.active.N || this.active.S;
+    const ewAlive = this.active.E || this.active.W;
+    if(!nsAlive && !ewAlive){ this.gameOver=true; this.result='draw'; return; }
+    if(!nsAlive){ this.gameOver=true; this.result='EW_win'; return; }
+    if(!ewAlive){ this.gameOver=true; this.result='NS_win'; return; }
+    // find next active seat after the mover
+    let nidx=this.turnIdx;
+    for(let i=0;i<4;i++){
+      nidx=(nidx+1)%4;
+      if(this.active[SEATS[nidx]]){ this.turnIdx=nidx; return; }
+    }
+    this.gameOver=true; this.result='draw';
+  }
+
+  evaluate(forSeat){
+    const VAL={P:100,N:320,B:330,R:500,Q:900,K:0};
+    let score=0;
+    for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE;c++){
+      const p=this.board[r][c];
+      if(!p) continue;
+      let v=VAL[p.type];
+      const sameTeam = this.teamOf(p.seat)===this.teamOf(forSeat);
+      score += sameTeam ? v : -v;
+    }
+    return score;
+  }
+
+  orderMoves(moves){
+    return moves.slice().sort((a,b)=>{
+      const av=(a.capture?100:0)+(a.promotion?50:0)+Math.random()*0.5;
+      const bv=(b.capture?100:0)+(b.promotion?50:0)+Math.random()*0.5;
+      return bv-av;
+    });
+  }
+
+  // Shallow greedy/1-2 ply search per seat (a full 4-player minimax tree is
+  // impractical at interactive speeds, so each AI turn picks the move that
+  // most improves its team's material+position score after its own move
+  // and the single best immediate reply from the next active opponent).
+  bestMove(seat, timeLimitMs, maxDepth){
+    const deadline=Date.now()+timeLimitMs;
+    const moves=this.orderMoves(this.legalMovesFor(seat));
+    if(moves.length===0) return null;
+    let best=moves[0], bestScore=-Infinity;
+    for(const m of moves){
+      if(Date.now()>deadline) break;
+      this.makeMoveRaw(m, seat);
+      let val;
+      try{
+        val = maxDepth>1 ? this._shallowOpponentReply(seat, deadline) : this.evaluate(seat);
+      } finally { this.unmakeMoveRaw(); }
+      if(val>bestScore){ bestScore=val; best=m; }
+    }
+    return best;
+  }
+
+  _shallowOpponentReply(mySeat, deadline){
+    // Find the next active seat and let them make their single best
+    // (greedy) reply, then score the resulting position for mySeat.
+    let idx=SEATS.indexOf(this.turnIdxSeatOverride || this.turn);
+    // determine actual next active seat after whichever seat just moved
+    const oppSeat = this._peekNextActiveSeat();
+    if(!oppSeat || Date.now()>deadline) return this.evaluate(mySeat);
+    const oppMoves=this.orderMoves(this.legalMovesFor(oppSeat));
+    if(oppMoves.length===0) return this.evaluate(mySeat);
+    let worst=Infinity;
+    const sampled = oppMoves.slice(0, Math.min(8, oppMoves.length));
+    for(const m of sampled){
+      this.makeMoveRaw(m, oppSeat);
+      const val=this.evaluate(mySeat);
+      this.unmakeMoveRaw();
+      if(val<worst) worst=val;
+    }
+    return worst;
+  }
+
+  _peekNextActiveSeat(){
+    let idx=this.turnIdx;
+    for(let i=0;i<4;i++){
+      idx=(idx+1)%4;
+      if(this.active[SEATS[idx]]) return SEATS[idx];
+    }
+    return null;
+  }
+
+  makeMoveRaw(m, seat){
+    const p=this.board[m.fr][m.fc];
+    const prevMoved=p.moved;
+    const info=this.applyMoveToBoard(this.board,m);
+    this._searchStack.push({m,info,prevMoved,promotedFrom:m.promotion?p.type:null});
+  }
+
+  unmakeMoveRaw(){
+    const entry=this._searchStack.pop();
+    const {m,info,prevMoved}=entry;
+    const moved=this.board[m.tr][m.tc];
+    let restored={...moved, moved:prevMoved};
+    if(m.promotion) restored.type=entry.promotedFrom;
+    this.board[m.fr][m.fc]=restored;
+    this.board[m.tr][m.tc]=info.captured||null;
+  }
+}
+
+
+if(typeof module!=='undefined') module.exports = {VerneyGame, isValidSquare, SEATS, FORWARD};
+
+/* ===== UI ===== */
+(function(){
+  const GLYPH={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'};
+  const SEAT_NAME_JA={N:'北',E:'東',S:'南',W:'西'};
+  const SEAT_NAME_EN={N:'North',E:'East',S:'South',W:'West'};
+
+  let game = new VerneyGame();
+  let humanSeat='N';
+  let selected=null, legalForSelected=[], lastMove=null;
+  let aiThinkTime=1200, aiMaxDepth=2;
+  let moveNo=1;
+  let gameGen=0;
+
+  const boardEl=document.getElementById('board');
+  const statusEl=document.getElementById('status');
+  const movelogEl=document.getElementById('movelog');
+  const seatListEl=document.getElementById('seatList');
+  const isEN=()=>document.body.classList.contains('lang-en');
+
+  function buildBoardDOM(){
+    boardEl.innerHTML='';
+    for(let r=0;r<14;r++){
+      for(let c=0;c<14;c++){
+        const d=document.createElement('div');
+        const valid=isValidSquare(r,c);
+        d.className='sq '+(valid ? (((r+c)%2===0)?'light':'dark') : 'offboard');
+        d.dataset.r=r; d.dataset.c=c;
+        if(valid) d.addEventListener('click',()=>onSquareClick(r,c));
+        boardEl.appendChild(d);
+      }
+    }
+  }
+
+  function teamClass(seat){ return game.teamOf(seat)==='NS' ? 'piece-ns' : 'piece-ew'; }
+
+  function render(){
+    const cells=boardEl.children;
+    for(let r=0;r<14;r++){
+      for(let c=0;c<14;c++){
+        if(!isValidSquare(r,c)) continue;
+        const idx=r*14+c;
+        const cell=cells[idx];
+        cell.innerHTML='';
+        cell.classList.remove('selected','lastmove');
+        const p=game.board[r][c];
+        if(p){
+          const span=document.createElement('span');
+          span.className = teamClass(p.seat) + (game.active[p.seat] ? '' : ' piece-dead');
+          span.textContent = GLYPH[p.type];
+          cell.appendChild(span);
+        }
+        if(selected && selected.r===r && selected.c===c) cell.classList.add('selected');
+        if(lastMove && ((lastMove.tr===r&&lastMove.tc===c)||(lastMove.fr===r&&lastMove.fc===c))) cell.classList.add('lastmove');
+        const mv = legalForSelected.find(m=>m.tr===r && m.tc===c);
+        if(mv){
+          const marker=document.createElement('div');
+          marker.className = game.board[r][c] ? 'ring':'dot';
+          cell.appendChild(marker);
+        }
+      }
+    }
+    renderSeatList();
+    renderStatus();
+  }
+
+  function seatLabel(seat){ return isEN() ? SEAT_NAME_EN[seat] : SEAT_NAME_JA[seat]; }
+
+  function renderSeatList(){
+    seatListEl.innerHTML='';
+    for(const seat of SEATS){
+      const div=document.createElement('div');
+      div.className='seat-row'+(game.active[seat] ? '' : ' seat-dead');
+      const dotClass = game.teamOf(seat)==='NS' ? 'ns' : 'ew';
+      div.innerHTML='<span><span class="seat-dot '+dotClass+'"></span>'+seatLabel(seat)+(seat===humanSeat?(isEN()?' (you)':'（あなた）'):'')+'</span><span>'+(game.active[seat] ? (isEN()?'active':'対局中') : (isEN()?'eliminated':'脱落'))+'</span>';
+      seatListEl.appendChild(div);
+    }
+  }
+
+  function renderStatus(){
+    statusEl.classList.remove('check','over');
+    if(game.gameOver){
+      statusEl.classList.add('over');
+      let msg;
+      if(game.result==='draw') msg = isEN()?'Draw — both teams eliminated.':'引き分け（両チームとも脱落）。';
+      else {
+        const teamName = game.result==='NS_win' ? (isEN()?'North+South':'北・南チーム') : (isEN()?'East+West':'東・西チーム');
+        msg = isEN() ? teamName+' wins!' : teamName+'の勝利！';
+      }
+      statusEl.textContent=msg; return;
+    }
+    let msg=(isEN()?"Turn: ":"手番: ")+seatLabel(game.turn);
+    if(game.inCheck(game.turn)){ statusEl.classList.add('check'); msg += isEN()?'  (Check!)':'（チェック！）'; }
+    if(game.turn!==humanSeat) msg += isEN()?'  — thinking…':'　— 思考中…';
+    statusEl.textContent=msg;
+  }
+
+  function algebraic(r,c){ return String.fromCharCode(97+c)+(14-r); }
+
+  function logMove(seat, m){
+    let txt = seatLabel(seat)+': '+algebraic(m.fr,m.fc)+(m.capture?'x':'-')+algebraic(m.tr,m.tc)+(m.promotion?'=Q':'');
+    const div=document.createElement('div');
+    div.innerHTML=txt;
+    movelogEl.appendChild(div);
+    movelogEl.scrollTop=movelogEl.scrollHeight;
+  }
+
+  function onSquareClick(r,c){
+    if(game.gameOver) return;
+    if(game.turn!==humanSeat) return;
+    const p=game.board[r][c];
+    if(selected){
+      const mv=legalForSelected.find(m=>m.tr===r && m.tc===c);
+      if(mv){ commitMove(mv); selected=null; legalForSelected=[]; return; }
+      if(p && p.seat===humanSeat) selectSquare(r,c);
+      else { selected=null; legalForSelected=[]; render(); }
+      return;
+    }
+    if(p && p.seat===humanSeat) selectSquare(r,c);
+  }
+
+  function selectSquare(r,c){
+    selected={r,c};
+    const all=game.legalMovesFor(humanSeat);
+    legalForSelected = all.filter(m=>m.fr===r && m.fc===c);
+    render();
+  }
+
+  function commitMove(mv){
+    const mover=game.board[mv.fr][mv.fc];
+    const seat=mover.seat;
+    game.makeMove(mv);
+    logMove(seat, mv);
+    lastMove=mv; selected=null; legalForSelected=[];
+    render();
+    if(!game.gameOver && game.turn!==humanSeat){
+      const myGen=gameGen;
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 240);
+    }
+  }
+
+  function aiMove(myGen){
+    if(myGen===undefined) myGen=gameGen;
+    if(myGen!==gameGen) return;
+    if(game.gameOver || game.turn===humanSeat) return;
+    render();
+    const seat = game.turn;
+    setTimeout(()=>{
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==seat) return;
+      const mv=game.bestMove(seat, aiThinkTime, aiMaxDepth);
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==seat) return;
+      if(!mv){ render(); return; }
+      commitMove(mv);
+    }, 30);
+  }
+
+  function newGame(){
+    gameGen++;
+    const myGen=gameGen;
+    game = new VerneyGame();
+    humanSeat = document.getElementById('sideSelect').value;
+    const [t,d]=document.getElementById('diffSelect').value.split(',').map(Number);
+    aiThinkTime=t; aiMaxDepth=d;
+    selected=null; legalForSelected=[]; lastMove=null; moveNo=1;
+    movelogEl.innerHTML='';
+    render();
+    if(game.turn!==humanSeat){
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 300);
+    }
+  }
+
+  document.getElementById('newGameBtn').addEventListener('click', ()=>newGame());
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('lang-en');
+    render();
+  });
+  document.getElementById('themeBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('light-mode');
+  });
+
+  buildBoardDOM();
+  newGame();
+})();
+</script>
+</body>
+</html>
