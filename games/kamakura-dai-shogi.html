@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鎌倉将棋（大将棋）/ Kamakura Shogi (Dai Shogi)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#100d0a; --ink-2:#171310; --board:#241d15; --board-line:#5a4a30;
+    --moss:#8a9a7e; --moss-dim:#5f6d55; --brass:#b08d57; --brass-bright:#d4ad6f;
+    --royal:#c9a13f; --royal-dim:#4a3d1f; --paper:#ece3d3; --paper-dim:#a89b83;
+    --danger:#b0584f; --shadow: 0 8px 30px rgba(0,0,0,0.55);
+    --piece-bg-1:#332818; --piece-bg-2:#20180e; --piece-border:#4a3a24;
+  }
+  body.theme-light{
+    --ink:#f3ede0; --ink-2:#e9decb; --board:#dcc9a0; --board-line:#a8874f;
+    --moss:#5f7350; --moss-dim:#c3d0b6; --brass:#8a6a3a; --brass-bright:#6b5024;
+    --royal:#8a6a1f; --royal-dim:#eadcb0;
+    --paper:#241d10; --paper-dim:#6b5f47; --danger:#a1382c;
+    --shadow: 0 8px 24px rgba(0,0,0,0.15);
+    --piece-bg-1:#fbf5e5; --piece-bg-2:#eaddbf; --piece-border:#b89f6c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:'Zen Kaku Gothic New',sans-serif;min-height:100vh;}
+  body{background:radial-gradient(ellipse at 15% -10%, rgba(201,161,63,0.08), transparent 60%),radial-gradient(ellipse at 90% 110%, rgba(138,154,126,0.06), transparent 60%),var(--ink);display:flex;flex-direction:column;align-items:center;padding:24px 12px 60px;}
+  .lang-jp .en{display:none;} .lang-en .jp{display:none;}
+  header{width:100%;max-width:1100px;display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .titleblock{display:flex;flex-direction:column;gap:2px;}
+  h1{font-family:'Shippori Mincho',serif;font-weight:800;font-size:1.9em;margin:0;color:var(--paper);letter-spacing:0.05em;text-shadow:0 0 22px rgba(201,161,63,0.16);}
+  h1 .en{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;font-size:0.48em;color:var(--brass-bright);letter-spacing:0.08em;display:block;margin-top:2px;}
+  .tagline{font-size:0.75em;color:var(--paper-dim);letter-spacing:0.03em;}
+  .topctrl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  button{font-family:'Zen Kaku Gothic New',sans-serif;background:var(--ink-2);color:var(--paper);border:1px solid var(--board-line);padding:7px 12px;border-radius:3px;cursor:pointer;font-size:0.78em;letter-spacing:0.02em;transition:all .15s ease;}
+  button:hover{border-color:var(--brass);color:var(--brass-bright);}
+  button.active{background:var(--moss-dim);border-color:var(--moss);color:var(--paper);}
+  .layout{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;max-width:1100px;}
+  .side{width:190px;display:flex;flex-direction:column;gap:10px;}
+  .side-label{font-size:0.7em;letter-spacing:0.06em;color:var(--paper-dim);text-transform:uppercase;border-bottom:1px solid var(--board-line);padding-bottom:5px;}
+  .status{font-size:0.82em;color:var(--paper-dim);min-height:1.4em;text-align:center;}
+  .status.check{color:var(--danger);}
+  .capturedlist{display:flex;flex-wrap:wrap;gap:3px;min-height:26px;max-height:140px;overflow-y:auto;}
+  .cap-piece{width:22px;height:22px;border-radius:3px;background:var(--ink-2);border:1px solid var(--board-line);display:flex;align-items:center;justify-content:center;font-family:'Shippori Mincho',serif;font-size:0.5em;color:var(--paper-dim);opacity:0.75;}
+  .boardwrap{position:relative;}
+  #board{display:grid;grid-template-columns:repeat(15,30px);grid-template-rows:repeat(15,30px);background:var(--board);border:3px solid var(--board-line);box-shadow:var(--shadow);}
+  .sq{border:1px solid rgba(90,74,48,0.4);position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .sq.movable::after{content:'';position:absolute;width:8px;height:8px;border-radius:50%;background:rgba(138,154,126,0.6);}
+  .sq.movable.capture::after{background:transparent;border:2px solid var(--moss);width:22px;height:22px;box-sizing:border-box;border-radius:4px;}
+  .sq.lastmove{background:rgba(176,141,87,0.16);}
+  .piece{font-family:'Shippori Mincho',serif;font-weight:600;font-size:0.5em;line-height:1.05;width:27px;height:27px;display:flex;align-items:center;justify-content:center;color:var(--paper);user-select:none;position:relative;background:linear-gradient(180deg, var(--piece-bg-1), var(--piece-bg-2));border:1px solid var(--piece-border);border-radius:2px;text-align:center;}
+  .piece.gote{transform:rotate(180deg);}
+  .piece.promoted{color:var(--danger);}
+  .piece.royal{box-shadow:0 0 0 1px var(--royal) inset;}
+  .piece.selected{box-shadow:0 0 0 2px var(--brass-bright), 0 0 10px rgba(212,173,111,0.6);}
+  .panel{width:230px;background:var(--ink-2);border:1px solid var(--board-line);border-radius:4px;padding:14px;font-size:0.78em;color:var(--paper-dim);}
+  .panel h3{font-family:'Shippori Mincho',serif;color:var(--paper);font-size:1em;margin:0 0 8px;letter-spacing:0.03em;}
+  .panel .rule{margin-bottom:9px;line-height:1.5;}
+  .panel .rule b{color:var(--royal);}
+  footer{margin-top:24px;font-size:0.7em;color:var(--paper-dim);opacity:0.6;text-align:center;letter-spacing:0.02em;max-width:700px;line-height:1.6;}
+  .modal-bg{position:fixed;inset:0;background:rgba(10,10,8,0.78);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--ink-2);border:1px solid var(--brass);border-radius:6px;padding:28px 32px;text-align:center;max-width:420px;box-shadow:var(--shadow);}
+  .modal h2{font-family:'Shippori Mincho',serif;color:var(--brass-bright);margin:0 0 10px;}
+  .modal p{color:var(--paper-dim);font-size:0.85em;line-height:1.6;text-align:left;}
+  @media (max-width:900px){
+    #board{grid-template-columns:repeat(15,20px);grid-template-rows:repeat(15,20px);}
+    .piece{width:18px;height:18px;font-size:0.38em;}
+    .side{width:130px;} .panel{width:100%;max-width:400px;order:3;}
+  }
+</style>
+</head>
+<body class="lang-jp">
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <p id="modalBody"></p>
+    <div id="modalActions" style="margin-top:14px;display:flex;gap:8px;justify-content:center;">
+      <button id="modalCloseBtn"><span class="jp">閉じる</span><span class="en">Close</span></button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="titleblock">
+    <h1>鎌倉将棋（大将棋）<span class="en">Kamakura Shogi (Dai Shogi)</span></h1>
+    <div class="tagline jp">15×15の盤に29種の駒。鎌倉時代の大将棋を再現。</div>
+    <div class="tagline en">29 piece types on a 15×15 board — a reconstruction of Kamakura-era Dai Shogi.</div>
+  </div>
+  <div class="topctrl">
+    <button id="langBtn">EN / JA</button>
+    <button id="themeBtn"><span class="jp">☀ ライト</span><span class="en">☀ Light</span></button>
+    <span style="width:1px;height:20px;background:var(--board-line);"></span>
+    <button id="sideSenteBtn" class="active"><span class="jp">先手</span><span class="en">Sente</span></button>
+    <button id="sideGoteBtn"><span class="jp">後手</span><span class="en">Gote</span></button>
+    <span style="width:1px;height:20px;background:var(--board-line);"></span>
+    <button id="diffBtn0">1</button>
+    <button id="diffBtn1">2</button>
+    <button id="diffBtn2" class="active">3</button>
+    <button id="diffBtn3">4</button>
+    <button id="diffBtn4">5</button>
+    <button id="restartBtn"><span class="jp">はじめから</span><span class="en">Restart</span></button>
+    <button id="rulesBtn"><span class="jp">ルール</span><span class="en">Rules</span></button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="side">
+    <div class="side-label"><span class="jp">後手 消えた駒</span><span class="en">Gote's losses</span></div>
+    <div class="capturedlist" id="capGote"></div>
+    <div class="side-label" style="margin-top:14px;"><span class="jp">状況</span><span class="en">Status</span></div>
+    <div class="status" id="status"></div>
+  </div>
+  <div class="boardwrap"><div id="board"></div></div>
+  <div class="side">
+    <div class="side-label"><span class="jp">先手 消えた駒</span><span class="en">Sente's losses</span></div>
+    <div class="capturedlist" id="capSente"></div>
+    <div class="panel" style="margin-top:14px;">
+      <h3><span class="jp">大将棋について</span><span class="en">About Dai Shogi</span></h3>
+      <div class="rule jp">29種類130枚級の大型将棋。持ち駒制度はなく、取った駒はそのまま除かれます。成りは敵陣5段以内で可能です。</div>
+      <div class="rule en">A large-scale shogi variant with 29 piece types. No hand or drops — captured pieces are simply removed. Promotion is available within the far 5 ranks.</div>
+      <div class="rule jp"><b>簡略化</b>：獅子は2マス以内へのジャンプとして、角鷹・飛鷲は複合二段移動を省略し竜馬・竜王と同じ動きとして実装しています。配置も一部簡略化した再構成です。</div>
+      <div class="rule en"><b>Simplifications</b>: the Lion is implemented as a jump within 2 squares (omitting the historical double-capture/anti-repetition rules); the Horned Falcon and Soaring Eagle are simplified to move like the Dragon Horse/King (omitting their compound double-move). The starting layout is a best-effort reconstruction, not a citation-perfect historical replica.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span class="jp">鎌倉将棋（大将棋）— 鎌倉時代に指されたと伝わる大型将棋の再構成 — Mossgreen 作</span><br>
+  <span class="en">Kamakura Shogi (Dai Shogi) — a reconstruction of the large-format shogi played in the Kamakura era — implemented by Mossgreen</span>
+</footer>
+
+<script>
+/* ============ 言語 ============ */
+let lang='jp';
+function toggleLang(){ lang = lang==='jp'?'en':'jp'; document.body.className='lang-'+lang; render(); }
+
+/* ============ 音 ============ */
+let audioCtx=null;
+function startAmbient(){
+  if(audioCtx) return;
+  try{
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const freqs=[49,73.4,98];
+    const master=audioCtx.createGain(); master.gain.value=0.022; master.connect(audioCtx.destination);
+    freqs.forEach((f,i)=>{
+      const osc=audioCtx.createOscillator(); osc.type='sine'; osc.frequency.value=f;
+      const g=audioCtx.createGain(); g.gain.value=0.5/(i+1);
+      const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.04+i*0.015;
+      const lfoGain=audioCtx.createGain(); lfoGain.gain.value=0.15;
+      lfo.connect(lfoGain); lfoGain.connect(g.gain);
+      osc.connect(g); g.connect(master); osc.start(); lfo.start();
+    });
+  }catch(e){}
+}
+function chime(freq){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type='sine'; o.frequency.value=freq;
+  g.gain.value=0.0001; g.connect(audioCtx.destination); o.connect(g);
+  const t=audioCtx.currentTime;
+  g.gain.exponentialRampToValueAtTime(0.05,t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.85);
+  o.start(); o.stop(t+0.95);
+}
+
+/* ============ 駒の定義（29種） ============ */
+const KANJI = {
+  FU:'歩', KY:'香', KE:'桂', GI:'銀', KI:'金', KA:'角', HI:'飛', OU:'王',
+  TOKIN:'と金', HAKUKU:'白駒', RYUMA:'竜馬', RYUOU:'竜王', KAKUTAKA:'角鷹', HIWASHI:'飛鷲',
+  SHISHI:'獅子', SUIZOU:'酔象', TAISHI:'太子', DOU:'銅将', TETSU:'鉄将', SEKI:'石将',
+  MOUHYOU:'猛豹', HANSHA:'反車', GEIGEI:'鯨鯢', MOUKO:'盲虎', HIROKU:'飛鹿', KIRIN:'麒麟',
+  HOUOU:'鳳凰', HONNOU:'奔王', CHUNIN:'仲人', OUGYOU:'横行', HONCHO:'奔猪', TATEGYOU:'竪行',
+  HIGYUU:'飛牛', AKUROU:'悪狼', SHINCHO:'嗔猪', NEKOMATA:'猫刄', MOUGYUU:'猛牛', HIRYUU:'飛龍'
+};
+const PROMOTE = {
+  FU:'TOKIN', KY:'HAKUKU', KE:'KI', GI:'TATEGYOU', KI:'HI', KA:'RYUMA', HI:'RYUOU',
+  RYUMA:'KAKUTAKA', RYUOU:'HIWASHI', SUIZOU:'TAISHI', DOU:'OUGYOU', MOUHYOU:'KA',
+  HANSHA:'GEIGEI', MOUKO:'HIROKU', KIRIN:'SHISHI', HOUOU:'HONNOU', CHUNIN:'SUIZOU',
+  OUGYOU:'HONCHO', TATEGYOU:'HIGYUU', TETSU:'KI', SEKI:'KI', AKUROU:'KI', SHINCHO:'KI',
+  NEKOMATA:'KI', MOUGYUU:'KI', HIRYUU:'KI'
+};
+const CAN_PROMOTE = new Set(Object.keys(PROMOTE));
+
+/* 各配列は [drow, dcol]。sente視点の前進方向を drow=-1 とする */
+const MOVES = {
+  FU:{step:[[-1,0]]},
+  KY:{ray:[[-1,0]]},
+  KE:{jump:[[-2,-1],[-2,1]]},
+  GI:{step:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,1]]},
+  KI:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,0]]},
+  KA:{ray:[[-1,-1],[-1,1],[1,-1],[1,1]]},
+  HI:{ray:[[-1,0],[1,0],[0,-1],[0,1]]},
+  OU:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]},
+  TOKIN:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,0]]},
+  HAKUKU:{ray:[[-1,-1],[-1,0],[-1,1],[1,0]]},
+  RYUMA:{ray:[[-1,-1],[-1,1],[1,-1],[1,1]], step:[[-1,0],[1,0],[0,-1],[0,1]]},
+  RYUOU:{ray:[[-1,0],[1,0],[0,-1],[0,1]], step:[[-1,-1],[-1,1],[1,-1],[1,1]]},
+  KAKUTAKA:{ray:[[-1,-1],[-1,1],[1,-1],[1,1]], step:[[-1,0],[1,0],[0,-1],[0,1]]},
+  HIWASHI:{ray:[[-1,0],[1,0],[0,-1],[0,1]], step:[[-1,-1],[-1,1],[1,-1],[1,1]]},
+  SHISHI:{area2:true},
+  SUIZOU:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,1]]},
+  TAISHI:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]},
+  DOU:{step:[[-1,-1],[-1,0],[-1,1],[1,0]]},
+  TETSU:{step:[[-1,-1],[-1,0],[-1,1]]},
+  SEKI:{step:[[-1,-1],[-1,1]]},
+  MOUHYOU:{step:[[-1,-1],[-1,1],[1,-1],[1,1],[0,-1],[0,1]]},
+  HANSHA:{ray:[[-1,0],[1,0]]},
+  GEIGEI:{ray:[[-1,0],[1,-1],[1,0],[1,1]]},
+  MOUKO:{step:[[-1,-1],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]},
+  HIROKU:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]], ray:[[-1,0]]},
+  KIRIN:{step:[[-1,0],[1,0],[0,-1],[0,1]], jump:[[-2,-2],[-2,2],[2,-2],[2,2]]},
+  HOUOU:{step:[[-1,-1],[-1,1],[1,-1],[1,1]], jump:[[-2,0],[2,0],[0,-2],[0,2]]},
+  HONNOU:{ray:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]},
+  CHUNIN:{step:[[-1,0],[1,0]]},
+  OUGYOU:{ray:[[0,-1],[0,1]], step:[[-1,0],[1,0]]},
+  HONCHO:{ray:[[-1,-1],[-1,1],[1,-1],[1,1]], step:[[0,-1],[0,1]]},
+  TATEGYOU:{ray:[[-1,0],[1,0]], step:[[0,-1],[0,1]]},
+  HIGYUU:{ray:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]},
+  AKUROU:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1]]},
+  SHINCHO:{step:[[-1,0],[0,-1],[0,1],[1,0]]},
+  NEKOMATA:{step:[[-1,-1],[-1,1],[1,-1],[1,1]]},
+  MOUGYUU:{rangedRay:[[-1,0],[1,0],[0,-1],[0,1]], maxRange:2},
+  HIRYUU:{rangedRay:[[-1,-1],[-1,1],[1,-1],[1,1]], maxRange:2}
+};
+const VALUES = {
+  FU:1,KY:3,KE:3,GI:5,KI:6,KA:9,HI:11,OU:0,
+  TOKIN:6,HAKUKU:8,RYUMA:13,RYUOU:14,KAKUTAKA:13,HIWASHI:14,
+  SHISHI:12,SUIZOU:5,TAISHI:9,DOU:3,TETSU:2,SEKI:2,
+  MOUHYOU:5,HANSHA:4,GEIGEI:6,MOUKO:6,HIROKU:9,KIRIN:8,
+  HOUOU:8,HONNOU:16,CHUNIN:1,OUGYOU:5,HONCHO:7,TATEGYOU:5,
+  HIGYUU:9,AKUROU:4,SHINCHO:4,NEKOMATA:4,MOUGYUU:5,HIRYUU:5
+};
+
+let pid=0;
+function newPiece(kind, owner){ return {id:pid++, kind, owner}; }
+function clonePiece(p){ return {id:p.id, kind:p.kind, owner:p.owner}; }
+
+/* ============ 盤面初期化（15×15） ============ */
+const N = 15;
+let board, turn, selected, gameOver, lastMove, difficulty=3, capBySente, capByGote;
+let humanSide='sente';
+function aiSide(){ return humanSide==='sente' ? 'gote' : 'sente'; }
+const BOARD_N = N;
+
+function mirrorRow(row){ return row.slice(); }
+
+function initState(){
+  board = Array.from({length:N},()=>Array(N).fill(null));
+  capBySente=[]; capByGote=[];
+  const row14 = ['KY','HANSHA','DOU','TETSU','SEKI','KI','GI','OU','GI','KI','SEKI','TETSU','DOU','HANSHA','KY'];
+  const row13 = ['KE','MOUHYOU','AKUROU','SHINCHO','NEKOMATA','TATEGYOU','KIRIN','HI','HOUOU','TATEGYOU','NEKOMATA','SHINCHO','AKUROU','MOUHYOU','KE'];
+  const row12 = ['OUGYOU','MOUGYUU','HIRYUU','RYUOU','RYUMA','SHISHI','KA','SUIZOU','KA','SHISHI','RYUMA','RYUOU','HIRYUU','MOUGYUU','OUGYOU'];
+  for(let c=0;c<N;c++){
+    board[N-1][c] = newPiece(row14[c],'sente');
+    board[N-2][c] = newPiece(row13[c],'sente');
+    board[N-3][c] = newPiece(row12[c],'sente');
+    board[N-4][c] = newPiece('FU','sente');
+    board[0][c] = newPiece(row14[c],'gote');
+    board[1][c] = newPiece(row13[c],'gote');
+    board[2][c] = newPiece(row12[c],'gote');
+    board[3][c] = newPiece('FU','gote');
+  }
+  turn='sente'; selected=null; gameOver=false; lastMove=null;
+}
+
+function inb(r,c){ return r>=0&&r<N&&c>=0&&c<N; }
+
+function pieceMoves(piece,r,c,bd){
+  const dir = piece.owner==='sente' ? 1 : -1;
+  const mv = MOVES[piece.kind];
+  const out=[];
+  const flip=(dr,dc)=>[dr*dir,dc];
+  if(mv.area2){
+    for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){
+      if(dr===0&&dc===0) continue;
+      const nr=r+dr, nc=c+dc;
+      if(inb(nr,nc)){ const t=bd[nr][nc]; if(!t||t.owner!==piece.owner) out.push({r:nr,c:nc,capture:!!t}); }
+    }
+    return out;
+  }
+  if(mv.step) mv.step.forEach(([dr,dc])=>{
+    const [fr,fc]=flip(dr,dc); const nr=r+fr,nc=c+fc;
+    if(inb(nr,nc)){ const t=bd[nr][nc]; if(!t||t.owner!==piece.owner) out.push({r:nr,c:nc,capture:!!t}); }
+  });
+  if(mv.jump) mv.jump.forEach(([dr,dc])=>{
+    const [fr,fc]=flip(dr,dc); const nr=r+fr,nc=c+fc;
+    if(inb(nr,nc)){ const t=bd[nr][nc]; if(!t||t.owner!==piece.owner) out.push({r:nr,c:nc,capture:!!t}); }
+  });
+  if(mv.ray) mv.ray.forEach(([dr,dc])=>{
+    const [fr,fc]=flip(dr,dc); let nr=r+fr,nc=c+fc;
+    while(inb(nr,nc)){
+      const t=bd[nr][nc];
+      if(!t){ out.push({r:nr,c:nc,capture:false}); } else { if(t.owner!==piece.owner) out.push({r:nr,c:nc,capture:true}); break; }
+      nr+=fr; nc+=fc;
+    }
+  });
+  if(mv.rangedRay) mv.rangedRay.forEach(([dr,dc])=>{
+    const [fr,fc]=flip(dr,dc); let nr=r+fr,nc=c+fc; let steps=0;
+    while(inb(nr,nc) && steps<mv.maxRange){
+      const t=bd[nr][nc];
+      if(!t){ out.push({r:nr,c:nc,capture:false}); } else { if(t.owner!==piece.owner) out.push({r:nr,c:nc,capture:true}); break; }
+      nr+=fr; nc+=fc; steps++;
+    }
+  });
+  return out;
+}
+function findKing(bd,owner){
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){ const p=bd[r][c]; if(p&&p.owner===owner&&p.kind==='OU') return {r,c}; }
+  return null;
+}
+function isSquareAttacked(bd,r,c,byOwner){
+  for(let rr=0;rr<N;rr++)for(let cc=0;cc<N;cc++){
+    const p=bd[rr][cc];
+    if(p&&p.owner===byOwner){ if(pieceMoves(p,rr,cc,bd).some(m=>m.r===r&&m.c===c)) return true; }
+  }
+  return false;
+}
+function inCheck(bd,owner){
+  const k=findKing(bd,owner); if(!k) return false;
+  return isSquareAttacked(bd,k.r,k.c,owner==='sente'?'gote':'sente');
+}
+function applyMove(bd, from, to, promote){
+  const nb = bd.map(row=>row.slice());
+  const moving = clonePiece(nb[from.r][from.c]);
+  const captured = nb[to.r][to.c] ? clonePiece(nb[to.r][to.c]) : null;
+  if(promote) moving.kind = PROMOTE[moving.kind];
+  nb[to.r][to.c] = moving;
+  nb[from.r][from.c] = null;
+  return {nb, captured};
+}
+function kingSafeAfter(bd,owner){ return !inCheck(bd,owner); }
+
+function generateLegalActions(bd, owner){
+  const actions=[];
+  const promoZone = owner==='sente' ? [0,1,2,3,4] : [N-5,N-4,N-3,N-2,N-1];
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const p=bd[r][c];
+    if(!p||p.owner!==owner) continue;
+    pieceMoves(p,r,c,bd).forEach(m=>{
+      const canPromote = CAN_PROMOTE.has(p.kind) && (promoZone.includes(r)||promoZone.includes(m.r));
+      const {nb} = applyMove(bd,{r,c},{r:m.r,c:m.c},false);
+      if(kingSafeAfter(nb,owner)) actions.push({type:'move',from:{r,c},to:{r:m.r,c:m.c},promote:false,kind:p.kind});
+      if(canPromote){
+        const res2 = applyMove(bd,{r,c},{r:m.r,c:m.c},true);
+        if(kingSafeAfter(res2.nb,owner)) actions.push({type:'move',from:{r,c},to:{r:m.r,c:m.c},promote:true,kind:p.kind});
+      }
+    });
+  }
+  return actions;
+}
+
+/* ============ 進行 ============ */
+function doAction(action, owner){
+  const {nb,captured} = applyMove(board, action.from, action.to, action.promote);
+  board = nb;
+  if(captured){ (owner==='sente'?capBySente:capByGote).push(captured); }
+  lastMove = {from:action.from, to:action.to};
+}
+function checkGameEnd(owner){
+  const acts = generateLegalActions(board, owner);
+  if(acts.length===0){ gameOver=true; return true; }
+  return false;
+}
+
+/* ============ UI ============ */
+function render(){
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML='';
+  const legalTargets = selected ? currentLegalTargets() : [];
+  const flip = humanSide==='gote';
+  for(let vr=0;vr<N;vr++)for(let vc=0;vc<N;vc++){
+    const r = flip ? (BOARD_N-1-vr) : vr;
+    const c = flip ? (BOARD_N-1-vc) : vc;
+    const sq=document.createElement('div'); sq.className='sq';
+    if(lastMove && ((lastMove.from&&lastMove.from.r===r&&lastMove.from.c===c)||(lastMove.to.r===r&&lastMove.to.c===c))) sq.classList.add('lastmove');
+    const p=board[r][c];
+    const tgt = legalTargets.find(t=>t.r===r&&t.c===c);
+    if(tgt){ sq.classList.add('movable'); if(tgt.capture) sq.classList.add('capture'); }
+    if(p){
+      const pd=document.createElement('div');
+      const isPromoted = p.kind!=='FU'&&p.kind!=='KY'&&p.kind!=='KE'&&p.kind!=='GI'&&p.kind!=='KI'&&p.kind!=='KA'&&p.kind!=='HI'&&p.kind!=='OU'&&p.kind!=='SHISHI'&&p.kind!=='SUIZOU'&&p.kind!=='DOU'&&p.kind!=='TETSU'&&p.kind!=='SEKI'&&p.kind!=='MOUHYOU'&&p.kind!=='HANSHA'&&p.kind!=='MOUKO'&&p.kind!=='KIRIN'&&p.kind!=='HOUOU'&&p.kind!=='HONNOU'&&p.kind!=='CHUNIN'&&p.kind!=='OUGYOU'&&p.kind!=='TATEGYOU'&&p.kind!=='AKUROU'&&p.kind!=='SHINCHO'&&p.kind!=='NEKOMATA'&&p.kind!=='MOUGYUU'&&p.kind!=='HIRYUU'&&p.kind!=='RYUMA'&&p.kind!=='RYUOU';
+      pd.className='piece'+(p.owner!==humanSide?' gote':'')+(isPromoted?' promoted':'')+(p.kind==='OU'||p.kind==='TAISHI'?' royal':'');
+      pd.textContent = KANJI[p.kind];
+      if(selected && selected.r===r && selected.c===c) pd.classList.add('selected');
+      sq.appendChild(pd);
+    }
+    sq.addEventListener('click', ()=>onSquareClick(r,c));
+    boardEl.appendChild(sq);
+  }
+  renderCaptured(); renderStatus();
+}
+function renderCaptured(){
+  const elS = document.getElementById('capSente'); elS.innerHTML='';
+  capBySente.forEach(p=>{ const d=document.createElement('div'); d.className='cap-piece'; d.textContent=KANJI[p.kind]; elS.appendChild(d); });
+  const elG = document.getElementById('capGote'); elG.innerHTML='';
+  capByGote.forEach(p=>{ const d=document.createElement('div'); d.className='cap-piece'; d.textContent=KANJI[p.kind]; elG.appendChild(d); });
+}
+function currentLegalTargets(){
+  if(!selected) return [];
+  const acts = generateLegalActions(board, turn);
+  return acts.filter(a=>a.from.r===selected.r&&a.from.c===selected.c)
+    .map(a=>({r:a.to.r,c:a.to.c,capture:!!board[a.to.r][a.to.c],action:a}));
+}
+function onSquareClick(r,c){
+  if(gameOver||turn!==humanSide) return;
+  const targets = currentLegalTargets();
+  const hit = targets.find(t=>t.r===r&&t.c===c);
+  if(hit){ performPlayerAction(hit.action); return; }
+  const p = board[r][c];
+  selected = (p&&p.owner===humanSide) ? {r,c} : null;
+  render();
+}
+function performPlayerAction(action){
+  if(CAN_PROMOTE.has(action.kind)){
+    const promoZone = turn==='sente'?[0,1,2,3,4]:[N-5,N-4,N-3,N-2,N-1];
+    const inZone = promoZone.includes(action.from.r)||promoZone.includes(action.to.r);
+    if(inZone && !action.promote){ askPromote(action); return; }
+  }
+  finalizeAction(action);
+}
+function askPromote(action){
+  document.getElementById('modalTitle').innerHTML = lang==='jp'?'成りますか？':'Promote?';
+  document.getElementById('modalBody').innerHTML = lang==='jp'?`成ると「${KANJI[PROMOTE[action.kind]]}」になります。`:`Promoting turns this piece into "${KANJI[PROMOTE[action.kind]]}".`;
+  const actionsEl = document.getElementById('modalActions'); actionsEl.innerHTML='';
+  const yesBtn=document.createElement('button'); yesBtn.innerHTML = lang==='jp'?'成る':'Promote';
+  yesBtn.onclick=()=>{ action.promote=true; closeModal(); finalizeAction(action); };
+  const noBtn=document.createElement('button'); noBtn.innerHTML = lang==='jp'?'成らない':'Stay';
+  noBtn.onclick=()=>{ action.promote=false; closeModal(); finalizeAction(action); };
+  actionsEl.appendChild(noBtn); actionsEl.appendChild(yesBtn);
+  document.getElementById('modalBg').classList.add('show');
+}
+function resetModalActions(){
+  const actionsEl=document.getElementById('modalActions'); actionsEl.innerHTML='';
+  const closeBtn=document.createElement('button'); closeBtn.innerHTML = lang==='jp'?'閉じる':'Close';
+  closeBtn.onclick=closeModal; actionsEl.appendChild(closeBtn);
+}
+function finalizeAction(action){
+  const wasCapture = !!board[action.to.r][action.to.c];
+  doAction(action, turn);
+  if(wasCapture) chime(680);
+  selected=null;
+  const opponent = turn==='sente'?'gote':'sente';
+  const overNow = checkGameEnd(opponent);
+  turn = opponent;
+  render();
+  if(overNow){ endGame(turn); return; }
+  if(turn===aiSide() && !gameOver) setTimeout(aiMove, 260);
+}
+function renderStatus(){
+  const el = document.getElementById('status');
+  if(gameOver){ el.textContent = lang==='jp'?'対局終了':'Game over'; return; }
+  const aiLabel = aiSide()==='sente' ? (lang==='jp'?'先手':'Sente') : (lang==='jp'?'後手':'Gote');
+  let msg = turn===humanSide ? (lang==='jp'?'あなたの番です':'Your move') : (lang==='jp'?`${aiLabel}（AI）思考中…`:`${aiLabel} (AI) thinking…`);
+  el.className='status';
+  if(inCheck(board,turn)){ msg += lang==='jp'?'　王手！':'  Check!'; el.classList.add('check'); }
+  el.textContent = msg;
+}
+function endGame(loser){
+  gameOver=true;
+  const winner = loser==='sente' ? (lang==='jp'?'後手':'Gote') : (lang==='jp'?'先手':'Sente');
+  const loserName = loser==='sente' ? (lang==='jp'?'先手':'Sente') : (lang==='jp'?'後手':'Gote');
+  document.getElementById('modalTitle').innerHTML = lang==='jp'?`${winner}の勝ち`:`${winner} wins`;
+  document.getElementById('modalBody').innerHTML = lang==='jp'?`${loserName}に合法手がありません。`:`${loserName} has no legal moves.`;
+  resetModalActions();
+  document.getElementById('modalBg').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('show'); }
+function showRules(){
+  document.getElementById('modalTitle').innerHTML = lang==='jp'?'ルール':'Rules';
+  document.getElementById('modalBody').innerHTML = lang==='jp' ?
+    '15×15盤、29種類の駒を使用。持ち駒制度はなく、取った駒はそのまま除かれます。成りは敵陣5段以内で可能（成るか成らないか選べます）。詰み（合法手なし）で敗北です。獅子は2マス以内へのジャンプ、角鷹・飛鷲は竜馬・竜王と同じ動きとして簡略化しています。'
+    : "Played on a 15×15 board with 29 piece types. There is no hand or drops — captured pieces are simply removed. Promotion is optional and available within the far 5 ranks. A side with no legal moves loses. The Lion is simplified to a jump within 2 squares; the Horned Falcon and Soaring Eagle are simplified to move like the Dragon Horse and Dragon King.";
+  resetModalActions();
+  document.getElementById('modalBg').classList.add('show');
+}
+function setDifficulty(d){ difficulty=d; [0,1,2,3,4].forEach(i=>document.getElementById('diffBtn'+i).classList.toggle('active', i===d-1)); }
+const DIFFICULTY_DEPTH = {1:1, 2:1, 3:1, 4:2, 5:2};
+const DIFFICULTY_BLUNDER = {1:0.4, 2:0.2, 3:0.08, 4:0.0, 5:0.0};
+function setHumanSide(side){
+  humanSide = side;
+  document.getElementById('sideSenteBtn').classList.toggle('active', side==='sente');
+  document.getElementById('sideGoteBtn').classList.toggle('active', side==='gote');
+  resetGame();
+}
+let theme='dark';
+function toggleTheme(){
+  theme = theme==='dark' ? 'light' : 'dark';
+  document.body.classList.toggle('theme-light', theme==='light');
+  const btn = document.getElementById('themeBtn');
+  btn.querySelector('.jp').textContent = theme==='dark' ? '☀ ライト' : '🌙 ダーク';
+  btn.querySelector('.en').textContent = theme==='dark' ? '☀ Light' : '🌙 Dark';
+}
+function resetGame(){
+  initState(); closeModal(); render(); startAmbient();
+  if(turn===aiSide() && !gameOver) setTimeout(aiMove, 260);
+}
+
+/* ============ AI ============ */
+function evalBoard(bd){
+  let score=0;
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const p=bd[r][c]; if(!p) continue;
+    const v=VALUES[p.kind]||0;
+    score += p.owner==='gote' ? v : -v;
+  }
+  return score;
+}
+function simulate(bd,owner,action){
+  const res = applyMove(bd, action.from, action.to, action.promote);
+  return {nb:res.nb};
+}
+function minimax(bd,owner,depth,alpha,beta){
+  const opponent = owner==='sente'?'gote':'sente';
+  const acts = generateLegalActions(bd, owner);
+  if(acts.length===0) return owner==='gote' ? -9999-depth : 9999+depth;
+  if(depth===0) return evalBoard(bd);
+  const maximizing = owner==='gote';
+  let best = maximizing? -Infinity: Infinity;
+  acts.sort((a,b)=>{
+    const av = bd[a.to.r]&&bd[a.to.r][a.to.c]?1:0;
+    const bv = bd[b.to.r]&&bd[b.to.r][b.to.c]?1:0;
+    return bv-av;
+  });
+  const sample = acts.length>25 ? acts.slice(0,25) : acts;
+  for(const act of sample){
+    const {nb} = simulate(bd,owner,act);
+    const val = minimax(nb,opponent,depth-1,alpha,beta);
+    if(maximizing){ if(val>best) best=val; alpha=Math.max(alpha,val); } else { if(val<best) best=val; beta=Math.min(beta,val); }
+    if(beta<=alpha) break;
+  }
+  return best;
+}
+function aiMove(){
+  if(gameOver) return;
+  const ai = aiSide(), human = humanSide;
+  const acts = generateLegalActions(board, ai);
+  if(acts.length===0){ turn=ai; endGame(ai); render(); return; }
+  const depth = DIFFICULTY_DEPTH[difficulty] || 1;
+  const blunder = DIFFICULTY_BLUNDER[difficulty] || 0;
+  let chosen;
+  if(Math.random() < blunder){
+    chosen = acts[Math.floor(Math.random()*acts.length)];
+  } else {
+    let bestVal = ai==='gote' ? -Infinity : Infinity;
+    let bestActs=[];
+    const sample = acts.length>35 ? acts.slice().sort(()=>Math.random()-0.5).slice(0,35) : acts;
+    for(const act of sample){
+      const {nb} = simulate(board,ai,act);
+      const val = minimax(nb,human,Math.max(depth-1,0),-Infinity,Infinity);
+      if(ai==='gote'){
+        if(val>bestVal){ bestVal=val; bestActs=[act]; } else if(val===bestVal){ bestActs.push(act); }
+      } else {
+        if(val<bestVal){ bestVal=val; bestActs=[act]; } else if(val===bestVal){ bestActs.push(act); }
+      }
+    }
+    chosen = bestActs[Math.floor(Math.random()*bestActs.length)] || acts[0];
+  }
+  const wasCapture = !!board[chosen.to.r][chosen.to.c];
+  doAction(chosen,ai);
+  if(wasCapture) chime(560);
+  const overNow = checkGameEnd(human);
+  turn=human;
+  render();
+  if(overNow) endGame(human);
+}
+
+/* ============ 起動 ============ */
+function wireUI(){
+  document.getElementById('langBtn').addEventListener('click', toggleLang);
+  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+  document.getElementById('sideSenteBtn').addEventListener('click', ()=>setHumanSide('sente'));
+  document.getElementById('sideGoteBtn').addEventListener('click', ()=>setHumanSide('gote'));
+  document.getElementById('diffBtn0').addEventListener('click', ()=>setDifficulty(1));
+  document.getElementById('diffBtn1').addEventListener('click', ()=>setDifficulty(2));
+  document.getElementById('diffBtn2').addEventListener('click', ()=>setDifficulty(3));
+  document.getElementById('diffBtn3').addEventListener('click', ()=>setDifficulty(4));
+  document.getElementById('diffBtn4').addEventListener('click', ()=>setDifficulty(5));
+  document.getElementById('restartBtn').addEventListener('click', resetGame);
+  document.getElementById('rulesBtn').addEventListener('click', showRules);
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.addEventListener('click', startAmbient, {once:true});
+}
+wireUI();
+initState();
+render();
+</script>
+</body>
+</html>

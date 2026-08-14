@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>悪魔将棋 / Demon Pact Shogi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#120a0a; --ink-2:#1a0f0f; --board:#2a1414; --board-line:#5c2f2f;
+    --moss:#8a9a7e; --moss-dim:#5f6d55; --brass:#b08d57; --brass-bright:#d4ad6f;
+    --demon:#d8434f; --demon-dim:#5c2028; --paper:#ede2e2; --paper-dim:#ad9a9a;
+    --danger:#e0a83f; --shadow: 0 8px 30px rgba(0,0,0,0.6);
+    --piece-bg-1:#331818; --piece-bg-2:#1e0f0f; --piece-border:#4a2626;
+  }
+  body.theme-light{
+    --ink:#f5ecec; --ink-2:#ecdcdc; --board:#e0c4c4; --board-line:#b06868;
+    --moss:#5f7350; --moss-dim:#c3d0b6; --brass:#8a6a3a; --brass-bright:#6b5024;
+    --demon:#b0202c; --demon-dim:#f0c7cb;
+    --paper:#251414; --paper-dim:#6b4c4c; --danger:#a1701a;
+    --shadow: 0 8px 24px rgba(0,0,0,0.15);
+    --piece-bg-1:#fbf0f0; --piece-bg-2:#f0dcdc; --piece-border:#c89494;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:'Zen Kaku Gothic New',sans-serif;min-height:100vh;}
+  body{background:radial-gradient(ellipse at 15% -10%, rgba(216,67,79,0.09), transparent 60%),radial-gradient(ellipse at 90% 110%, rgba(176,141,87,0.05), transparent 60%),var(--ink);display:flex;flex-direction:column;align-items:center;padding:28px 14px 60px;}
+  .lang-jp .en{display:none;} .lang-en .jp{display:none;}
+  header{width:100%;max-width:980px;display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+  .titleblock{display:flex;flex-direction:column;gap:2px;}
+  h1{font-family:'Shippori Mincho',serif;font-weight:800;font-size:2.1em;margin:0;color:var(--paper);letter-spacing:0.06em;text-shadow:0 0 22px rgba(216,67,79,0.2);}
+  h1 .en{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:400;font-size:0.5em;color:var(--brass-bright);letter-spacing:0.08em;display:block;margin-top:2px;}
+  .tagline{font-size:0.78em;color:var(--paper-dim);letter-spacing:0.04em;}
+  .topctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  button{font-family:'Zen Kaku Gothic New',sans-serif;background:var(--ink-2);color:var(--paper);border:1px solid var(--board-line);padding:8px 14px;border-radius:3px;cursor:pointer;font-size:0.82em;letter-spacing:0.03em;transition:all .15s ease;}
+  button:hover{border-color:var(--brass);color:var(--brass-bright);}
+  button.active{background:var(--moss-dim);border-color:var(--moss);color:var(--paper);}
+  .layout{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;max-width:980px;}
+  .side{width:150px;display:flex;flex-direction:column;gap:10px;}
+  .side-label{font-size:0.72em;letter-spacing:0.08em;color:var(--paper-dim);text-transform:uppercase;border-bottom:1px solid var(--board-line);padding-bottom:6px;}
+  .hand{display:flex;flex-wrap:wrap;gap:6px;min-height:44px;}
+  .hand-piece{width:40px;height:40px;border-radius:4px;background:var(--ink-2);border:1px solid var(--board-line);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;font-family:'Shippori Mincho',serif;font-size:1.15em;color:var(--paper);transition:all .15s ease;}
+  .hand-piece.gote{transform:rotate(180deg);}
+  .hand-piece:hover{border-color:var(--brass-bright);box-shadow:0 0 10px rgba(212,173,111,0.35);}
+  .hand-piece.selected{border-color:var(--demon);box-shadow:0 0 12px rgba(216,67,79,0.5);}
+  .hand-count{position:absolute;bottom:-6px;right:-6px;background:var(--brass);color:var(--ink);font-size:0.6em;border-radius:8px;padding:0 5px;}
+  .status{font-size:0.85em;color:var(--paper-dim);min-height:1.4em;text-align:center;}
+  .status.check{color:var(--danger);}
+  .boardwrap{position:relative;}
+  #board{display:grid;grid-template-columns:repeat(9,52px);grid-template-rows:repeat(9,52px);background:var(--board);border:3px solid var(--board-line);box-shadow:var(--shadow);}
+  .sq{border:1px solid rgba(92,47,47,0.55);position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .sq.movable::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:rgba(138,154,126,0.55);}
+  .sq.movable.capture::after{background:transparent;border:2px solid var(--moss);width:34px;height:34px;box-sizing:border-box;border-radius:6px;}
+  .sq.lastmove{background:rgba(176,141,87,0.14);}
+  .piece{font-family:'Shippori Mincho',serif;font-weight:600;font-size:1.55em;width:46px;height:46px;display:flex;align-items:center;justify-content:center;color:var(--paper);user-select:none;position:relative;clip-path:polygon(50% 0%, 92% 18%, 100% 100%, 0% 100%, 8% 18%);background:linear-gradient(180deg, var(--piece-bg-1), var(--piece-bg-2));border:1px solid var(--piece-border);}
+  .piece.gote{transform:rotate(180deg);}
+  .piece.promoted{color:var(--danger);}
+  .piece.selected{box-shadow:0 0 0 2px var(--brass-bright), 0 0 14px rgba(212,173,111,0.6);}
+  .piece.possessed{border-color:var(--demon); box-shadow:0 0 8px rgba(216,67,79,0.55);}
+  .possess-badge{position:absolute;bottom:1px;right:1px;width:14px;height:14px;border-radius:50%;background:var(--demon);color:#160808;font-size:0.42em;display:flex;align-items:center;justify-content:center;font-family:'Shippori Mincho',serif;font-weight:800;box-shadow:0 0 6px rgba(216,67,79,0.7);}
+  .piece.gote .possess-badge{transform:rotate(180deg);}
+  .panel{width:210px;background:var(--ink-2);border:1px solid var(--board-line);border-radius:4px;padding:14px;font-size:0.8em;color:var(--paper-dim);}
+  .panel h3{font-family:'Shippori Mincho',serif;color:var(--paper);font-size:1em;margin:0 0 8px;letter-spacing:0.04em;}
+  .panel .rule{margin-bottom:10px;line-height:1.5;}
+  .panel .rule b{color:var(--demon);}
+  footer{margin-top:26px;font-size:0.72em;color:var(--paper-dim);opacity:0.6;text-align:center;letter-spacing:0.03em;}
+  .modal-bg{position:fixed;inset:0;background:rgba(10,5,5,0.8);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--ink-2);border:1px solid var(--demon);border-radius:6px;padding:30px 34px;text-align:center;max-width:380px;box-shadow:var(--shadow);}
+  .modal h2{font-family:'Shippori Mincho',serif;color:var(--demon);margin:0 0 10px;}
+  .modal p{color:var(--paper-dim);font-size:0.88em;line-height:1.6;text-align:left;}
+  @media (max-width:760px){
+    #board{grid-template-columns:repeat(9,36px);grid-template-rows:repeat(9,36px);}
+    .piece{width:32px;height:32px;font-size:1.1em;}
+    .side{width:110px;}
+    .panel{width:100%;max-width:400px;order:3;}
+    .hand-piece{width:32px;height:32px;font-size:0.95em;}
+  }
+</style>
+</head>
+<body class="lang-jp">
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <p id="modalBody"></p>
+    <div id="modalActions" style="margin-top:14px;display:flex;gap:8px;justify-content:center;">
+      <button id="modalCloseBtn"><span class="jp">閉じる</span><span class="en">Close</span></button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="titleblock">
+    <h1>悪魔将棋<span class="en">Demon Pact Shogi</span></h1>
+    <div class="tagline jp">屠った駒の力を、その場で己に取り込むか。</div>
+    <div class="tagline en">Absorb the power of what you've slain — right there on the spot.</div>
+  </div>
+  <div class="topctrl">
+    <button id="langBtn">EN / JA</button>
+    <button id="themeBtn"><span class="jp">☀ ライト</span><span class="en">☀ Light</span></button>
+    <span style="width:1px;height:20px;background:var(--board-line);"></span>
+    <button id="sideSenteBtn" class="active"><span class="jp">先手で指す</span><span class="en">Play Sente</span></button>
+    <button id="sideGoteBtn"><span class="jp">後手で指す</span><span class="en">Play Gote</span></button>
+    <span style="width:1px;height:20px;background:var(--board-line);"></span>
+    <button id="diffBtn0">1</button>
+    <button id="diffBtn1">2</button>
+    <button id="diffBtn2" class="active">3</button>
+    <button id="diffBtn3">4</button>
+    <button id="diffBtn4">5</button>
+    <button id="restartBtn"><span class="jp">はじめから</span><span class="en">Restart</span></button>
+    <button id="rulesBtn"><span class="jp">ルール</span><span class="en">Rules</span></button>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="side">
+    <div class="side-label"><span class="jp">後手 持ち駒</span><span class="en">Gote's hand</span></div>
+    <div class="hand" id="handGote"></div>
+    <div class="side-label" style="margin-top:14px;"><span class="jp">状況</span><span class="en">Status</span></div>
+    <div class="status" id="status"></div>
+  </div>
+  <div class="boardwrap"><div id="board"></div></div>
+  <div class="side">
+    <div class="side-label"><span class="jp">先手 持ち駒</span><span class="en">Sente's hand</span></div>
+    <div class="hand" id="handSente"></div>
+    <div class="panel" style="margin-top:14px;">
+      <h3><span class="jp">契約のルール</span><span class="en">The Pact rule</span></h3>
+      <div class="rule jp">駒が敵駒を捕獲すると、<b>契約</b>を選べます。契約すると、捕獲した駒の動き方を永久に吸収し、自分本来の動きと合わせて使えるようになります。</div>
+      <div class="rule en">When a piece captures an enemy piece, you may choose to <b>make a pact</b>. This permanently absorbs the captured piece's movement, added to the piece's own.</div>
+      <div class="rule jp">代償として、契約した駒は<b>二度と成れなくなります</b>。玉は契約できません。契約は駒1枚につき一度きりです。</div>
+      <div class="rule en">The cost: a piece that makes a pact can <b>never promote again</b>. The king cannot make pacts. Each piece may make only one pact.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span class="jp">悪魔将棋 — Mossgreen 作</span>
+  <span class="en">Demon Pact Shogi — implemented by Mossgreen</span>
+</footer>
+
+<script>
+/* ============ 言語 ============ */
+let lang='jp';
+function toggleLang(){ lang = lang==='jp'?'en':'jp'; document.body.className='lang-'+lang; render(); }
+
+/* ============ 音 ============ */
+let audioCtx=null;
+function startAmbient(){
+  if(audioCtx) return;
+  try{
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const freqs=[55,82.5,110];
+    const master=audioCtx.createGain(); master.gain.value=0.024; master.connect(audioCtx.destination);
+    freqs.forEach((f,i)=>{
+      const osc=audioCtx.createOscillator(); osc.type='sawtooth'; osc.frequency.value=f;
+      const filt=audioCtx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=300;
+      const g=audioCtx.createGain(); g.gain.value=0.35/(i+1);
+      const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.04+i*0.02;
+      const lfoGain=audioCtx.createGain(); lfoGain.gain.value=0.12;
+      lfo.connect(lfoGain); lfoGain.connect(g.gain);
+      osc.connect(filt); filt.connect(g); g.connect(master); osc.start(); lfo.start();
+    });
+  }catch(e){}
+}
+function chime(freq, demonic){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type = demonic ? 'sawtooth' : 'sine'; o.frequency.value=freq;
+  g.gain.value=0.0001; g.connect(audioCtx.destination); o.connect(g);
+  const t=audioCtx.currentTime;
+  g.gain.exponentialRampToValueAtTime(demonic?0.08:0.055,t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+(demonic?1.4:0.9));
+  o.start(); o.stop(t+(demonic?1.5:1.0));
+}
+
+/* ============ 駒の定義 ============ */
+const KANJI = {FU:'歩',KY:'香',KE:'桂',GI:'銀',KI:'金',KA:'角',HI:'飛',OU:'王',TO:'と',NKY:'成香',NKE:'成桂',NGI:'成銀',UMA:'馬',RYU:'龍'};
+const PROMOTE = {FU:'TO', KY:'NKY', KE:'NKE', GI:'NGI', KA:'UMA', HI:'RYU'};
+const HAND_BASE = {TO:'FU', NKY:'KY', NKE:'KE', NGI:'GI', UMA:'KA', RYU:'HI'};
+const CAN_PROMOTE = new Set(['FU','KY','KE','GI','KA','HI']);
+
+/* 各配列は [drow, dcol]。sente視点の前進方向を drow=-1 とする */
+const MOVES = {
+  FU:{step:[[-1,0]]}, KY:{ray:[[-1,0]]}, KE:{jump:[[-2,-1],[-2,1]]},
+  GI:{step:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,1]]},
+  KI:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,0]]},
+  KA:{ray:[[-1,-1],[-1,1],[1,-1],[1,1]]}, HI:{ray:[[-1,0],[1,0],[0,-1],[0,1]]},
+  OU:{step:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]},
+  TO:{gold:true}, NKY:{gold:true}, NKE:{gold:true}, NGI:{gold:true},
+  UMA:{ray:[[-1,-1],[-1,1],[1,-1],[1,1]], step:[[-1,0],[1,0],[0,-1],[0,1]]},
+  RYU:{ray:[[-1,0],[1,0],[0,-1],[0,1]], step:[[-1,-1],[-1,1],[1,-1],[1,1]]}
+};
+function baseMovesFor(kind){ return MOVES[kind].gold ? MOVES.KI : MOVES[kind]; }
+/* 契約中は自駒本来の動き + 吸収した動きを合算する */
+function movesFor(piece){
+  const own = baseMovesFor(piece.kind);
+  if(!piece.possessed) return own;
+  const absorbed = baseMovesFor(piece.possessed);
+  return {
+    step: [...(own.step||[]), ...(absorbed.step||[])],
+    jump: [...(own.jump||[]), ...(absorbed.jump||[])],
+    ray: [...(own.ray||[]), ...(absorbed.ray||[])]
+  };
+}
+const VALUES = {FU:1,KY:3,KE:3,GI:5,KI:6,KA:8,HI:10,OU:0,TO:4,NKY:5,NKE:5,NGI:6,UMA:11,RYU:13};
+
+let pid=0;
+function newPiece(kind, owner){ return {id:pid++, kind, owner, possessed:null}; }
+function clonePiece(p){ return {id:p.id, kind:p.kind, owner:p.owner, possessed:p.possessed}; }
+
+/* ============ 盤面初期化 ============ */
+let board, handS, handG, turn, selected, gameOver, lastMove, difficulty=3;
+let humanSide='sente';
+function aiSide(){ return humanSide==='sente' ? 'gote' : 'sente'; }
+const BOARD_N = 9;
+let pendingPactAction = null;
+
+function initState(){
+  board = Array.from({length:9},()=>Array(9).fill(null));
+  handS=[]; handG=[];
+  const backRow = ['KY','KE','GI','KI','OU','KI','GI','KE','KY'];
+  for(let c=0;c<9;c++){
+    board[0][c] = newPiece(backRow[c],'gote');
+    board[8][c] = newPiece(backRow[c],'sente');
+    board[2][c] = newPiece('FU','gote');
+    board[6][c] = newPiece('FU','sente');
+  }
+  board[1][1] = newPiece('HI','gote');
+  board[1][7] = newPiece('KA','gote');
+  board[7][7] = newPiece('HI','sente');
+  board[7][1] = newPiece('KA','sente');
+  turn='sente'; selected=null; gameOver=false; lastMove=null; pendingPactAction=null;
+}
+
+function inb(r,c){ return r>=0&&r<9&&c>=0&&c<9; }
+
+function pieceMoves(piece,r,c,bd){
+  const dir = piece.owner==='sente' ? 1 : -1;
+  const mv = movesFor(piece);
+  const out=[];
+  const flip=(dr,dc)=>[dr*dir,dc];
+  if(mv.step) mv.step.forEach(([dr,dc])=>{
+    const [fr,fc]=flip(dr,dc); const nr=r+fr,nc=c+fc;
+    if(inb(nr,nc)){ const t=bd[nr][nc]; if(!t||t.owner!==piece.owner) out.push({r:nr,c:nc,capture:!!t}); }
+  });
+  if(mv.jump) mv.jump.forEach(([dr,dc])=>{
+    const [fr,fc]=flip(dr,dc); const nr=r+fr,nc=c+fc;
+    if(inb(nr,nc)){ const t=bd[nr][nc]; if(!t||t.owner!==piece.owner) out.push({r:nr,c:nc,capture:!!t}); }
+  });
+  if(mv.ray) mv.ray.forEach(([dr,dc])=>{
+    const [fr,fc]=flip(dr,dc); let nr=r+fr,nc=c+fc;
+    while(inb(nr,nc)){
+      const t=bd[nr][nc];
+      if(!t){ out.push({r:nr,c:nc,capture:false}); } else { if(t.owner!==piece.owner) out.push({r:nr,c:nc,capture:true}); break; }
+      nr+=fr; nc+=fc;
+    }
+  });
+  return out;
+}
+function findKing(bd,owner){
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){ const p=bd[r][c]; if(p&&p.owner===owner&&p.kind==='OU') return {r,c}; }
+  return null;
+}
+function isSquareAttacked(bd,r,c,byOwner){
+  for(let rr=0;rr<9;rr++)for(let cc=0;cc<9;cc++){
+    const p=bd[rr][cc];
+    if(p&&p.owner===byOwner){ if(pieceMoves(p,rr,cc,bd).some(m=>m.r===r&&m.c===c)) return true; }
+  }
+  return false;
+}
+function inCheck(bd,owner){
+  const k=findKing(bd,owner); if(!k) return false;
+  return isSquareAttacked(bd,k.r,k.c,owner==='sente'?'gote':'sente');
+}
+function applyMove(bd, from, to, promote){
+  const nb = bd.map(row=>row.slice());
+  const moving = clonePiece(nb[from.r][from.c]);
+  const captured = nb[to.r][to.c] ? clonePiece(nb[to.r][to.c]) : null;
+  if(promote) moving.kind = PROMOTE[moving.kind];
+  nb[to.r][to.c] = moving;
+  nb[from.r][from.c] = null;
+  return {nb, captured};
+}
+function lastRankForbidden(kind, r, owner){
+  const top = owner==='sente';
+  if(kind==='FU'||kind==='KY'){ if(top&&r===0) return true; if(!top&&r===8) return true; }
+  if(kind==='KE'){ if(top&&r<=1) return true; if(!top&&r>=7) return true; }
+  return false;
+}
+function hasPawnOnFile(bd,col,owner){
+  for(let r=0;r<9;r++){ const p=bd[r][col]; if(p&&p.owner===owner&&p.kind==='FU') return true; }
+  return false;
+}
+function kingSafeAfter(bd,owner){ return !inCheck(bd,owner); }
+
+function generateLegalActions(bd, hand, owner){
+  const actions=[];
+  const promoZone = owner==='sente' ? [0,1,2] : [6,7,8];
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const p=bd[r][c];
+    if(!p||p.owner!==owner) continue;
+    const pmoves = pieceMoves(p,r,c,bd);
+    pmoves.forEach(m=>{
+      const eligiblePromote = CAN_PROMOTE.has(p.kind) && !p.possessed;
+      const canPromote = eligiblePromote && (promoZone.includes(r)||promoZone.includes(m.r));
+      const forced = eligiblePromote && lastRankForbidden(p.kind, m.r, owner);
+      if(!(forced)){
+        const {nb} = applyMove(bd,{r,c},{r:m.r,c:m.c},false);
+        if(kingSafeAfter(nb,owner)) actions.push({type:'move', from:{r,c}, to:{r:m.r,c:m.c}, promote:false, kind:p.kind});
+      }
+      if(canPromote){
+        const {nb} = applyMove(bd,{r,c},{r:m.r,c:m.c},true);
+        if(kingSafeAfter(nb,owner)) actions.push({type:'move', from:{r,c}, to:{r:m.r,c:m.c}, promote:true, kind:p.kind});
+      }
+    });
+  }
+  const seenKinds = new Set();
+  hand.forEach(piece=>{
+    if(seenKinds.has(piece.kind)) return; seenKinds.add(piece.kind);
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+      if(bd[r][c]) continue;
+      if(lastRankForbidden(piece.kind, r, owner)) continue;
+      if(piece.kind==='FU' && hasPawnOnFile(bd, c, owner)) continue;
+      const nb = bd.map(row=>row.slice());
+      nb[r][c] = clonePiece(piece);
+      if(kingSafeAfter(nb,owner)) actions.push({type:'drop', kind:piece.kind, to:{r,c}});
+    }
+  });
+  return actions;
+}
+
+/* ============ 進行 ============ */
+function ownHand(owner){ return owner==='sente'?handS:handG; }
+function doAction(action, owner, pact){
+  if(action.type==='move'){
+    const {nb, captured} = applyMove(board, action.from, action.to, action.promote);
+    board = nb;
+    if(captured){
+      const base = HAND_BASE[captured.kind] || captured.kind;
+      captured.kind = base; captured.owner = owner;
+      ownHand(owner).push(captured);
+      if(pact && !action.promote){
+        const mover = board[action.to.r][action.to.c];
+        if(mover.kind!=='OU' && !mover.possessed){
+          mover.possessed = base;
+        }
+      }
+    }
+    lastMove = {from:action.from, to:action.to};
+  } else if(action.type==='drop'){
+    const hand = ownHand(owner);
+    const idx = hand.findIndex(h=>h.kind===action.kind);
+    const piece = hand.splice(idx,1)[0];
+    piece.owner = owner;
+    const nb = board.map(row=>row.slice());
+    nb[action.to.r][action.to.c] = piece;
+    board = nb;
+    lastMove = {from:null, to:action.to};
+  }
+}
+function checkGameEnd(owner){
+  const acts = generateLegalActions(board, ownHand(owner), owner);
+  if(acts.length===0){ gameOver=true; return true; }
+  return false;
+}
+
+/* ============ UI ============ */
+function render(){
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML='';
+  const legalTargets = selected ? currentLegalTargets() : [];
+  const flip = humanSide==='gote';
+  for(let vr=0;vr<9;vr++)for(let vc=0;vc<9;vc++){
+    const r = flip ? (BOARD_N-1-vr) : vr;
+    const c = flip ? (BOARD_N-1-vc) : vc;
+    const sq = document.createElement('div');
+    sq.className='sq';
+    if(lastMove && ((lastMove.from && lastMove.from.r===r && lastMove.from.c===c) || (lastMove.to.r===r&&lastMove.to.c===c))) sq.classList.add('lastmove');
+    const p = board[r][c];
+    const tgt = legalTargets.find(t=>t.r===r&&t.c===c);
+    if(tgt){ sq.classList.add('movable'); if(tgt.capture) sq.classList.add('capture'); }
+    if(p){
+      const pd = document.createElement('div');
+      pd.className='piece' + (p.owner!==humanSide?' gote':'') + (['TO','NKY','NKE','NGI','UMA','RYU'].includes(p.kind)?' promoted':'') + (p.possessed?' possessed':'');
+      pd.textContent = KANJI[p.kind];
+      if(selected && selected.type==='board' && selected.r===r && selected.c===c) pd.classList.add('selected');
+      if(p.possessed){
+        const badge=document.createElement('div'); badge.className='possess-badge'; badge.textContent=KANJI[p.possessed];
+        pd.appendChild(badge);
+      }
+      sq.appendChild(pd);
+    }
+    sq.addEventListener('click', ()=>onSquareClick(r,c));
+    boardEl.appendChild(sq);
+  }
+  renderHand('sente'); renderHand('gote');
+  renderStatus();
+}
+function renderHand(owner){
+  const el = document.getElementById(owner==='sente'?'handSente':'handGote');
+  el.innerHTML='';
+  const hand = ownHand(owner);
+  const counts = {};
+  hand.forEach(p=>{ counts[p.kind]=(counts[p.kind]||0)+1; });
+  Object.entries(counts).forEach(([kind,n])=>{
+    const d = document.createElement('div');
+    d.className='hand-piece' + (owner!==humanSide?' gote':'');
+    d.textContent = KANJI[kind];
+    if(n>1){ const cnt=document.createElement('div'); cnt.className='hand-count'; cnt.textContent=n; d.appendChild(cnt); }
+    if(selected && selected.type==='hand' && selected.owner===owner && selected.kind===kind) d.classList.add('selected');
+    d.addEventListener('click', ()=>onHandClick(owner, kind));
+    el.appendChild(d);
+  });
+}
+function currentLegalTargets(){
+  if(!selected) return [];
+  const acts = generateLegalActions(board, ownHand(turn), turn);
+  if(selected.type==='board'){
+    return acts.filter(a=>a.type==='move'&&a.from.r===selected.r&&a.from.c===selected.c)
+      .map(a=>({r:a.to.r,c:a.to.c,capture:!!board[a.to.r][a.to.c],action:a}));
+  } else if(selected.type==='hand'){
+    return acts.filter(a=>a.type==='drop'&&a.kind===selected.kind).map(a=>({r:a.to.r,c:a.to.c,capture:false,action:a}));
+  }
+  return [];
+}
+function onSquareClick(r,c){
+  if(gameOver||turn!==humanSide) return;
+  const targets = currentLegalTargets();
+  const hit = targets.find(t=>t.r===r&&t.c===c);
+  if(hit){ performPlayerAction(hit.action); return; }
+  const p = board[r][c];
+  selected = (p && p.owner===humanSide) ? {type:'board', r, c} : null;
+  render();
+}
+function onHandClick(owner, kind){
+  if(gameOver||turn!==humanSide||owner!==humanSide) return;
+  selected = {type:'hand', owner, kind};
+  render();
+}
+function performPlayerAction(action){
+  if(action.type==='move' && CAN_PROMOTE.has(action.kind)){
+    const promoZone = turn==='sente'?[0,1,2]:[6,7,8];
+    const inZone = promoZone.includes(action.from.r) || promoZone.includes(action.to.r);
+    const forced = lastRankForbidden(action.kind, action.to.r, turn);
+    const willCapture = !!board[action.to.r][action.to.c];
+    const canPossess = willCapture && !board[action.from.r][action.from.c].possessed;
+    if(inZone && !forced && !action.promote && !willCapture){
+      askPromote(action); return;
+    }
+    if(forced) action.promote = true;
+  }
+  const willCapture = !!board[action.to.r][action.to.c];
+  const mover = board[action.from.r][action.from.c];
+  if(willCapture && action.type==='move' && mover.kind!=='OU' && !mover.possessed && !action.promote){
+    askPact(action);
+    return;
+  }
+  finalizeAction(action, false);
+}
+function askPromote(action){
+  document.getElementById('modalTitle').innerHTML = lang==='jp'?'成りますか？':'Promote?';
+  document.getElementById('modalBody').innerHTML = lang==='jp'?'成ると駒の動きが変わります。':"The piece's movement changes if promoted.";
+  const actionsEl = document.getElementById('modalActions'); actionsEl.innerHTML='';
+  const yesBtn=document.createElement('button'); yesBtn.innerHTML = lang==='jp'?'成る':'Promote';
+  yesBtn.onclick=()=>{ action.promote=true; closeModal(); finalizeAction(action, false); };
+  const noBtn=document.createElement('button'); noBtn.innerHTML = lang==='jp'?'成らない':'Stay';
+  noBtn.onclick=()=>{ action.promote=false; closeModal();
+    const willCapture = !!board[action.to.r][action.to.c];
+    const mover = board[action.from.r][action.from.c];
+    if(willCapture && mover.kind!=='OU' && !mover.possessed){ askPact(action); } else { finalizeAction(action, false); }
+  };
+  actionsEl.appendChild(noBtn); actionsEl.appendChild(yesBtn);
+  document.getElementById('modalBg').classList.add('show');
+}
+function askPact(action){
+  const capturedKind = board[action.to.r][action.to.c].kind;
+  const baseKind = HAND_BASE[capturedKind] || capturedKind;
+  document.getElementById('modalTitle').innerHTML = lang==='jp'?'契約しますか？':'Make a pact?';
+  document.getElementById('modalBody').innerHTML = lang==='jp'
+    ? `「${KANJI[baseKind]}」の動きを永久に吸収します。代償として、この駒は二度と成れなくなります。`
+    : `Permanently absorb "${KANJI[baseKind]}"'s movement. In exchange, this piece can never promote again.`;
+  const actionsEl = document.getElementById('modalActions'); actionsEl.innerHTML='';
+  const yesBtn=document.createElement('button'); yesBtn.innerHTML = lang==='jp'?'契約する':'Make the pact';
+  yesBtn.style.borderColor='var(--demon)';
+  yesBtn.onclick=()=>{ closeModal(); finalizeAction(action, true); };
+  const noBtn=document.createElement('button'); noBtn.innerHTML = lang==='jp'?'契約しない':'Refuse';
+  noBtn.onclick=()=>{ closeModal(); finalizeAction(action, false); };
+  actionsEl.appendChild(noBtn); actionsEl.appendChild(yesBtn);
+  document.getElementById('modalBg').classList.add('show');
+}
+function resetModalActions(){
+  const actionsEl = document.getElementById('modalActions'); actionsEl.innerHTML='';
+  const closeBtn = document.createElement('button'); closeBtn.innerHTML = lang==='jp' ? '閉じる' : 'Close';
+  closeBtn.onclick = closeModal;
+  actionsEl.appendChild(closeBtn);
+}
+function finalizeAction(action, pact){
+  const wasCapture = action.type==='move' && !!board[action.to.r][action.to.c];
+  doAction(action, turn, pact);
+  if(pact) chime(220, true); else if(wasCapture) chime(760,false); else chime(0,false);
+  selected=null;
+  const opponent = turn==='sente'?'gote':'sente';
+  const overNow = checkGameEnd(opponent);
+  turn = opponent;
+  render();
+  if(overNow){ endGame(turn); return; }
+  if(turn===aiSide() && !gameOver) setTimeout(aiMove, 420);
+}
+function renderStatus(){
+  const el = document.getElementById('status');
+  if(gameOver){ el.textContent = lang==='jp'?'対局終了':'Game over'; return; }
+  const aiLabel = aiSide()==='sente' ? (lang==='jp'?'先手':'Sente') : (lang==='jp'?'後手':'Gote');
+  let msg = turn===humanSide ? (lang==='jp'?'あなたの番です':'Your move') : (lang==='jp'?`${aiLabel}（AI）思考中…`:`${aiLabel} (AI) thinking…`);
+  el.className='status';
+  if(inCheck(board,turn)){ msg += lang==='jp'?'　王手！':'  Check!'; el.classList.add('check'); }
+  el.textContent = msg;
+}
+function endGame(loser){
+  gameOver=true;
+  const winner = loser==='sente' ? (lang==='jp'?'後手':'Gote') : (lang==='jp'?'先手':'Sente');
+  const loserName = loser==='sente' ? (lang==='jp'?'先手':'Sente') : (lang==='jp'?'後手':'Gote');
+  document.getElementById('modalTitle').innerHTML = lang==='jp'?`${winner}の勝ち`:`${winner} wins`;
+  document.getElementById('modalBody').innerHTML = lang==='jp'?`${loserName}に合法手がありません。`:`${loserName} has no legal moves.`;
+  resetModalActions();
+  document.getElementById('modalBg').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('show'); }
+function showRules(){
+  document.getElementById('modalTitle').innerHTML = lang==='jp'?'ルール':'Rules';
+  document.getElementById('modalBody').innerHTML = lang==='jp' ?
+    '基本は本将棋のルールです。駒が敵駒を捕獲すると「契約」を選べます。契約すると、捕獲した駒の本来の動きを永久に吸収し、自駒本来の動きと合わせて使えるようになります。代償として、その駒は二度と成れなくなります（すでに成っている駒が契約しても成りは解除されません）。玉は契約できず、1枚の駒が契約できるのは一度きりです。詰み（合法手なし）で敗北です。'
+    : "Standard shogi rules apply. When a piece captures an enemy piece, you may choose to make a pact: the piece permanently absorbs the captured piece's base movement, combined with its own. The cost is that the piece can never promote again (an already-promoted piece keeps its promotion if it makes a pact). The king cannot make pacts, and each piece may make only one pact. A side with no legal moves loses.";
+  resetModalActions();
+  document.getElementById('modalBg').classList.add('show');
+}
+function setDifficulty(d){
+  difficulty = d;
+  [0,1,2,3,4].forEach(i=>document.getElementById('diffBtn'+i).classList.toggle('active', i===d-1));
+}
+const DIFFICULTY_DEPTH = {1:1, 2:1, 3:2, 4:2, 5:3};
+const DIFFICULTY_BLUNDER = {1:0.45, 2:0.22, 3:0.08, 4:0.0, 5:0.0};
+
+function setHumanSide(side){
+  humanSide = side;
+  document.getElementById('sideSenteBtn').classList.toggle('active', side==='sente');
+  document.getElementById('sideGoteBtn').classList.toggle('active', side==='gote');
+  resetGame();
+}
+let theme='dark';
+function toggleTheme(){
+  theme = theme==='dark' ? 'light' : 'dark';
+  document.body.classList.toggle('theme-light', theme==='light');
+  const btn = document.getElementById('themeBtn');
+  btn.querySelector('.jp').textContent = theme==='dark' ? '☀ ライト' : '🌙 ダーク';
+  btn.querySelector('.en').textContent = theme==='dark' ? '☀ Light' : '🌙 Dark';
+}
+function resetGame(){
+  initState();
+  closeModal();
+  render();
+  startAmbient();
+  if(turn===aiSide() && !gameOver) setTimeout(aiMove, 420);
+}
+
+/* ============ AI ============ */
+function evalBoard(bd, handSente, handGote){
+  let score = 0;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const p = bd[r][c];
+    if(!p) continue;
+    let v = VALUES[p.kind] || 0;
+    if(p.possessed) v += (VALUES[p.possessed]||0) * 0.5;
+    score += p.owner==='gote' ? v : -v;
+  }
+  handGote.forEach(p=>score += (VALUES[p.kind]||0)*0.9);
+  handSente.forEach(p=>score -= (VALUES[p.kind]||0)*0.9);
+  return score;
+}
+function simulate(bd, hS, hG, owner, action, pact){
+  let nb, captured=null;
+  const nhS = hS.map(clonePiece), nhG = hG.map(clonePiece);
+  if(action.type==='move'){
+    const res = applyMove(bd, action.from, action.to, action.promote);
+    nb = res.nb; captured = res.captured;
+    if(captured && pact && !action.promote){
+      const base = HAND_BASE[captured.kind] || captured.kind;
+      const mover = nb[action.to.r][action.to.c];
+      if(mover.kind!=='OU' && !mover.possessed) mover.possessed = base;
+    }
+  } else {
+    const hand = owner==='sente'?nhS:nhG;
+    const idx = hand.findIndex(h=>h.kind===action.kind);
+    const piece = hand.splice(idx,1)[0];
+    piece.owner = owner;
+    nb = bd.map(row=>row.slice());
+    nb[action.to.r][action.to.c] = piece;
+  }
+  if(captured){
+    const base = HAND_BASE[captured.kind]||captured.kind;
+    captured.kind = base; captured.owner = owner;
+    (owner==='sente'?nhS:nhG).push(captured);
+  }
+  return {nb, nhS, nhG};
+}
+function minimax(bd, hS, hG, owner, depth, alpha, beta){
+  const opponent = owner==='sente'?'gote':'sente';
+  const acts = generateLegalActions(bd, owner==='sente'?hS:hG, owner);
+  if(acts.length===0){
+    return owner==='gote' ? -9999 - depth : 9999 + depth;
+  }
+  if(depth===0){
+    return evalBoard(bd, hS, hG);
+  }
+  const maximizing = owner==='gote';
+  let best = maximizing ? -Infinity : Infinity;
+  acts.sort((a,b)=>{
+    const av = bd[a.to.r] && bd[a.to.r][a.to.c] ? 1:0;
+    const bv = bd[b.to.r] && bd[b.to.r][b.to.c] ? 1:0;
+    return bv-av;
+  });
+  const sample = acts.length>40 ? acts.slice(0,40) : acts;
+  for(const act of sample){
+    const {nb, nhS, nhG} = simulate(bd, hS, hG, owner, act, true);
+    const val = minimax(nb, nhS, nhG, opponent, depth-1, alpha, beta);
+    if(maximizing){ if(val>best) best=val; alpha=Math.max(alpha,val); }
+    else{ if(val<best) best=val; beta=Math.min(beta,val); }
+    if(beta<=alpha) break;
+  }
+  return best;
+}
+function aiMove(){
+  if(gameOver) return;
+  const ai = aiSide(), human = humanSide;
+  const acts = generateLegalActions(board, ownHand(ai), ai);
+  if(acts.length===0){ turn=ai; checkGameEnd(ai); render(); endGame(ai); return; }
+  const depth = DIFFICULTY_DEPTH[difficulty] || 2;
+  const blunder = DIFFICULTY_BLUNDER[difficulty] || 0;
+  let chosen;
+  if(Math.random() < blunder){
+    chosen = acts[Math.floor(Math.random()*acts.length)];
+  } else {
+    let bestVal = ai==='gote' ? -Infinity : Infinity;
+    let bestActs=[];
+    const sample = acts.length>50 ? acts.slice().sort(()=>Math.random()-0.5).slice(0,50) : acts;
+    for(const act of sample){
+      const {nb, nhS, nhG} = simulate(board, handS, handG, ai, act, true);
+      const val = minimax(nb, nhS, nhG, human, Math.max(depth-1,0), -Infinity, Infinity);
+      if(ai==='gote'){
+        if(val>bestVal){ bestVal=val; bestActs=[act]; } else if(val===bestVal){ bestActs.push(act); }
+      } else {
+        if(val<bestVal){ bestVal=val; bestActs=[act]; } else if(val===bestVal){ bestActs.push(act); }
+      }
+    }
+    chosen = bestActs[Math.floor(Math.random()*bestActs.length)] || acts[0];
+  }
+  const willCapture = chosen.type==='move' && !!board[chosen.to.r][chosen.to.c];
+  const moverBefore = chosen.type==='move' ? board[chosen.from.r][chosen.from.c] : null;
+  const pact = willCapture && moverBefore && moverBefore.kind!=='OU' && !moverBefore.possessed && Math.random()<0.75;
+  doAction(chosen, ai, pact);
+  if(pact) chime(220,true); else if(willCapture) chime(660,false);
+  const overNow = checkGameEnd(human);
+  turn = human;
+  render();
+  if(overNow){ endGame(human); }
+}
+
+/* ============ 起動 ============ */
+function wireUI(){
+  document.getElementById('langBtn').addEventListener('click', toggleLang);
+  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+  document.getElementById('sideSenteBtn').addEventListener('click', ()=>setHumanSide('sente'));
+  document.getElementById('sideGoteBtn').addEventListener('click', ()=>setHumanSide('gote'));
+  document.getElementById('diffBtn0').addEventListener('click', ()=>setDifficulty(1));
+  document.getElementById('diffBtn1').addEventListener('click', ()=>setDifficulty(2));
+  document.getElementById('diffBtn2').addEventListener('click', ()=>setDifficulty(3));
+  document.getElementById('diffBtn3').addEventListener('click', ()=>setDifficulty(4));
+  document.getElementById('diffBtn4').addEventListener('click', ()=>setDifficulty(5));
+  document.getElementById('restartBtn').addEventListener('click', resetGame);
+  document.getElementById('rulesBtn').addEventListener('click', showRules);
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  document.addEventListener('click', startAmbient, {once:true});
+}
+wireUI();
+initState();
+render();
+</script>
+</body>
+</html>
