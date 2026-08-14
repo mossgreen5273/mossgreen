@@ -11,7 +11,6 @@
   :root{
     --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
     --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6; --text-dim: #9fae9f;
-    --seal: #a8453a;
   }
   body.light-mode{
     --bg: #f2ead9; --bg-panel: #fbf6ea; --moss: #8fae82; --moss-light: #a3c294;
@@ -22,7 +21,7 @@
   body{
     background:
       radial-gradient(1400px 700px at 20% -10%, rgba(217,180,124,0.07), transparent 60%),
-      radial-gradient(1100px 800px at 100% 15%, rgba(168,69,58,0.10), transparent 60%),
+      radial-gradient(1100px 800px at 100% 15%, rgba(79,111,86,0.16), transparent 60%),
       var(--bg);
     color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh;
   }
@@ -35,32 +34,32 @@
   .nav-links a.current{background:var(--brass); color:#1b2a22; border-color:var(--brass); font-weight:600;}
   .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:13px; padding:7px 14px; border-radius:999px; cursor:pointer;}
 
-  .hero{max-width:900px; margin:0 auto; padding:64px 32px 20px; text-align:center; position:relative;}
-  .seal{position:absolute; top:40px; right:32px; width:56px; height:56px; border:2px solid var(--seal); border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:700; color:var(--seal); font-size:22px; opacity:0.7; transform:rotate(-4deg);}
+  .hero{max-width:900px; margin:0 auto; padding:64px 32px 28px; text-align:center;}
   .hero .eyebrow{font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:var(--brass-bright); margin-bottom:14px;}
   .hero h1{font-family:'Fraunces',serif; font-weight:700; font-size:clamp(34px,6vw,56px); margin:0 0 16px; line-height:1.1;}
   .hero h1 .en{display:block; font-style:italic; font-weight:500; font-size:0.4em; color:var(--brass-bright); margin-top:10px;}
   .hero p{font-size:15px; line-height:1.8; color:var(--text-dim); max-width:640px; margin:0 auto;}
 
-  main{max-width:1080px; margin:0 auto; padding:20px 32px 100px;}
+  .stats{display:flex; justify-content:center; gap:36px; padding:8px 32px 44px; flex-wrap:wrap;}
+  .stat{text-align:center;}
+  .stat .n{font-family:'Fraunces',serif; font-weight:700; font-size:30px; color:var(--brass-bright);}
+  .stat .l{font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-top:2px;}
+
+  main{max-width:1080px; margin:0 auto; padding:0 32px 100px;}
   .cat{margin-bottom:52px;}
   .cat-head{display:flex; align-items:baseline; gap:14px; margin-bottom:6px; border-bottom:1px solid rgba(185,146,90,0.22); padding-bottom:12px;}
+  .cat-num{font-family:'Fraunces',serif; font-style:italic; font-size:15px; color:var(--brass); flex-shrink:0;}
   .cat-head h2{font-family:'Fraunces',serif; font-weight:600; font-size:20px; margin:0;}
   .cat-note{font-size:12.5px; color:var(--text-dim); margin:10px 0 20px; line-height:1.7; max-width:640px;}
 
-  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px;}
-  .card{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:18px 20px 16px; text-decoration:none; display:block; transition:transform .15s, border-color .15s;}
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
+  .card{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:20px 22px 18px; text-decoration:none; display:block; transition:transform .15s, border-color .15s;}
   .card:hover{transform:translateY(-3px); border-color:var(--brass);}
   .card h3{font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:0 0 3px; color:var(--cream);}
-  .card .en-name{font-size:12px; font-style:italic; color:var(--brass-bright); margin-bottom:8px;}
-  .card p{font-size:12px; line-height:1.6; color:var(--text-dim); margin:0;}
-
-  .card.placeholder{border-style:dashed; opacity:0.55; cursor:default;}
-  .card.placeholder:hover{transform:none; border-color:rgba(185,146,90,0.18);}
-  .card.placeholder h3{color:var(--text-dim);}
-
-  .note-box{background:var(--bg-panel); border:1px dashed rgba(185,146,90,0.35); border-radius:10px; padding:20px 24px; font-size:12.5px; color:var(--text-dim); line-height:1.8; margin-bottom:48px;}
-  .note-box b{color:var(--brass-bright);}
+  .card .en-name{font-size:12px; font-style:italic; color:var(--brass-bright); margin-bottom:10px;}
+  .card p{font-size:12.5px; line-height:1.75; color:var(--text-dim); margin:0;}
+  .card .badges{display:flex; gap:6px; margin-top:12px; flex-wrap:wrap;}
+  .card .badge{font-size:10px; letter-spacing:0.04em; padding:3px 8px; border-radius:999px; border:1px solid rgba(185,146,90,0.35); color:var(--text-dim);}
 
   footer{text-align:center; padding:40px 32px 60px; font-size:12px; color:var(--text-dim); border-top:1px solid rgba(185,146,90,0.15);}
   .other-games{max-width:1080px; margin:0 auto; padding:0 32px 20px;}
@@ -88,34 +87,105 @@
 </nav>
 
 <div class="hero">
-  <div class="seal">将</div>
-  <div class="eyebrow lang-ja">駒が裏返るとき、盤の意味が変わる</div>
-  <div class="eyebrow lang-en">When a piece turns over, the board means something new</div>
+  <div class="eyebrow lang-ja">同じ持ち駒、まったく違う掟</div>
+  <div class="eyebrow lang-en">The same dropped pieces, entirely different laws</div>
   <h1>変則将棋<span class="en">Shogi Variants</span></h1>
-  <p class="lang-ja">持ち駒・成り・図式という将棋ならではの仕組みを軸に、標準ルールから派生したバリアントを再現していきます。</p>
-  <p class="lang-en">Variants built around what makes shogi shogi — piece drops, promotion, and puzzle composition — each departing from the standard rules in its own way.</p>
+  <p class="lang-ja">持ち駒・成り・王手詰みという、将棋ならではの仕組みを一つずつ捻ったバリアント集。歴史上に実在した古式のルールの再現と、西洋のフェアリーチェスを将棋に翻案したもの、そして独自に考案したオリジナルルールを収録しています。</p>
+  <p class="lang-en">A collection of shogi variants, each twisting one thing that makes shogi shogi — the piece-drop rule, promotion, or checkmate itself. Includes reconstructions of historical rulesets, shogi adaptations of Western fairy chess, and entirely original house rules.</p>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="n">9</div><div class="l lang-ja">バリアント</div><div class="l lang-en">Variants</div></div>
+  <div class="stat"><div class="n">3</div><div class="l lang-ja">カテゴリ</div><div class="l lang-en">Categories</div></div>
+  <div class="stat"><div class="n">2</div><div class="l lang-ja">言語対応</div><div class="l lang-en">Languages</div></div>
 </div>
 
 <main>
 
-  <div class="note-box lang-ja">
-    <b>このページは制作中です。</b> 過去に作った変則将棋（安南将棋・京都将棋・平安将棋・継承将棋など）をここに順次まとめていく予定です。まずはチェスバリアント集と同じ形式の枠組みだけ用意しています。
-  </div>
-  <div class="note-box lang-en">
-    <b>This page is under construction.</b> Previously built shogi variants (Annan Shogi, Kyoto Shogi, Heian Shogi, Inheritance Shogi, and others) will be gathered here over time. For now, this is the same framework as the Chess Variants page, ready to fill in.
-  </div>
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">I</span>
+      <h2><span class="lang-ja">オリジナルルール</span><span class="lang-en">Original Rules</span></h2>
+    </div>
+    <p class="cat-note lang-ja">史実にはとらわれない、独自に考案した将棋の掟 — 記憶、階層、契約。</p>
+    <p class="cat-note lang-en">Laws of shogi bound by no history — memory, tiered space, and pacts made in the heat of capture.</p>
+    <div class="cards">
+      <a class="card" href="games/inheritance-shogi.html">
+        <h3>継承将棋</h3><div class="en-name">Inheritance Shogi</div>
+        <p class="lang-ja">駒は自分が通った直近3マスを記憶し、捕獲されても記憶は消えない。奪った駒は前の持ち主の記憶を継承し、通常の移動の代わりにその記憶のマスへ一度だけ跳躍できる——想起という名の特殊行動。</p>
+        <p class="lang-en">Every piece remembers its last three squares — even after capture. A piece you've taken carries its former owner's memory, letting you leap it back to a remembered square once, instead of a normal move.</p>
+        <div class="badges"><span class="badge">9×9</span><span class="badge">AI 5段階</span></div>
+      </a>
+      <a class="card" href="games/tiered-shogi.html">
+        <h3>立体将棋</h3><div class="en-name">Tiered Shogi</div>
+        <p class="lang-ja">地・人・天、三層の盤が並ぶ。すべての駒は「人」の層で開始し、通常の移動は今いる層の中だけで完結する。駒を選んで「登る／降りる」を押すと、隣接する層の同じマスへ移動できる（捕獲不可）。</p>
+        <p class="lang-en">Three layered boards — Earth, Human, Heaven. All pieces start on the Human layer; ordinary moves stay within a piece's current layer. Climb up or down to the same square on an adjacent layer instead (climbing never captures).</p>
+        <div class="badges"><span class="badge">3層 9×9</span><span class="badge">AI 5段階</span></div>
+      </a>
+      <a class="card" href="games/demon-pact-shogi.html">
+        <h3>悪魔将棋</h3><div class="en-name">Demon Pact Shogi</div>
+        <p class="lang-ja">駒が敵駒を捕獲すると「契約」を選べる。契約すると捕獲した駒の動き方を永久に吸収できるが、代償としてその駒は二度と成れなくなる。玉は契約できない。</p>
+        <p class="lang-en">When a piece captures an enemy, you may make a pact — permanently absorbing the captured piece's movement. The cost is that piece can never promote again. The king cannot make pacts.</p>
+        <div class="badges"><span class="badge">9×9</span><span class="badge">AI 5段階</span></div>
+      </a>
+    </div>
+  </section>
 
   <section class="cat">
     <div class="cat-head">
-      <h2><span class="lang-ja">準備中</span><span class="lang-en">Coming Soon</span></h2>
+      <span class="cat-num">II</span>
+      <h2><span class="lang-ja">西洋フェアリーチェスの翻案</span><span class="lang-en">Western Fairy Chess, Adapted</span></h2>
     </div>
-    <p class="cat-note lang-ja">タイトルとリンクが決まり次第、ここにカードが追加されます。</p>
-    <p class="cat-note lang-en">Cards will be added here as each variant's title and link are finalized.</p>
+    <p class="cat-note lang-ja">チェスバリアント集にある同名の変則ルールを、持ち駒と成りのある将棋の文法で書き直したもの。</p>
+    <p class="cat-note lang-en">The same fairy-chess rules found in the Chess Variants collection, rewritten in shogi's grammar of drops and promotion.</p>
     <div class="cards">
-      <div class="card placeholder"><h3 class="lang-ja">近日公開</h3><h3 class="lang-en">Coming soon</h3></div>
-      <div class="card placeholder"><h3 class="lang-ja">近日公開</h3><h3 class="lang-en">Coming soon</h3></div>
-      <div class="card placeholder"><h3 class="lang-ja">近日公開</h3><h3 class="lang-en">Coming soon</h3></div>
-      <div class="card placeholder"><h3 class="lang-ja">近日公開</h3><h3 class="lang-en">Coming soon</h3></div>
+      <a class="card" href="games/circe-shogi.html">
+        <h3>キルケー将棋</h3><div class="en-name">Circe Shogi</div>
+        <p class="lang-ja">フェアリーチェスの「Circe」ルールを将棋に翻案。駒が取られると、その駒自身の初期配置マスが空いていれば不成の状態で蘇る。埋まっていれば、そのまま消える——持ち駒制度なし。</p>
+        <p class="lang-en">A shogi adaptation of the fairy-chess "Circe" rule. A captured piece is reborn — demoted to its base form — on its own original starting square, if empty. If occupied, it's gone for good. No hand, no drops.</p>
+        <div class="badges"><span class="badge">9×9</span><span class="badge">AI 5段階</span></div>
+      </a>
+      <a class="card" href="games/alice-shogi.html">
+        <h3>アリス将棋</h3><div class="en-name">Alice Shogi</div>
+        <p class="lang-ja">V.R.パーソンのアリスチェスを将棋に翻案。盤が2枚並び、駒は移動を終えるともう片方の盤の同じマスへ瞬間移動する（空いている場合のみ）。王手は玉が今いる盤の駒からのみ発生する。</p>
+        <p class="lang-en">A shogi adaptation of V. R. Parton's Alice Chess. Two boards sit side by side; every move ends with the piece teleporting to the same square on the other board, if empty there. Check only comes from the board the king occupies.</p>
+        <div class="badges"><span class="badge">2面盤 9×9</span><span class="badge">AI 5段階</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">III</span>
+      <h2><span class="lang-ja">歴史の再現</span><span class="lang-en">Historical Reconstructions</span></h2>
+    </div>
+    <p class="cat-note lang-ja">大正期の考案から鎌倉時代の大型将棋まで — 各時代に実在した（あるいは伝わる）将棋の古い形。</p>
+    <p class="cat-note lang-en">From a Taishō-era invention to Kamakura-period grand shogi — old forms of the game that once actually existed, or are said to.</p>
+    <div class="cards">
+      <a class="card" href="games/annan-shogi-original.html">
+        <h3>安南将棋（原典）</h3><div class="en-name">Annan Shogi (Original Ruleset)</div>
+        <p class="lang-ja">大正15年頃、鈴木信太郎考案と伝わる安南将棋を、独自要素を加えずそのまま再現。駒は縦の列で自分のすぐ後ろにいる駒の動き方を借りる。新型配置により開始直後の力の偏りを緩和。</p>
+        <p class="lang-en">A faithful reconstruction of the historical Annan Shogi ruleset, traditionally attributed to Shintaro Suzuki c. 1926 — no house-rule additions. A piece borrows the movement of whatever friendly piece sits directly behind it.</p>
+        <div class="badges"><span class="badge">9×9</span><span class="badge">AI 5段階</span></div>
+      </a>
+      <a class="card" href="games/kyoto-shogi.html">
+        <h3>京都将棋</h3><div class="en-name">Kyoto Shogi</div>
+        <p class="lang-ja">1976年、田宮克哉考案。5×5盤、5種類の駒（香⟷と、銀⟷角、金⟷桂、飛⟷歩、玉）。玉以外の駒は1手動くごとに必ず裏返る。二歩も打ち歩詰めも反則ではない、小さく密度の高い将棋。</p>
+        <p class="lang-en">Devised in 1976 by Katsuya Tamiya. A 5×5 board with five piece pairs. Every non-king piece must flip after moving — no exceptions, and none of the usual double-pawn or pawn-drop-checkmate restrictions apply.</p>
+        <div class="badges"><span class="badge">5×5</span><span class="badge">AI 5段階</span></div>
+      </a>
+      <a class="card" href="games/heian-shogi.html">
+        <h3>平安将棋</h3><div class="en-name">Heian Shogi</div>
+        <p class="lang-ja">現存最古級とされる将棋の一形態を8×8盤で再現。飛車も角行もなく、持ち駒制度もない——取った駒はそのまま盤外へ消える、静かでじりじりとした駆け引きの将棋。</p>
+        <p class="lang-en">A reconstruction of one of the earliest known forms of shogi, on an 8×8 board. No rook, no bishop, and no hand — captured pieces are simply removed. A slower, quieter game of attrition.</p>
+        <div class="badges"><span class="badge">8×8</span><span class="badge">AI 5段階</span></div>
+      </a>
+      <a class="card" href="games/kamakura-dai-shogi.html">
+        <h3>鎌倉将棋（大将棋）</h3><div class="en-name">Kamakura Shogi (Dai Shogi)</div>
+        <p class="lang-ja">鎌倉時代に指されたと伝わる大型将棋を15×15盤・29種類の駒で再構成。獅子・麒麟・鳳凰・奔王など、現代の将棋にはいない駒が並ぶ。持ち駒制度なし。獅子と角鷹・飛鷲の複合移動は簡略化。</p>
+        <p class="lang-en">A reconstruction of the large-format shogi played in the Kamakura era — 15×15 board, 29 piece types, including the Lion, Kirin, Phoenix, and Free King. No hand or drops. The Lion's and hawks' compound double-moves are simplified.</p>
+        <div class="badges"><span class="badge">15×15</span><span class="badge">29種の駒</span><span class="badge">AI 5段階</span></div>
+      </a>
     </div>
   </section>
 
@@ -143,6 +213,7 @@
   body.lang-en .lang-ja{display:none;}
   body.lang-en .lang-en{display:block;}
   body.lang-en .nav-links a{display:inline-block;}
+  body.lang-en .stat .l{display:block;}
 </style>
 <script>
   document.getElementById('langBtn').addEventListener('click', ()=>{
