@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>型を崩す — 侘び寂び盆栽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+(function(){
+  var orig = console.log;
+  console.log = function(){};
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
+  s.onload = function(){ console.log = orig; };
+  s.onerror = function(){ console.log = orig; };
+  document.head.appendChild(s);
+})();
+</script>
+<style>
+  :root{
+    --bg:#171613; --panel:#211f1b; --panel-line:#3a362e;
+    --ink:#e7dfce; --ink-dim:#a89e88;
+    --moss:#71805a; --seal:#a8433a; --gold:#8f7a4f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans JP',sans-serif;}
+  body{min-height:100vh;display:flex;justify-content:center;}
+  #app{width:100%;max-width:460px;padding:16px 16px 40px;}
+
+  h1{font-family:'Noto Serif JP',serif;font-weight:700;font-size:20px;letter-spacing:.04em;margin:4px 0 2px;}
+  .sub{font-size:11px;color:var(--ink-dim);letter-spacing:.08em;margin-bottom:18px;}
+
+  .style-card{background:var(--panel);border:1px solid var(--panel-line);border-radius:2px;
+    padding:14px 16px;margin-bottom:12px;cursor:pointer;transition:border-color .15s;}
+  .style-card:active{border-color:var(--seal);}
+  .style-card .jp{font-family:'Noto Serif JP',serif;font-size:18px;font-weight:600;}
+  .style-card .en{font-size:10px;color:var(--ink-dim);letter-spacing:.1em;margin-bottom:6px;}
+  .style-card .desc{font-size:13px;color:var(--ink-dim);line-height:1.7;}
+
+  .screen{display:none;} .screen.active{display:block;}
+
+  .setup-label{font-size:12px;color:var(--ink-dim);margin:14px 0 8px;letter-spacing:.05em;}
+  .chipRow{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{padding:9px 14px;border:1px solid var(--panel-line);border-radius:20px;font-size:12px;
+    cursor:pointer;background:var(--panel);color:var(--ink-dim);}
+  .chip.selected{border-color:var(--seal);color:var(--seal);}
+
+  .target-card{background:var(--panel);border:1px solid var(--gold);border-radius:2px;
+    padding:10px 14px;margin-bottom:6px;font-size:12px;color:var(--ink-dim);}
+  .target-card .jp{font-family:'Noto Serif JP',serif;color:var(--ink);font-size:15px;margin-right:8px;}
+  #targetMeta{font-size:11px;color:var(--ink-dim);margin-bottom:14px;}
+
+  #canvasWrap{background:linear-gradient(180deg,#1e1c18,#151310);border:1px solid var(--panel-line);
+    border-radius:2px;display:flex;justify-content:center;margin-bottom:10px;overflow:hidden;}
+  canvas{display:block;touch-action:manipulation;}
+
+  #selInfo{font-size:12px;color:var(--ink-dim);min-height:18px;margin-bottom:8px;text-align:center;}
+  #selInfo b{color:var(--seal);}
+
+  .navRow{display:flex;gap:8px;margin-bottom:10px;}
+  .navRow button{flex:1;}
+
+  .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  button{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--panel);color:var(--ink);
+    border:1px solid var(--panel-line);border-radius:2px;padding:11px 8px;cursor:pointer;letter-spacing:.02em;}
+  button:disabled{opacity:.32;}
+  button.primary{border-color:var(--moss);color:var(--moss);}
+  button.warn{border-color:var(--seal);color:var(--seal);}
+  button.wide{grid-column:1/-1;}
+
+  #budgetRow{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-dim);margin:10px 0;}
+  #budgetRow .n{color:var(--ink);font-weight:500;}
+  #depletedMsg{display:none;font-size:11px;color:var(--seal);margin:-4px 0 10px;}
+
+  #finishBtn{width:100%;margin-top:6px;background:var(--seal);border-color:var(--seal);color:#f3ece1;font-weight:500;padding:13px;}
+
+  .score-total{font-family:'Noto Serif JP',serif;font-size:44px;text-align:center;margin:8px 0 2px;}
+  .score-total span{font-size:16px;color:var(--ink-dim);}
+  .flavor{font-family:'Noto Serif JP',serif;font-size:14px;line-height:2;text-align:center;margin:6px 0 10px;padding:0 6px;}
+  .judges{font-size:12px;color:var(--ink-dim);line-height:1.9;margin-bottom:18px;padding:10px 12px;
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:2px;}
+  .judges b{color:var(--ink);}
+  .bar-row{margin-bottom:12px;}
+  .bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim);margin-bottom:4px;}
+  .bar-bg{height:6px;background:var(--panel);border:1px solid var(--panel-line);border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--moss);}
+  .notes{margin-top:16px;font-size:12px;color:var(--ink-dim);line-height:2;}
+  .resultBtnRow{display:flex;gap:8px;margin-top:18px;}
+  .resultBtnRow button{flex:1;}
+</style>
+</head>
+<body>
+<div id="app">
+  <button id="bgmToggle" style="position:fixed;top:14px;right:14px;z-index:60;width:auto;padding:7px 12px;
+    font-size:11px;border-radius:20px;background:rgba(33,31,27,0.9);border:1px solid var(--panel-line);color:var(--ink-dim);">♪ BGM</button>
+
+  <div id="speciesScreen" class="screen active">
+    <h1>型を崩す</h1>
+    <div class="sub">WABI-SABI BONSAI — 樹種を選ぶ</div>
+    <div id="speciesCards"></div>
+  </div>
+
+  <div id="styleScreen" class="screen">
+    <h1>型を崩す</h1>
+    <div class="sub">お題を選ぶ</div>
+    <div id="styleCards"></div>
+  </div>
+
+  <div id="setupScreen" class="screen">
+    <h1>型を崩す</h1>
+    <div class="sub">仕上げの設定</div>
+    <div class="setup-label">鉢</div>
+    <div class="chipRow" id="potChips"></div>
+    <div class="setup-label">季節</div>
+    <div class="chipRow" id="seasonChips"></div>
+    <button id="beginBtn" class="wide primary" style="margin-top:22px;">育て始める</button>
+  </div>
+
+  <div id="gameScreen" class="screen">
+    <h1>型を崩す</h1>
+    <div class="target-card">
+      <span class="jp" id="targetSpeciesJp"></span><span id="targetSpeciesEn"></span> ×
+      <span class="jp" id="targetJp"></span><span id="targetEn"></span>
+    </div>
+    <div id="targetMeta"></div>
+
+    <div id="canvasWrap"><canvas id="canvas" width="360" height="440"></canvas></div>
+
+    <div id="selInfo">枝をタップ、または前後で選択</div>
+
+    <div class="navRow">
+      <button id="prevBtn">◀ 前の枝</button>
+      <button id="nextBtn">次の枝 ▶</button>
+    </div>
+
+    <div class="toolbar">
+      <button id="pruneBtn" class="warn">剪定 <small>(-2)</small></button>
+      <button id="jinBtn">舎利にする <small>(-2)</small></button>
+      <button id="wireMinusBtn">針金 ← <small>(-1)</small></button>
+      <button id="wirePlusBtn">針金 → <small>(-1)</small></button>
+      <button id="unwireBtn" class="wide">針金跡を残す <small>(-1)</small></button>
+      <button id="nebariBtn" class="wide">根を見せる <small>(-2)</small></button>
+      <button id="undoBtn">元に戻す</button>
+      <button id="deselectBtn">選択解除</button>
+    </div>
+
+    <div id="budgetRow">残り行動 <span class="n" id="budgetN">18</span></div>
+    <div id="depletedMsg">行動ポイントを使い切った。あとは仕上げるのみ。</div>
+    <button id="finishBtn">仕上げる</button>
+  </div>
+
+  <div id="resultScreen" class="screen">
+    <h1>仕上がり</h1>
+    <div class="score-total"><span id="scoreVal">0</span><span>/100</span></div>
+    <div class="flavor" id="flavorText"></div>
+    <div class="judges">
+      <div><b>型式派:</b> <span id="formalComment"></span></div>
+      <div style="margin-top:6px;"><b>自由派:</b> <span id="freeComment"></span></div>
+    </div>
+
+    <div class="bar-row"><div class="bar-label"><span>非対称の妙</span><span id="b1n"></span></div>
+      <div class="bar-bg"><div class="bar-fill" id="b1"></div></div></div>
+    <div class="bar-row"><div class="bar-label"><span>崩れの自然さ</span><span id="b2n"></span></div>
+      <div class="bar-bg"><div class="bar-fill" id="b2"></div></div></div>
+    <div class="bar-row"><div class="bar-label"><span>経年の気配</span><span id="b3n"></span></div>
+      <div class="bar-bg"><div class="bar-fill" id="b3"></div></div></div>
+    <div class="bar-row"><div class="bar-label"><span>型との対話</span><span id="b4n"></span></div>
+      <div class="bar-bg"><div class="bar-fill" id="b4"></div></div></div>
+
+    <ul class="notes" id="notesList"></ul>
+    <div class="resultBtnRow">
+      <button id="exportBtn">画像として保存</button>
+      <button id="retryBtn" class="primary">別の樹で</button>
+    </div>
+  </div>
+
+  <div id="exportOverlay" style="display:none;position:fixed;inset:0;background:rgba(10,9,7,0.94);
+    z-index:50;padding:20px;overflow-y:auto;">
+    <div style="max-width:420px;margin:0 auto;text-align:center;">
+      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">画像を長押しして保存</div>
+      <img id="exportImg" style="width:100%;border:1px solid var(--panel-line);border-radius:2px;">
+      <a id="exportDownloadLink" download="wabi-sabi-bonsai.png" style="display:block;margin-top:14px;
+        font-size:12px;color:var(--ink-dim);text-decoration:underline;">ダウンロードを試す</a>
+      <button id="exportCloseBtn" class="wide" style="margin-top:16px;">閉じる</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const STYLES = {
+    chokkan:{jp:'直幹',en:'FORMAL UPRIGHT',desc:'幹はまっすぐ天に伸びる、最も格式高い型。'},
+    moyogi:{jp:'模様木',en:'INFORMAL UPRIGHT',desc:'幹は緩やかに曲がりながら上へ向かう、自由度の高い型。'},
+    kengai:{jp:'懸崖',en:'CASCADE',desc:'幹は鉢の縁を越えて下へ流れ落ちる、崖の樹を写す型。'},
+    bunjin:{jp:'文人木',en:'LITERATI',desc:'枝葉を極限まで削ぎ落とし、幹の曲がりだけで孤高を表す型。'},
+    sokan:{jp:'双幹',en:'TWIN TRUNK',desc:'根元から二本の幹が立ち上がる、親子のような型。'}
+  };
+
+  const SPECIES = {
+    matsu:{jp:'松',en:'PINE',desc:'常緑針葉樹。武骨な幹肌と、密で地味な緑。冬も葉を落とさない。',
+      trunk:'#3a3427',foliage:[70,95,55],shape:'needle',spreadMod:0.78,lenMin:0.62,lenMax:0.80,branchChance:0.48,
+      regCenter:180,regWidth:260,asymLow:0.08,asymHigh:0.30},
+    kaede:{jp:'楓',en:'MAPLE',desc:'落葉樹。繊細に分岐する枝と、丸みを帯びた葉。',
+      trunk:'#4a3c2c',foliage:[168,96,52],shape:'round',spreadMod:1.15,lenMin:0.55,lenMax:0.75,branchChance:0.68,
+      regCenter:260,regWidth:200,asymLow:0.08,asymHigh:0.32},
+    ume:{jp:'梅',en:'PLUM',desc:'早春に花をつける古木。曲がりくねった幹が特徴。',
+      trunk:'#54473a',foliage:[196,124,142],shape:'blossom',spreadMod:1.45,lenMin:0.50,lenMax:0.70,branchChance:0.40,
+      regCenter:340,regWidth:260,asymLow:0.15,asymHigh:0.50}
+  };
+
+  const POTS = {
+    tokoname:{jp:'常滑焼(無釉)',en:'UNGLAZED CLAY',color:'#4a4438',shape:'rect',suits:['chokkan','bunjin']},
+    seiji:{jp:'青磁鉢',en:'CELADON',color:'#3f5a52',shape:'oval',suits:['moyogi','sokan']},
+    doban:{jp:'古渡り鉢(浅鉢)',en:'SHALLOW ANTIQUE',color:'#5a4030',shape:'shallow',suits:['kengai','bunjin']}
+  };
+
+  const SEASONS = {
+    haru:{jp:'春',en:'SPRING'},
+    aki:{jp:'秋',en:'AUTUMN'},
+    fuyu:{jp:'冬',en:'WINTER'}
+  };
+
+  let state = null;
+  let nodeIdCounter = 0;
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const BASE_Y = canvas.height - 46;
+  const BASE_X = canvas.width / 2;
+
+  // ---------- audio ----------
+  let snipSynth, wireSynth, chimeSynth, audioReady=false;
+  function ensureAudio(){
+    if(typeof Tone==='undefined') return;
+    if(!audioReady){
+      snipSynth = new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:0.001,decay:0.05,sustain:0}}).toDestination();
+      snipSynth.volume.value = -8;
+      wireSynth = new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:0.001,decay:0.08,sustain:0,release:0.05}}).toDestination();
+      wireSynth.volume.value = -14;
+      chimeSynth = new Tone.PolySynth(Tone.Synth,{envelope:{attack:0.01,decay:0.3,sustain:0.2,release:0.8}}).toDestination();
+      chimeSynth.volume.value = -10;
+      audioReady = true;
+    }
+    if(Tone.context.state!=='running') Tone.start();
+  }
+  function playSnip(){ ensureAudio(); if(snipSynth) snipSynth.triggerAttackRelease('16n'); }
+  function playWire(){ ensureAudio(); if(wireSynth) wireSynth.triggerAttackRelease('C4','32n'); }
+  function playFinish(){
+    ensureAudio(); if(!chimeSynth) return;
+    const now = Tone.now();
+    chimeSynth.triggerAttackRelease('C5','8n', now);
+    chimeSynth.triggerAttackRelease('E5','8n', now+0.18);
+    chimeSynth.triggerAttackRelease('G5','6n', now+0.36);
+  }
+
+  // ---------- ambient BGM (hirajoshi scale, phrase-based) ----------
+  let bgmPlaying=false, bgmLoop=null, bgmReverb=null, bgmPad=null, bgmQueue=[];
+  const HIRAJOSHI = ['E3','F3','A3','B3','C4','E4','F4','A4','C5','E5'];
+  const MOTIFS = [
+    [4,3,2,null,4,5,null],
+    [0,2,3,2,0,null,null],
+    [6,5,4,null,2,null],
+    [4,5,7,6,5,4,null,null],
+    [2,4,5,null,4,2,null],
+    [8,6,5,4,null,null]
+  ];
+  function refillQueue(){
+    const m = MOTIFS[Math.floor(Math.random()*MOTIFS.length)];
+    m.forEach(idx => bgmQueue.push(idx===null ? null : HIRAJOSHI[idx]));
+    bgmQueue.push(null, null, null); // breathing space between phrases
+  }
+  function setupBgm(){
+    if(bgmPad) return;
+    bgmReverb = new Tone.Reverb({decay:9, wet:0.55}).toDestination();
+    bgmPad = new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},
+      envelope:{attack:0.6,decay:1.2,sustain:0.4,release:3.5}}).connect(bgmReverb);
+    bgmPad.volume.value = -18;
+    Tone.Transport.bpm.value = 54;
+    bgmLoop = new Tone.Loop((time)=>{
+      if(bgmQueue.length===0) refillQueue();
+      const note = bgmQueue.shift();
+      if(note) bgmPad.triggerAttackRelease(note, '4n', time, 0.28+Math.random()*0.2);
+    }, '4n');
+  }
+  function toggleBgm(){
+    ensureAudio(); setupBgm();
+    if(bgmPlaying){
+      bgmLoop.stop(); Tone.Transport.pause(); bgmPlaying=false;
+      document.getElementById('bgmToggle').textContent = '♪ BGM';
+    } else {
+      Tone.Transport.start(); bgmLoop.start(0); bgmPlaying=true;
+      document.getElementById('bgmToggle').textContent = '♪ BGM ON';
+    }
+  }
+  document.getElementById('bgmToggle').onclick = toggleBgm;
+
+  function seeded(id, salt){ const x=Math.sin(id*12.9898+salt*78.233)*43758.5453; return x-Math.floor(x); }
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  function createNode(parent, angle, length, thickness, depth){
+    return {id:nodeIdCounter++, parent, angle, originalAngle:angle, length, thickness, depth,
+      children:[], jin:false, wireScar:false};
+  }
+
+  function grow(node, sp){
+    if(node.depth >= 4 || node.length < 14) return;
+    const nChildren = Math.random() < sp.branchChance ? (Math.random()<0.5?2:3) : 1;
+    for(let i=0;i<nChildren;i++){
+      const spread = (22 + node.depth*9) * sp.spreadMod;
+      const offset = rand(-spread,spread) + (i - (nChildren-1)/2) * 14;
+      const child = createNode(node, offset, node.length*rand(sp.lenMin, sp.lenMax),
+        Math.max(1.4, node.thickness*0.62), node.depth+1);
+      node.children.push(child);
+      grow(child, sp);
+    }
+  }
+
+  function buildTree(speciesKey, styleKey){
+    nodeIdCounter = 0;
+    const sp = SPECIES[speciesKey];
+    if(styleKey==='sokan'){
+      const base = createNode(null, 0, 0, 1, -1);
+      const t1 = createNode(base, rand(-24,-9), 85, 12, 0);
+      const t2 = createNode(base, rand(13,30), 55, 8, 0);
+      base.children.push(t1,t2);
+      grow(t1, sp); grow(t2, sp);
+      return base;
+    }
+    const root = createNode(null, rand(-9,9), 92, 13, 0);
+    grow(root, sp);
+    return root;
+  }
+
+  function allNodes(root){
+    const out=[]; (function walk(n){ out.push(n); n.children.forEach(walk); })(root); return out;
+  }
+
+  function computeAbsolute(root){
+    const list=[];
+    (function walk(node, parentAbsAngle, x, y){
+      const absAngle = (parentAbsAngle||0) + node.angle;
+      const rad = absAngle*Math.PI/180;
+      const ex = x + Math.sin(rad)*node.length;
+      const ey = y - Math.cos(rad)*node.length;
+      list.push({node,x,y,ex,ey,absAngle});
+      node.children.forEach(c=>walk(c, absAngle, ex, ey));
+    })(root, 0, BASE_X, BASE_Y);
+    return list;
+  }
+
+  function nodeOrder(){
+    return allNodes(state.tree).filter(n=>n.length>=1).sort((a,b)=> a.depth-b.depth || a.id-b.id);
+  }
+
+  // ---------- undo (single-level) ----------
+  function serializeNode(n){
+    return {id:n.id, angle:n.angle, originalAngle:n.originalAngle, length:n.length, thickness:n.thickness,
+      depth:n.depth, jin:n.jin, wireScar:n.wireScar, children:n.children.map(serializeNode)};
+  }
+  function deserializeNode(d, parent){
+    const n = {id:d.id, parent, angle:d.angle, originalAngle:d.originalAngle, length:d.length,
+      thickness:d.thickness, depth:d.depth, jin:d.jin, wireScar:d.wireScar, children:[]};
+    n.children = d.children.map(c=>deserializeNode(c,n));
+    return n;
+  }
+  function snapshot(){
+    state.undoSnap = {
+      treeData: serializeNode(state.tree),
+      points: state.points, jinCount: state.jinCount, nebari: state.nebari, selectedId: state.selectedId
+    };
+  }
+  function doUndo(){
+    if(!state.undoSnap || state.finished) return;
+    const s = state.undoSnap;
+    state.tree = deserializeNode(s.treeData, null);
+    state.points = s.points; state.jinCount = s.jinCount; state.nebari = s.nebari; state.selectedId = s.selectedId;
+    state.undoSnap = null;
+    updateSelInfo(); updateToolbar(); render();
+  }
+
+  // ---------- view transform (auto-fit) ----------
+  let viewT = {scale:1, cx:BASE_X, cy:BASE_Y-60, tx:BASE_X, ty:BASE_Y-60};
+  function computeViewTransform(segs){
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    segs.forEach(s=>{ [[s.x,s.y],[s.ex,s.ey]].forEach(([x,y])=>{
+      if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; }); });
+    minX = Math.min(minX, BASE_X-72); maxX = Math.max(maxX, BASE_X+72);
+    maxY = Math.max(maxY, BASE_Y+22); minY = Math.min(minY, BASE_Y-140);
+    const pad=34, w=(maxX-minX)||1, h=(maxY-minY)||1;
+    const availW=canvas.width-pad*2, availH=canvas.height-pad*2;
+    let scale = Math.min(availW/w, availH/h);
+    scale = clamp(scale, 0.32, 1.1);
+    return {scale, cx:(minX+maxX)/2, cy:(minY+maxY)/2, tx:canvas.width/2, ty:canvas.height/2};
+  }
+  function toScreen(x,y){ return {x:viewT.tx+(x-viewT.cx)*viewT.scale, y:viewT.ty+(y-viewT.cy)*viewT.scale}; }
+
+  // ---------- rendering ----------
+  function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const segs = computeAbsolute(state.tree);
+    viewT = computeViewTransform(segs);
+    const pot = POTS[state.pot];
+
+    const potDepth = pot.shape==='shallow' ? 12 : 22;
+    const potL = toScreen(BASE_X-70, BASE_Y+6), potR = toScreen(BASE_X+70, BASE_Y+6);
+    const potLB = toScreen(BASE_X-58, BASE_Y+potDepth), potRB = toScreen(BASE_X+58, BASE_Y+potDepth);
+    ctx.beginPath();
+    ctx.moveTo(potL.x,potL.y);
+    ctx.lineTo(potR.x,potR.y);
+    ctx.lineTo(potRB.x,potRB.y);
+    ctx.lineTo(potLB.x,potLB.y);
+    ctx.closePath();
+    ctx.fillStyle = pot.color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(potL.x,potL.y); ctx.lineTo(potR.x,potR.y); ctx.stroke();
+
+    // nebari (root flare)
+    if(state.nebari){
+      const rootAngles=[-55,-25,0,25,55];
+      rootAngles.forEach((a,i)=>{
+        const rad=(180-a)*Math.PI/180;
+        const len=16+seeded(i,7)*10;
+        const rx=BASE_X+Math.sin(rad)*len, ry=BASE_Y-Math.cos(rad)*len*0.3+8;
+        const p1=toScreen(BASE_X,BASE_Y+4), p2=toScreen(rx,ry);
+        ctx.strokeStyle='#8a7a5c'; ctx.lineWidth=3*viewT.scale; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+      });
+    }
+
+    const sp = SPECIES[state.species];
+    segs.forEach(s=>{
+      const n = s.node;
+      if(n.length<1) return;
+      const p1=toScreen(s.x,s.y), p2=toScreen(s.ex,s.ey);
+      const wob=(seeded(n.id,1)-0.5)*10*viewT.scale;
+      const midx=(p1.x+p2.x)/2+wob, midy=(p1.y+p2.y)/2+(seeded(n.id,2)-0.5)*6*viewT.scale;
+
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.quadraticCurveTo(midx,midy,p2.x,p2.y);
+      ctx.lineCap='round'; ctx.lineWidth=clamp(n.thickness,1.6,14)*viewT.scale;
+      if(n.id===state.selectedId) ctx.strokeStyle='#c05a4d';
+      else if(n.jin) ctx.strokeStyle='#7d7566';
+      else ctx.strokeStyle=sp.trunk;
+      ctx.stroke();
+
+      if(n.wireScar){
+        ctx.beginPath(); ctx.arc(p1.x,p1.y,3.5*viewT.scale,0,Math.PI*2);
+        ctx.strokeStyle='#c9a84c'; ctx.lineWidth=1.4; ctx.stroke();
+      }
+
+      const bare = state.season==='fuyu' && sp.shape!=='needle';
+      if(n.children.length===0 && !n.jin && !bare){
+        let [fr,fg,fb] = sp.foliage;
+        if(state.season==='aki' && sp.shape!=='needle'){ fr=200; fg=90; fb=40; }
+        const dabCount = sp.shape==='needle' ? 4 : (sp.shape==='blossom' ? 2 : 3);
+        for(let i=0;i<dabCount;i++){
+          const dx=(seeded(n.id,10+i)-0.5)*16*viewT.scale, dy=(seeded(n.id,20+i)-0.5)*16*viewT.scale;
+          let rx=(5+seeded(n.id,30+i)*4)*viewT.scale, ry=rx*0.7;
+          if(sp.shape==='needle'){ rx*=0.5; ry=rx*2.6; }
+          if(sp.shape==='blossom'){ rx*=1.1; ry=rx; }
+          ctx.beginPath(); ctx.ellipse(p2.x+dx,p2.y+dy,rx,ry,seeded(n.id,40+i)*Math.PI,0,Math.PI*2);
+          const jitter=Math.floor(seeded(n.id,50+i)*30)-15;
+          ctx.fillStyle=`rgba(${clamp(fr+jitter,0,255)},${clamp(fg+jitter,0,255)},${clamp(fb+jitter,0,255)},0.6)`;
+          ctx.fill();
+        }
+      }
+      if(n.id===state.selectedId){
+        ctx.beginPath(); ctx.arc(p2.x,p2.y,4,0,Math.PI*2); ctx.fillStyle='#c05a4d'; ctx.fill();
+      }
+    });
+  }
+
+  // ---------- selection ----------
+  function selectNode(id){ state.selectedId=id; updateSelInfo(); updateToolbar(); render(); }
+  function currentSelected(){
+    if(state.selectedId===null) return null;
+    return allNodes(state.tree).find(n=>n.id===state.selectedId) || null;
+  }
+  function updateSelInfo(){
+    const el=document.getElementById('selInfo');
+    if(state.selectedId===null){ el.innerHTML='枝をタップ、または前後で選択'; return; }
+    const n=currentSelected(); if(!n){ el.innerHTML='枝をタップ、または前後で選択'; return; }
+    let tag='';
+    if(n.jin) tag='・舎利済み';
+    else if(n.children.length>0) tag='・先端ではないので舎利化不可';
+    else if(n.parent!==null) tag='・先端の枝(舎利化できる)';
+    el.innerHTML = `選択中: <b>枝 #${n.id}</b>（深さ ${n.depth}${tag}）`;
+  }
+
+  function updateToolbar(){
+    const n = currentSelected();
+    const pts = state.points;
+    const wired = n && Math.abs(n.angle-n.originalAngle) > 0.01;
+    document.getElementById('pruneBtn').disabled = !n || n.parent===null || pts<2 || state.finished;
+    document.getElementById('jinBtn').disabled = !n || n.children.length>0 || n.jin || n.parent===null || pts<2 || state.finished;
+    document.getElementById('wireMinusBtn').disabled = !n || pts<1 || state.finished;
+    document.getElementById('wirePlusBtn').disabled = !n || pts<1 || state.finished;
+    document.getElementById('unwireBtn').disabled = !n || !wired || n.wireScar || pts<1 || state.finished;
+    document.getElementById('nebariBtn').disabled = !n || n.depth!==0 || state.nebari || pts<2 || state.finished;
+    document.getElementById('undoBtn').disabled = !state.undoSnap || state.finished;
+    document.getElementById('deselectBtn').disabled = !n;
+    document.getElementById('budgetN').textContent = state.points;
+    document.getElementById('depletedMsg').style.display = (state.points<=0 && !state.finished) ? 'block' : 'none';
+  }
+
+  function spendPoints(n){ state.points=Math.max(0,state.points-n); updateToolbar(); }
+
+  function pointToSegDist(px,py,x1,y1,x2,y2){
+    const dx=x2-x1, dy=y2-y1, len2=dx*dx+dy*dy||1;
+    let t=((px-x1)*dx+(py-y1)*dy)/len2; t=clamp(t,0,1);
+    return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+  }
+
+  canvas.addEventListener('click',(e)=>{
+    if(state.finished) return;
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+    const px=(e.clientX-rect.left)*scaleX, py=(e.clientY-rect.top)*scaleY;
+    const segs=computeAbsolute(state.tree).filter(s=>s.node.length>=1);
+    let best=null,bestD=26;
+    segs.forEach(s=>{
+      const p1=toScreen(s.x,s.y), p2=toScreen(s.ex,s.ey);
+      const d=pointToSegDist(px,py,p1.x,p1.y,p2.x,p2.y);
+      if(d<bestD){ bestD=d; best=s.node.id; }
+    });
+    if(best!==null) selectNode(best);
+  });
+
+  document.getElementById('prevBtn').onclick=()=>{
+    const order=nodeOrder(); if(!order.length) return;
+    let idx=order.findIndex(n=>n.id===state.selectedId);
+    idx = idx<=0 ? order.length-1 : idx-1;
+    selectNode(order[idx].id);
+  };
+  document.getElementById('nextBtn').onclick=()=>{
+    const order=nodeOrder(); if(!order.length) return;
+    let idx=order.findIndex(n=>n.id===state.selectedId);
+    idx=(idx+1)%order.length;
+    selectNode(order[idx].id);
+  };
+  document.getElementById('deselectBtn').onclick=()=> selectNode(null);
+
+  document.getElementById('pruneBtn').onclick=()=>{
+    const n=currentSelected(); if(!n||!n.parent) return;
+    snapshot();
+    n.parent.children = n.parent.children.filter(c=>c.id!==n.id);
+    playSnip(); spendPoints(2); selectNode(null);
+  };
+  document.getElementById('jinBtn').onclick=()=>{
+    const n=currentSelected(); if(!n||n.children.length>0||n.jin) return;
+    snapshot();
+    n.jin=true; state.jinCount++;
+    spendPoints(2); updateSelInfo(); render(); updateToolbar();
+  };
+  document.getElementById('wireMinusBtn').onclick=()=>{
+    const n=currentSelected(); if(!n) return;
+    snapshot();
+    n.angle=clamp(n.angle-12,-75,75);
+    playWire(); spendPoints(1); render();
+  };
+  document.getElementById('wirePlusBtn').onclick=()=>{
+    const n=currentSelected(); if(!n) return;
+    snapshot();
+    n.angle=clamp(n.angle+12,-75,75);
+    playWire(); spendPoints(1); render();
+  };
+  document.getElementById('unwireBtn').onclick=()=>{
+    const n=currentSelected(); if(!n) return;
+    snapshot();
+    n.wireScar=true;
+    spendPoints(1); updateSelInfo(); render(); updateToolbar();
+  };
+  document.getElementById('nebariBtn').onclick=()=>{
+    const n=currentSelected(); if(!n||n.depth!==0) return;
+    snapshot();
+    state.nebari=true;
+    spendPoints(2); render(); updateToolbar();
+  };
+  document.getElementById('undoBtn').onclick=()=> doUndo();
+  document.getElementById('finishBtn').onclick=()=> finish();
+
+  // ---------- scoring ----------
+  function variance(arr){
+    if(!arr.length) return 0;
+    const m=arr.reduce((a,b)=>a+b,0)/arr.length;
+    return arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length;
+  }
+  function gaussianScore(x,center,width,maxScore){
+    const z=(x-center)/width; return maxScore*Math.exp(-z*z);
+  }
+  function tallestPathLength(node){
+    let total=node.length, cur=node;
+    while(cur.children.length>0){
+      cur = cur.children.reduce((a,b)=> b.length>a.length?b:a);
+      total += cur.length;
+    }
+    return total;
+  }
+
+  function scoreTree(){
+    const sp = SPECIES[state.species];
+    const segs = computeAbsolute(state.tree);
+    const leaves = segs.filter(s=>s.node.children.length===0 && s.node.length>=1);
+    const halfW = 90;
+
+    // asymmetry (species-tuned band)
+    const xs = leaves.map(l=> l.ex-BASE_X);
+    const avgX = xs.reduce((a,b)=>a+b,0)/(xs.length||1);
+    const asymIndex = clamp(Math.abs(avgX)/halfW, 0, 1);
+    let asymScore;
+    if(asymIndex>=sp.asymLow && asymIndex<=sp.asymHigh) asymScore=20;
+    else if(asymIndex<sp.asymLow) asymScore=20*(asymIndex/sp.asymLow);
+    else asymScore=Math.max(0, 20*(1-(asymIndex-sp.asymHigh)/0.5));
+
+    // regularity (species-tuned)
+    const diffs=[];
+    allNodes(state.tree).forEach(n=>{
+      if(n.children.length>=2){
+        const angs=n.children.map(c=>c.angle).sort((a,b)=>a-b);
+        for(let i=1;i<angs.length;i++) diffs.push(angs[i]-angs[i-1]);
+      }
+    });
+    const varr = variance(diffs);
+    const regScore = diffs.length===0 ? 10 : gaussianScore(varr, sp.regCenter, sp.regWidth, 20);
+
+    // aged elements
+    const wireScarCount = allNodes(state.tree).filter(n=>n.wireScar).length;
+    const agedScore = Math.min(25, state.jinCount*5 + wireScarCount*4 + (state.nebari?6:0));
+
+    // style fit
+    let trunkPath=[], cur=state.tree, curAbs=0;
+    while(cur){
+      trunkPath.push(curAbs);
+      if(cur.children.length===0) break;
+      const next = cur.children.reduce((a,b)=> b.length>a.length?b:a);
+      curAbs += next.angle; cur = next;
+    }
+    const trunkAvgAbs = trunkPath.reduce((a,b)=>a+Math.abs(b),0)/(trunkPath.length||1);
+    const maxDrop = Math.max(0, ...leaves.map(l=> l.ey-BASE_Y));
+
+    let styleScore, ratio=null, angleDiff=null;
+    if(state.style==='chokkan'){
+      styleScore = 35*clamp(1-trunkAvgAbs/26,0,1);
+    } else if(state.style==='moyogi'){
+      styleScore = gaussianScore(trunkAvgAbs,18,13,35);
+    } else if(state.style==='kengai'){
+      styleScore = 35*clamp(maxDrop/55,0,1);
+    } else if(state.style==='bunjin'){
+      const sparsity = clamp(1-(leaves.length-5)/12,0,1);
+      const curveRange = trunkPath.length ? (Math.max(...trunkPath)-Math.min(...trunkPath)) : 0;
+      const curveFactor = clamp(curveRange/50,0,1);
+      styleScore = 35*(0.5*sparsity+0.5*curveFactor);
+    } else { // sokan
+      const [t1,t2] = state.tree.children;
+      const r1=tallestPathLength(t1), r2=tallestPathLength(t2);
+      const bigger=Math.max(r1,r2), smaller=Math.min(r1,r2);
+      ratio = smaller/(bigger||1);
+      angleDiff = Math.abs(t1.angle-t2.angle);
+      const ratioScore = clamp(gaussianScore(ratio,0.67,0.18,1),0,1);
+      const diffScore = clamp(gaussianScore(angleDiff,26,15,1),0,1);
+      styleScore = 35*(0.5*ratioScore+0.5*diffScore);
+    }
+
+    const potBonus = POTS[state.pot].suits.includes(state.style) ? 5 : 0;
+    const total = Math.min(100, Math.round(asymScore+regScore+agedScore+styleScore+potBonus));
+
+    const notes=[];
+    if(asymIndex<sp.asymLow) notes.push('中心に寄りすぎている。中心を外す勇気を。');
+    if(asymIndex>sp.asymHigh+0.35) notes.push('崩れすぎて、まとまりを欠いている。');
+    if(diffs.length>0 && varr < sp.regCenter-sp.regWidth*0.7) notes.push('枝分かれが規則的すぎる。人工的な印象を与える。');
+    if(diffs.length>0 && varr > sp.regCenter+sp.regWidth*1.3) notes.push('枝の乱れが激しく、混沌としている。');
+    if(state.jinCount===0 && wireScarCount===0 && !state.nebari) notes.push('経年の気配が一つもない。時間の痕跡を残すのも一つの手。');
+    if(wireScarCount>0) notes.push('針金跡が景色になっている。');
+    if(state.nebari) notes.push('根張りが加わり、古木の風格が増した。');
+    if(potBonus>0) notes.push('鉢と型の相性が良い（+5）。');
+    if(state.style==='chokkan' && trunkAvgAbs>26) notes.push('直幹にしては幹の芯が揺らいでいる。');
+    if(state.style==='kengai' && maxDrop<20) notes.push('懸崖と呼ぶには、鉢を越える枝がまだ足りない。');
+    if(state.style==='bunjin' && leaves.length>14) notes.push('文人木にしては葉が多すぎる。もっと削ぎ落としてよい。');
+    if(state.style==='sokan' && ratio!==null){
+      if(ratio<0.35) notes.push('双幹というには、片方の幹が弱すぎる。');
+      if(angleDiff<10) notes.push('二本の幹が近すぎて、一本に見えてしまう。');
+    }
+
+    let flavor;
+    if(total>=80) flavor='型を通り抜けた先の、自然な佇まい。';
+    else if(total>=60) flavor='崩し方に説得力がある。まだ伸びしろあり。';
+    else if(total>=40) flavor='型への意識が強く残っている。もう少し崩してよい。';
+    else flavor='これは崩れではなく、単なる乱れかもしれない。';
+
+    const formalAvg = (styleScore/35 + regScore/20)/2;
+    const formalComment = formalAvg>0.72 ? '型の骨格を外していない。技術は正統。'
+      : formalAvg>0.42 ? '型の意図は読めるが、詰めが甘い。'
+      : 'これはもう型と呼べない。修行が要る。';
+    const freeAvg = (asymScore/20 + agedScore/25)/2;
+    const freeComment = freeAvg>0.65 ? '型を忘れて樹と対話できている。良い崩れだ。'
+      : freeAvg>0.35 ? 'まだ型に気を取られすぎている。もっと崩していい。'
+      : '崩す勇気が足りない、あるいは崩し方を誤っている。';
+
+    return {total, asymScore, regScore, agedScore, styleScore, notes, flavor, formalComment, freeComment};
+  }
+
+  function finish(){
+    state.finished = true;
+    playFinish();
+    const r = scoreTree();
+    document.getElementById('scoreVal').textContent = r.total;
+    document.getElementById('flavorText').textContent = r.flavor;
+    document.getElementById('formalComment').textContent = r.formalComment;
+    document.getElementById('freeComment').textContent = r.freeComment;
+    setBar('b1', r.asymScore, 20);
+    setBar('b2', r.regScore, 20);
+    setBar('b3', r.agedScore, 25);
+    setBar('b4', r.styleScore, 35);
+    const ul = document.getElementById('notesList');
+    ul.innerHTML = r.notes.length ? r.notes.map(n=>`<li>・${n}</li>`).join('') : '<li>・特筆すべき乱れも整いすぎも見当たらない。</li>';
+    document.getElementById('gameScreen').classList.remove('active');
+    document.getElementById('resultScreen').classList.add('active');
+  }
+  function setBar(id,val,max){
+    const pct=clamp(val/max,0,1)*100;
+    document.getElementById(id).style.width=pct+'%';
+    document.getElementById(id+'n').textContent=Math.round(val)+' / '+max;
+  }
+
+  // ---------- export card ----------
+  document.getElementById('exportBtn').onclick=()=>{
+    const w=640,h=820;
+    const off=document.createElement('canvas'); off.width=w; off.height=h;
+    const o=off.getContext('2d');
+    o.fillStyle='#171613'; o.fillRect(0,0,w,h);
+    o.strokeStyle='#8f7a4f'; o.lineWidth=2; o.strokeRect(20,20,w-40,h-40);
+    const dw=canvas.width*1.5, dh=canvas.height*1.5;
+    o.drawImage(canvas,(w-dw)/2,50,dw,dh);
+    o.fillStyle='#e7dfce'; o.font='26px "Noto Serif JP", serif'; o.textAlign='center';
+    o.fillText(`${SPECIES[state.species].jp} × ${STYLES[state.style].jp}`, w/2, 730);
+    o.fillStyle='#a8433a'; o.font='46px "Noto Serif JP", serif';
+    o.fillText(`${document.getElementById('scoreVal').textContent} / 100`, w/2, 785);
+    const url=off.toDataURL('image/png');
+    document.getElementById('exportImg').src = url;
+    document.getElementById('exportDownloadLink').href = url;
+    document.getElementById('exportOverlay').style.display = 'block';
+  };
+  document.getElementById('exportCloseBtn').onclick=()=>{
+    document.getElementById('exportOverlay').style.display = 'none';
+  };
+
+  // ---------- flow ----------
+  let pendingSpecies=null, pendingStyle=null, selectedPot='tokoname', selectedSeason='haru';
+
+  function startGame(speciesKey, styleKey, potKey, seasonKey){
+    state = {
+      species:speciesKey, style:styleKey, pot:potKey, season:seasonKey,
+      tree:buildTree(speciesKey, styleKey),
+      points:18, selectedId:null, finished:false, jinCount:0, nebari:false, undoSnap:null
+    };
+    const s=STYLES[styleKey], sp=SPECIES[speciesKey], pot=POTS[potKey], season=SEASONS[seasonKey];
+    document.getElementById('targetJp').textContent=s.jp;
+    document.getElementById('targetEn').textContent=' '+s.en;
+    document.getElementById('targetSpeciesJp').textContent=sp.jp;
+    document.getElementById('targetSpeciesEn').textContent=' '+sp.en;
+    document.getElementById('targetMeta').textContent=`鉢: ${pot.jp} ｜ 季節: ${season.jp}`;
+    ['speciesScreen','styleScreen','setupScreen','resultScreen'].forEach(id=>
+      document.getElementById(id).classList.remove('active'));
+    document.getElementById('gameScreen').classList.add('active');
+    updateSelInfo(); updateToolbar(); render();
+  }
+
+  function buildSpeciesScreen(){
+    const wrap=document.getElementById('speciesCards'); wrap.innerHTML='';
+    Object.keys(SPECIES).forEach(key=>{
+      const s=SPECIES[key];
+      const card=document.createElement('div'); card.className='style-card';
+      card.innerHTML=`<div class="jp">${s.jp}</div><div class="en">${s.en}</div><div class="desc">${s.desc}</div>`;
+      card.onclick=()=>{
+        pendingSpecies=key;
+        document.getElementById('speciesScreen').classList.remove('active');
+        document.getElementById('styleScreen').classList.add('active');
+      };
+      wrap.appendChild(card);
+    });
+  }
+  function buildStyleScreen(){
+    const wrap=document.getElementById('styleCards'); wrap.innerHTML='';
+    Object.keys(STYLES).forEach(key=>{
+      const s=STYLES[key];
+      const card=document.createElement('div'); card.className='style-card';
+      card.innerHTML=`<div class="jp">${s.jp}</div><div class="en">${s.en}</div><div class="desc">${s.desc}</div>`;
+      card.onclick=()=>{
+        pendingStyle=key;
+        document.getElementById('styleScreen').classList.remove('active');
+        document.getElementById('setupScreen').classList.add('active');
+        buildSetupScreen();
+      };
+      wrap.appendChild(card);
+    });
+  }
+  function buildSetupScreen(){
+    const potWrap=document.getElementById('potChips'); potWrap.innerHTML='';
+    Object.keys(POTS).forEach(key=>{
+      const chip=document.createElement('div');
+      chip.className='chip'+(key===selectedPot?' selected':'');
+      chip.textContent=POTS[key].jp;
+      chip.onclick=()=>{ selectedPot=key; buildSetupScreen(); };
+      potWrap.appendChild(chip);
+    });
+    const seasonWrap=document.getElementById('seasonChips'); seasonWrap.innerHTML='';
+    Object.keys(SEASONS).forEach(key=>{
+      const chip=document.createElement('div');
+      chip.className='chip'+(key===selectedSeason?' selected':'');
+      chip.textContent=SEASONS[key].jp;
+      chip.onclick=()=>{ selectedSeason=key; buildSetupScreen(); };
+      seasonWrap.appendChild(chip);
+    });
+  }
+  document.getElementById('beginBtn').onclick=()=>{
+    startGame(pendingSpecies, pendingStyle, selectedPot, selectedSeason);
+  };
+  document.getElementById('retryBtn').onclick=()=>{
+    document.getElementById('resultScreen').classList.remove('active');
+    document.getElementById('speciesScreen').classList.add('active');
+  };
+
+  buildSpeciesScreen();
+  buildStyleScreen();
+})();
+</script>
+</body>
+</html>
