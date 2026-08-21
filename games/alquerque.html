@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アルケルク | Alquerque — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1310; --panel:#162019; --panel2:#1c2820; --line:#3a4c40;
+    --brass:#c19a5b; --brass-dim:#8a7248; --cream:#efe8d8; --cream-dim:#a9b6ac;
+    --wood:#4a3826; --hole:#6b5238; --highlight:#f0d27a;
+    --white-p:#e8dfc8; --white-p-stroke:#a89468;
+    --black-p:#2a2320; --black-p-stroke:#141210;
+  }
+  html[data-theme="light"]{
+    --bg:#f4efe2; --panel:#ffffff; --panel2:#eee6d3; --line:#d8cbab;
+    --brass:#9c7530; --brass-dim:#b89a5e; --cream:#2c2418; --cream-dim:#6c6250;
+    --wood:#e4d8bc; --hole:#cfc09a; --highlight:#c8930f;
+    --white-p:#fffdf7; --white-p-stroke:#b8a878;
+    --black-p:#3a352d; --black-p-stroke:#141210;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:radial-gradient(ellipse at 20% -10%, color-mix(in srgb, var(--panel2) 60%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 110%, color-mix(in srgb, var(--panel2) 50%, transparent) 0%, transparent 55%), var(--bg);
+    color:var(--cream); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:20px 12px 60px; overflow-x:hidden;
+    transition:background .2s, color .2s;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,5vw,34px); margin:6px 0 2px; text-align:center; }
+  .sub{ color:var(--brass); font-size:13px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:18px; text-align:center; }
+  .topbar{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px; }
+  .settings{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 16px; }
+  .settings .group{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .settings .label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass-dim); }
+  .seg{ display:flex; gap:4px; flex-wrap:wrap; justify-content:center; }
+  button{ font-family:'Instrument Sans',sans-serif; font-size:13px; font-weight:600;
+    background:var(--panel2); color:var(--cream); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; cursor:pointer; transition:.15s; }
+  .seg button{ padding:6px 10px; font-size:12px; }
+  button:hover{ border-color:var(--brass); color:var(--brass); }
+  button.active{ background:var(--brass); color:#1a140a; border-color:var(--brass); }
+  .status{ background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 20px; margin-bottom:16px; font-size:15px; text-align:center; min-width:260px; }
+  .board-wrap{ background:linear-gradient(160deg, color-mix(in srgb, var(--wood) 82%, #000 10%), color-mix(in srgb, var(--wood) 115%, #fff 6%));
+    border:1px solid color-mix(in srgb, var(--brass) 45%, var(--line)); border-radius:18px;
+    padding:14px; max-width:100%; box-shadow:0 20px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06); }
+  svg{ display:block; touch-action:manipulation; max-width:100%; height:auto; }
+  .gridline{ stroke:var(--brass-dim); stroke-width:1.5; opacity:.55; }
+  .hole{ fill:var(--hole); stroke:var(--bg); stroke-width:1; }
+  .hole.movable{ fill:color-mix(in srgb, var(--highlight) 40%, var(--hole)); cursor:pointer; }
+  .hole.movable:hover{ fill:color-mix(in srgb, var(--highlight) 65%, var(--hole)); }
+  .piece{ cursor:pointer; }
+  .piece.white circle.body{ fill:var(--white-p); stroke:var(--white-p-stroke); stroke-width:1.5; }
+  .piece.black circle.body{ fill:var(--black-p); stroke:var(--black-p-stroke); stroke-width:1.5; }
+  .piece.selected circle.body{ stroke:var(--highlight); stroke-width:3; }
+  .kingmark{ fill:var(--brass); font-family:'Fraunces',serif; font-weight:700; font-size:12px; text-anchor:middle; dominant-baseline:central; pointer-events:none; }
+  .legend{ display:flex; gap:18px; margin-top:14px; font-size:13px; color:var(--cream-dim); align-items:center; flex-wrap:wrap; justify-content:center; }
+  .dot{ width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:-2px; border:1px solid var(--line); }
+  .footer-links{ margin-top:22px; text-align:center; }
+  .footer-links a{ color:var(--brass-dim); text-decoration:none; font-size:12px; }
+  .footer-links a:hover{ color:var(--brass); }
+  .note{ max-width:480px; font-size:12px; color:var(--cream-dim); text-align:center; margin-top:14px; line-height:1.7; }
+
+  .modal-overlay{ position:fixed; inset:0; background:rgba(10,14,11,.72); display:flex; align-items:center; justify-content:center; z-index:50; opacity:0; pointer-events:none; transition:opacity .25s; }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{ background:var(--panel); border:1px solid var(--brass); border-radius:18px; padding:36px 40px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5); transform:scale(.9); transition:transform .25s; }
+  .modal-overlay.show .modal-box{ transform:scale(1); }
+  .modal-box .big{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(24px,7vw,38px); color:var(--brass); margin-bottom:18px; }
+  .modal-box button{ margin-top:6px; }
+</style>
+</head>
+<body>
+
+<h1 id="title">アルケルク</h1>
+<div class="sub" id="subtitle">ALQUERQUE · ANCIENT CAPTURE GAME</div>
+
+<div class="topbar">
+  <button id="langBtn">EN</button>
+  <button id="themeBtn">🌙</button>
+  <button id="modeAI" class="active">vs AI</button>
+  <button id="mode2P">2人プレイ</button>
+  <button id="resetBtn">リセット</button>
+</div>
+
+<div class="settings" id="settingsAI">
+  <div class="group">
+    <div class="label" id="firstLabel">先攻・後攻</div>
+    <div class="seg">
+      <button id="firstYou" class="active">先手</button>
+      <button id="firstAI">後手</button>
+      <button id="firstRandom">ランダム</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="label" id="aiLabel">AIの強さ</div>
+    <div class="seg">
+      <button id="lv1">1</button><button id="lv2">2</button><button id="lv3" class="active">3</button><button id="lv4">4</button><button id="lv5">5</button>
+    </div>
+  </div>
+</div>
+
+<div class="status" id="status">あなたの番です（白）</div>
+
+<div class="board-wrap"><svg id="board" width="420" height="420" viewBox="0 0 420 420"></svg></div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--white-p)"></span><span id="legWhite">あなた（白）</span></span>
+  <span><span class="dot" style="background:var(--black-p)"></span><span id="legBlack">相手（黒）</span></span>
+</div>
+
+<div class="note" id="ruleNote">
+  Alfonso X「ゲームの本」（13世紀）のルールを採用：捕獲可能な時は必ず捕獲。連続ジャンプ可（King昇格で終了）。最奥列に到達するとKingに昇格し、盤上を自由な距離で移動・捕獲できます。
+</div>
+
+<div class="footer-links"><a href="https://mossgreen5273.github.io/mossgreen/">← Mossgreen Games</a></div>
+
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box">
+    <div class="big" id="winModalText"></div>
+    <button id="winModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const T = {
+  ja:{ title:"アルケルク", sub:"ALQUERQUE · ANCIENT CAPTURE GAME", vsAI:"vs AI", p2:"2人プレイ", reset:"リセット",
+       yourTurn:"あなたの番です（白）", aiTurn:"相手（黒）の番です…",
+       p2W:"白の番です", p2B:"黒の番です",
+       winYou:"あなたの勝ちです！", winAI:"相手（黒）の勝ちです", winW:"白の勝ちです！", winB:"黒の勝ちです！",
+       noMovesYou:"動ける駒がありません。あなたの負けです。", noMovesAI:"相手は動けません。あなたの勝ちです！",
+       legWhite:"あなた（白）", legBlack:"相手（黒）",
+       chainHint:"連続捕獲可能。同じ駒をクリックすると終了します。",
+       mandatory:"捕獲可能な駒があります。捕獲を選んでください。",
+       firstLabel:"先攻・後攻", firstYou:"先手", firstAI:"後手", firstRandom:"ランダム",
+       aiLabel:"AIの強さ", close:"閉じる",
+       ruleNote:'Alfonso X「ゲームの本」（13世紀）のルールを採用：捕獲可能な時は必ず捕獲。連続ジャンプ可（King昇格で終了）。最奥列に到達するとKingに昇格し、盤上を自由な距離で移動・捕獲できます。'},
+  en:{ title:"Alquerque", sub:"ALQUERQUE · ANCIENT CAPTURE GAME", vsAI:"vs AI", p2:"2 Player", reset:"Reset",
+       yourTurn:"Your move (White)", aiTurn:"Opponent (Black) is thinking…",
+       p2W:"White's turn", p2B:"Black's turn",
+       winYou:"You win!", winAI:"Black wins.", winW:"White wins!", winB:"Black wins!",
+       noMovesYou:"No legal moves. You lose.", noMovesAI:"Opponent has no moves. You win!",
+       legWhite:"You (White)", legBlack:"Opponent (Black)",
+       chainHint:"Chain capture available. Click the piece again to stop.",
+       mandatory:"A capture is available — you must take it.",
+       firstLabel:"Who goes first", firstYou:"You", firstAI:"Opponent", firstRandom:"Random",
+       aiLabel:"AI strength", close:"Close",
+       ruleNote:'Rules follow Alfonso X\'s "Libro de los juegos" (13th c.): capturing is mandatory when available. Chain jumps continue until none remain (a King promotion ends the chain). Reaching the far row promotes a piece to King, which may move and capture any distance along a line.'}
+};
+let lang='ja';
+let firstMove='you', aiLevel=3;
+const AI_LEVELS = {
+  1:{rand:6, capW:1, kingW:2, posW:0.1},
+  2:{rand:3, capW:2, kingW:4, posW:0.2},
+  3:{rand:1.2, capW:3, kingW:8, posW:0.3},
+  4:{rand:0.4, capW:4, kingW:14, posW:0.45},
+  5:{rand:0.1, capW:5, kingW:22, posW:0.6}
+};
+
+// ---------- board topology ----------
+const N=5;
+function inb(r,c){ return r>=0&&r<N&&c>=0&&c<N; }
+function hasEdge(r1,c1,r2,c2){
+  if(!inb(r1,c1)||!inb(r2,c2)) return false;
+  const dr=r2-r1, dc=c2-c1;
+  if(Math.abs(dr)>1||Math.abs(dc)>1||(dr===0&&dc===0)) return false;
+  if(dr===0||dc===0) return true;
+  const sr=Math.min(r1,r2), sc=Math.min(c1,c2);
+  if(sr<0||sr>3||sc<0||sc>3) return false;
+  return (sr+sc)%2===0;
+}
+const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+let board; // board[r][c] = {owner:'white'|'black', king:bool} | null
+let turn, mode, selected, chainPiece, gameOver;
+
+function startSetup(){
+  board = [];
+  for(let r=0;r<N;r++) board.push(new Array(N).fill(null));
+  for(let c=0;c<N;c++){ board[0][c]={owner:'white',king:false}; board[1][c]={owner:'white',king:false}; }
+  board[2][0]={owner:'white',king:false}; board[2][1]={owner:'white',king:false};
+  board[2][2]=null;
+  board[2][3]={owner:'black',king:false}; board[2][4]={owner:'black',king:false};
+  for(let c=0;c<N;c++){ board[3][c]={owner:'black',king:false}; board[4][c]={owner:'black',king:false}; }
+}
+
+function initGame(){
+  startSetup();
+  let start='white';
+  if(firstMove==='ai') start='black';
+  else if(firstMove==='random') start = Math.random()<0.5?'white':'black';
+  turn=start; selected=null; chainPiece=null; gameOver=false;
+  hideWinModal();
+  render(); updateStatus();
+  if(mode==='ai' && turn==='black'){ setTimeout(aiMove,550); }
+}
+
+function updateStatus(){
+  if(gameOver) return;
+  const s=document.getElementById('status');
+  const capturers = piecesWithCaptures(turn);
+  if(mode==='ai'){
+    s.textContent = turn==='white' ? (capturers.length? T[lang].mandatory : T[lang].yourTurn) : T[lang].aiTurn;
+  } else {
+    const base = turn==='white'? T[lang].p2W : T[lang].p2B;
+    s.textContent = capturers.length ? T[lang].mandatory : base;
+  }
+}
+
+// ---------- move generation ----------
+function simpleMoves(r,c){
+  const p = board[r][c];
+  const out=[];
+  for(const [dr,dc] of DIRS){
+    const nr=r+dr,nc=c+dc;
+    if(!hasEdge(r,c,nr,nc)) continue;
+    if(p.king){
+      let rr=r+dr, cc=c+dc;
+      while(hasEdge(rr-dr,cc-dc,rr,cc) && inb(rr,cc) && !board[rr][cc]){
+        out.push({r:rr,c:cc});
+        rr+=dr; cc+=dc;
+      }
+    } else {
+      if(inb(nr,nc) && !board[nr][nc]) out.push({r:nr,c:nc});
+    }
+  }
+  return out;
+}
+
+function captureMoves(r,c){
+  const p = board[r][c];
+  const out=[]; // {r,c,capR,capC}
+  for(const [dr,dc] of DIRS){
+    if(p.king){
+      let rr=r+dr, cc=c+dc, prevR=r, prevC=c;
+      while(hasEdge(prevR,prevC,rr,cc) && inb(rr,cc) && !board[rr][cc]){
+        prevR=rr; prevC=cc; rr+=dr; cc+=dc;
+      }
+      if(inb(rr,cc) && hasEdge(prevR,prevC,rr,cc) && board[rr][cc] && board[rr][cc].owner!==p.owner){
+        const landR=rr+dr, landC=cc+dc;
+        if(hasEdge(rr,cc,landR,landC) && inb(landR,landC) && !board[landR][landC]){
+          out.push({r:landR,c:landC,capR:rr,capC:cc});
+        }
+      }
+    } else {
+      const mr=r+dr, mc=c+dc, lr=r+2*dr, lc=c+2*dc;
+      if(!hasEdge(r,c,mr,mc) || !inb(mr,mc)) continue;
+      if(!board[mr][mc] || board[mr][mc].owner===p.owner) continue;
+      if(!hasEdge(mr,mc,lr,lc) || !inb(lr,lc) || board[lr][lc]) continue;
+      out.push({r:lr,c:lc,capR:mr,capC:mc});
+    }
+  }
+  return out;
+}
+
+function piecesWithCaptures(owner){
+  const out=[];
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    if(board[r][c] && board[r][c].owner===owner && captureMoves(r,c).length) out.push({r,c});
+  }
+  return out;
+}
+
+function legalTargetsFor(r,c){
+  const caps = captureMoves(r,c);
+  if(caps.length) return {type:'capture', targets:caps};
+  const forced = piecesWithCaptures(board[r][c].owner);
+  if(forced.length) return {type:'none', targets:[]};
+  return {type:'move', targets:simpleMoves(r,c)};
+}
+
+// ---------- interaction ----------
+function onPieceClick(r,c){
+  if(gameOver) return;
+  if(mode==='ai' && turn!=='white') return;
+  const p = board[r][c];
+  if(chainPiece){
+    if(chainPiece.r===r && chainPiece.c===c){ endTurn(); return; }
+    return;
+  }
+  if(!p || p.owner!==turn) return;
+  selected = {r,c};
+  render();
+}
+
+function onCellClick(tr,tc){
+  if(gameOver || !selected) return;
+  const {r,c} = selected;
+  const info = legalTargetsFor(r,c);
+  const target = info.targets.find(t=>t.r===tr && t.c===tc);
+  if(!target) return;
+
+  const piece = board[r][c];
+  board[r][c] = null;
+  if(target.capR!==undefined){ board[target.capR][target.capC] = null; }
+  board[tr][tc] = piece;
+
+  let promoted = false;
+  if(!piece.king){
+    if((piece.owner==='white' && tr===N-1) || (piece.owner==='black' && tr===0)){
+      piece.king = true; promoted = true;
+    }
+  }
+
+  if(target.capR!==undefined && !promoted){
+    const further = captureMoves(tr,tc);
+    if(further.length){
+      chainPiece = {r:tr,c:tc};
+      selected = {r:tr,c:tc};
+      render();
+      document.getElementById('status').textContent = T[lang].chainHint;
+      return;
+    }
+  }
+  selected = {r:tr,c:tc};
+  endTurn();
+}
+
+function endTurn(){
+  selected=null; chainPiece=null;
+  render();
+  const w = checkWin();
+  if(w){ finishGame(w); return; }
+  turn = turn==='white'?'black':'white';
+  updateStatus();
+  if(mode==='ai' && turn==='black' && !gameOver){ setTimeout(aiMove,550); }
+}
+
+function countPieces(owner){
+  let n=0;
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(board[r][c] && board[r][c].owner===owner) n++;
+  return n;
+}
+function hasAnyMove(owner){
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    if(board[r][c] && board[r][c].owner===owner){
+      if(captureMoves(r,c).length || simpleMoves(r,c).length) return true;
+    }
+  }
+  return false;
+}
+function checkWin(){
+  if(countPieces('black')===0) return 'white';
+  if(countPieces('white')===0) return 'black';
+  const next = turn==='white'?'black':'white';
+  if(!hasAnyMove(next)) return turn;
+  return null;
+}
+
+function finishGame(winner){
+  gameOver = true;
+  let text;
+  if(mode==='ai') text = winner==='white'? T[lang].winYou : T[lang].winAI;
+  else text = winner==='white'? T[lang].winW : T[lang].winB;
+  document.getElementById('status').textContent = text;
+  showWinModal(text);
+}
+
+function showWinModal(text){
+  document.getElementById('winModalText').textContent = text;
+  document.getElementById('winModal').classList.add('show');
+}
+function hideWinModal(){ document.getElementById('winModal').classList.remove('show'); }
+
+// ---------- AI ----------
+function progressScore(owner,r){ return owner==='black' ? r : (N-1-r); }
+
+function enumerateAllMoves(owner){
+  const caps = piecesWithCaptures(owner);
+  const moves=[];
+  if(caps.length){
+    caps.forEach(({r,c})=>{
+      captureMoves(r,c).forEach(t=>moves.push({from:{r,c},to:t,capture:true}));
+    });
+  } else {
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+      if(board[r][c] && board[r][c].owner===owner){
+        simpleMoves(r,c).forEach(t=>moves.push({from:{r,c},to:t,capture:false}));
+      }
+    }
+  }
+  return moves;
+}
+
+function aiMove(){
+  if(gameOver) return;
+  const lvl = AI_LEVELS[aiLevel];
+  const moves = enumerateAllMoves('black');
+  if(moves.length===0){ finishGame('white'); return; }
+  let best=moves[0], bestScore=-Infinity;
+  for(const m of moves){
+    let score=0;
+    if(m.capture) score += lvl.capW*10;
+    const piece = board[m.from.r][m.from.c];
+    const willPromote = !piece.king && m.to.r===0;
+    if(willPromote) score += lvl.kingW;
+    score += progressScore('black', m.to.r) * lvl.posW;
+    score += Math.random()*lvl.rand;
+    if(score>bestScore){ bestScore=score; best=m; }
+  }
+  executeAiMove(best);
+}
+
+function executeAiMove(m){
+  const piece = board[m.from.r][m.from.c];
+  board[m.from.r][m.from.c]=null;
+  if(m.to.capR!==undefined) board[m.to.capR][m.to.capC]=null;
+  board[m.to.r][m.to.c]=piece;
+  let promoted=false;
+  if(!piece.king && m.to.r===0){ piece.king=true; promoted=true; }
+  render();
+  if(m.capture && !promoted){
+    const further = captureMoves(m.to.r,m.to.c);
+    if(further.length){
+      const lvl = AI_LEVELS[aiLevel];
+      let best=further[0], bestScore=-Infinity;
+      further.forEach(t=>{
+        let score = Math.random()*lvl.rand + progressScore('black',t.r)*lvl.posW;
+        if(score>bestScore){bestScore=score; best=t;}
+      });
+      setTimeout(()=>executeAiMove({from:{r:m.to.r,c:m.to.c}, to:best, capture:true}), 400);
+      return;
+    }
+  }
+  const w = checkWin();
+  if(w){ finishGame(w); return; }
+  turn='white';
+  updateStatus();
+}
+
+// ---------- render ----------
+const S=76, O=30;
+function px(c){ return O + c*S; }
+function py(r){ return O + r*S; }
+
+function render(){
+  const svg = document.getElementById('board');
+  svg.innerHTML='';
+  const legal = selected ? legalTargetsFor(selected.r,selected.c) : null;
+  const targets = legal ? legal.targets : [];
+
+  // grid lines: orthogonal
+  for(let r=0;r<N;r++){
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',px(0)); l.setAttribute('y1',py(r)); l.setAttribute('x2',px(N-1)); l.setAttribute('y2',py(r));
+    l.setAttribute('class','gridline'); svg.appendChild(l);
+  }
+  for(let c=0;c<N;c++){
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',px(c)); l.setAttribute('y1',py(0)); l.setAttribute('x2',px(c)); l.setAttribute('y2',py(N-1));
+    l.setAttribute('class','gridline'); svg.appendChild(l);
+  }
+  // diagonal lines per X-square
+  for(let sr=0;sr<4;sr++) for(let sc=0;sc<4;sc++){
+    if((sr+sc)%2!==0) continue;
+    const l1=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l1.setAttribute('x1',px(sc)); l1.setAttribute('y1',py(sr)); l1.setAttribute('x2',px(sc+1)); l1.setAttribute('y2',py(sr+1));
+    l1.setAttribute('class','gridline'); svg.appendChild(l1);
+    const l2=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l2.setAttribute('x1',px(sc+1)); l2.setAttribute('y1',py(sr)); l2.setAttribute('x2',px(sc)); l2.setAttribute('y2',py(sr+1));
+    l2.setAttribute('class','gridline'); svg.appendChild(l2);
+  }
+
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const isTarget = targets.some(t=>t.r===r&&t.c===c);
+    const hole = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    hole.setAttribute('cx',px(c)); hole.setAttribute('cy',py(r)); hole.setAttribute('r',7);
+    hole.setAttribute('class','hole'+(isTarget?' movable':''));
+    hole.addEventListener('click',()=>onCellClick(r,c));
+    svg.appendChild(hole);
+  }
+
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const p = board[r][c];
+    if(!p) continue;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    let cls='piece '+p.owner;
+    if(selected && selected.r===r && selected.c===c) cls+=' selected';
+    g.setAttribute('class',cls);
+    const body = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    body.setAttribute('class','body');
+    body.setAttribute('cx',px(c)); body.setAttribute('cy',py(r)); body.setAttribute('r',15);
+    g.appendChild(body);
+    if(p.king){
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',px(c)); t.setAttribute('y',py(r));
+      t.setAttribute('class','kingmark');
+      t.textContent = 'K';
+      g.appendChild(t);
+    }
+    g.addEventListener('click',(e)=>{ e.stopPropagation(); onPieceClick(r,c); });
+    svg.appendChild(g);
+  }
+}
+
+// ---------- UI wiring ----------
+function setLang(l){
+  lang=l;
+  document.getElementById('langBtn').textContent = l==='ja'?'EN':'JA';
+  document.getElementById('title').textContent = T[l].title;
+  document.getElementById('subtitle').textContent = T[l].sub;
+  document.getElementById('modeAI').textContent = T[l].vsAI;
+  document.getElementById('mode2P').textContent = T[l].p2;
+  document.getElementById('resetBtn').textContent = T[l].reset;
+  document.getElementById('legWhite').textContent = T[l].legWhite;
+  document.getElementById('legBlack').textContent = T[l].legBlack;
+  document.getElementById('firstLabel').textContent = T[l].firstLabel;
+  document.getElementById('firstYou').textContent = T[l].firstYou;
+  document.getElementById('firstAI').textContent = T[l].firstAI;
+  document.getElementById('firstRandom').textContent = T[l].firstRandom;
+  document.getElementById('aiLabel').textContent = T[l].aiLabel;
+  document.getElementById('winModalClose').textContent = T[l].close;
+  document.getElementById('ruleNote').textContent = T[l].ruleNote;
+  document.documentElement.lang = l;
+  updateStatus();
+}
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeBtn').textContent = t==='light'?'☀️':'🌙';
+}
+
+document.getElementById('langBtn').addEventListener('click',()=>setLang(lang==='ja'?'en':'ja'));
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur = document.documentElement.dataset.theme;
+  setTheme(cur==='light'?'dark':'light');
+});
+document.getElementById('modeAI').addEventListener('click',()=>{
+  mode='ai';
+  document.getElementById('modeAI').classList.add('active');
+  document.getElementById('mode2P').classList.remove('active');
+  document.getElementById('settingsAI').style.display='flex';
+  initGame();
+});
+document.getElementById('mode2P').addEventListener('click',()=>{
+  mode='2p';
+  document.getElementById('mode2P').classList.add('active');
+  document.getElementById('modeAI').classList.remove('active');
+  document.getElementById('settingsAI').style.display='none';
+  initGame();
+});
+document.getElementById('resetBtn').addEventListener('click',initGame);
+document.getElementById('winModalClose').addEventListener('click',hideWinModal);
+
+function wireSeg(ids,onPick){
+  ids.forEach(id=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      ids.forEach(i=>document.getElementById(i).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      onPick(id);
+    });
+  });
+}
+wireSeg(['firstYou','firstAI','firstRandom'], id=>{
+  firstMove = id==='firstYou'?'you':id==='firstAI'?'ai':'random';
+  initGame();
+});
+wireSeg(['lv1','lv2','lv3','lv4','lv5'], id=>{ aiLevel = parseInt(id.slice(2),10); });
+
+mode='ai';
+setTheme('dark');
+initGame();
+})();
+</script>
+</body>
+</html>

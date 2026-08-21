@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チャイニーズチェッカー | Chinese Checkers — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1310;
+    --panel:#162019;
+    --panel2:#1c2820;
+    --line:#3a4c40;
+    --brass:#c19a5b;
+    --brass-dim:#8a7248;
+    --cream:#efe8d8;
+    --cream-dim:#a9b6ac;
+    --wood:#4a3826;
+    --hole:#6b5238;
+    --red:#c05f42;
+    --black:#2a2320;
+    --highlight:#f0d27a;
+  }
+  html[data-theme="light"]{
+    --bg:#f4efe2;
+    --panel:#ffffff;
+    --panel2:#eee6d3;
+    --line:#d8cbab;
+    --brass:#9c7530;
+    --brass-dim:#b89a5e;
+    --cream:#2c2418;
+    --cream-dim:#6c6250;
+    --wood:#e4d8bc;
+    --hole:#cfc09a;
+    --red:#b5533b;
+    --black:#3a352d;
+    --highlight:#c8930f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:
+      radial-gradient(ellipse at 20% -10%, color-mix(in srgb, var(--panel2) 60%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 110%, color-mix(in srgb, var(--panel2) 50%, transparent) 0%, transparent 55%),
+      var(--bg);
+    color:var(--cream);
+    font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 12px 60px;
+    overflow-x:hidden;
+    transition:background .2s, color .2s;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,5vw,34px);
+    margin:6px 0 2px; letter-spacing:.01em; text-align:center;
+    color:var(--cream);
+  }
+  .sub{
+    color:var(--brass); font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+    margin-bottom:18px; text-align:center;
+  }
+  .topbar{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px;
+  }
+  .settings{
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 16px;
+  }
+  .settings .group{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .settings .label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass-dim); }
+  .seg{ display:flex; gap:4px; }
+  button{
+    font-family:'Instrument Sans',sans-serif; font-size:13px; font-weight:600;
+    background:var(--panel2); color:var(--cream); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; cursor:pointer; transition:.15s;
+  }
+  .seg button{ padding:6px 10px; font-size:12px; }
+  button:hover{ border-color:var(--brass); color:var(--brass); }
+  button.active{ background:var(--brass); color:#1a140a; border-color:var(--brass); }
+  .status{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 20px; margin-bottom:16px; font-size:15px; text-align:center;
+    min-width:260px;
+  }
+  .status b{color:var(--brass);}
+  .board-wrap{
+    background:linear-gradient(160deg, color-mix(in srgb, var(--wood) 82%, #000 10%), color-mix(in srgb, var(--wood) 115%, #fff 6%));
+    border:1px solid color-mix(in srgb, var(--brass) 45%, var(--line));
+    border-radius:18px;
+    padding:14px; box-shadow:0 20px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06);
+    max-width:100%;
+  }
+  svg{ display:block; touch-action:manipulation; max-width:100%; height:auto; }
+  .cell{ fill:var(--wood); }
+  .hole{ fill:var(--hole); stroke:var(--bg); stroke-width:1; }
+  .hole.movable{ fill:color-mix(in srgb, var(--brass) 35%, var(--hole)); cursor:pointer; }
+  .hole.movable:hover{ fill:color-mix(in srgb, var(--brass) 55%, var(--hole)); }
+  .piece{ cursor:pointer; }
+  .piece.red{ fill:var(--red); stroke:#7a2f1e; }
+  .piece.black{ fill:var(--black); stroke:#141210; }
+  .piece.p2{ fill:#4a7a6a; stroke:#254038; }
+  .piece.selected{ stroke:var(--highlight); stroke-width:3; }
+  .legend{
+    display:flex; gap:18px; margin-top:14px; font-size:13px; color:var(--cream-dim);
+    align-items:center; flex-wrap:wrap; justify-content:center;
+  }
+  .dot{ width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:-2px; }
+  .footer-links{ margin-top:22px; }
+  .footer-links a{ color:var(--brass-dim); text-decoration:none; font-size:12px; }
+  .footer-links a:hover{ color:var(--brass); }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(10,14,11,.72);
+    display:flex; align-items:center; justify-content:center; z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    background:var(--panel); border:1px solid var(--brass); border-radius:18px;
+    padding:36px 40px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    transform:scale(.9); transition:transform .25s;
+  }
+  .modal-overlay.show .modal-box{ transform:scale(1); }
+  .modal-box .big{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(26px,7vw,40px);
+    color:var(--brass); margin-bottom:18px;
+  }
+  .modal-box button{ margin-top:6px; }
+</style>
+</head>
+<body>
+
+<h1 id="title">チャイニーズチェッカー</h1>
+<div class="sub" id="subtitle">DIAMOND GAME · CHINESE CHECKERS</div>
+
+<div class="topbar">
+  <button id="langBtn">EN</button>
+  <button id="themeBtn">🌙</button>
+  <button id="modeAI" class="active">vs AI</button>
+  <button id="mode2P">2人プレイ</button>
+  <button id="resetBtn">リセット</button>
+</div>
+
+<div class="settings" id="settingsAI">
+  <div class="group">
+    <div class="label" id="firstLabel">先攻・後攻</div>
+    <div class="seg">
+      <button id="firstYou" class="active">先手</button>
+      <button id="firstAI">後手</button>
+      <button id="firstRandom">ランダム</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="label" id="aiLabel">AIの強さ</div>
+    <div class="seg">
+      <button id="lv1">1</button>
+      <button id="lv2">2</button>
+      <button id="lv3" class="active">3</button>
+      <button id="lv4">4</button>
+      <button id="lv5">5</button>
+    </div>
+  </div>
+</div>
+
+<div class="status" id="status">あなたの番です（赤）</div>
+
+<div class="board-wrap"><svg id="board" width="480" height="560" viewBox="0 0 480 560"></svg></div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--red)"></span><span id="legRed">あなた（赤）</span></span>
+  <span><span class="dot" style="background:#3a352d"></span><span id="legBlack">相手（黒）</span></span>
+</div>
+
+<div class="footer-links"><a href="https://mossgreen5273.github.io/mossgreen/">← Mossgreen Games</a></div>
+
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box">
+    <div class="big" id="winModalText"></div>
+    <button id="winModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const T = {
+  ja:{ title:"チャイニーズチェッカー", sub:"DIAMOND GAME · CHINESE CHECKERS",
+       vsAI:"vs AI", p2:"2人プレイ", reset:"リセット",
+       yourTurn:"あなたの番です（赤）", aiTurn:"相手（黒）の番です…",
+       p2turnRed:"赤の番です", p2turnBlack:"黒の番です",
+       winYou:"あなたの勝ちです！", winAI:"相手（黒）の勝ちです", winRed:"赤の勝ちです！", winBlack:"黒の勝ちです！",
+       legRed:"あなた（赤）", legBlack:"相手（黒）",
+       chainHint:"連続ジャンプ可。同じ駒をクリックすると終了します。",
+       firstLabel:"先攻・後攻", firstYou:"先手", firstAI:"後手", firstRandom:"ランダム",
+       aiLabel:"AIの強さ", close:"閉じる"},
+  en:{ title:"Chinese Checkers", sub:"DIAMOND GAME · CHINESE CHECKERS",
+       vsAI:"vs AI", p2:"2 Player", reset:"Reset",
+       yourTurn:"Your move (Red)", aiTurn:"Opponent (Black) is thinking…",
+       p2turnRed:"Red's turn", p2turnBlack:"Black's turn",
+       winYou:"You win!", winAI:"Black wins.", winRed:"Red wins!", winBlack:"Black wins!",
+       legRed:"You (Red)", legBlack:"Opponent (Black)",
+       chainHint:"Chain jump available. Click the piece again to stop.",
+       firstLabel:"Who goes first", firstYou:"You", firstAI:"Opponent", firstRandom:"Random",
+       aiLabel:"AI strength", close:"Close"}
+};
+let lang = "ja";
+let firstMove = "you"; // 'you' | 'ai' | 'random'
+let aiLevel = 3; // 1-5
+const AI_LEVELS = {
+  1:{gainW:0.5, rand:6},
+  2:{gainW:1.0, rand:3},
+  3:{gainW:2.0, rand:1},
+  4:{gainW:3.0, rand:0.35},
+  5:{gainW:4.0, rand:0.08}
+};
+
+// ---------- board generation ----------
+const ROWW = [1,2,3,4,13,12,11,10,9,10,11,12,13,4,3,2,1];
+const cells = {}; // key "r,c2" -> {r,c2,x,y,piece:null}
+const cellSize = 30;
+const cx = 240, topY = 30, rowH = cellSize*0.86;
+
+function key(r,c2){ return r+","+c2; }
+
+for(let r=0;r<ROWW.length;r++){
+  const w = ROWW[r];
+  for(let i=0;i<w;i++){
+    const c2 = -(w-1) + 2*i;
+    const x = cx + c2*(cellSize/2);
+    const y = topY + r*rowH;
+    cells[key(r,c2)] = {r,c2,x,y,piece:null};
+  }
+}
+
+function neighbors(r,c2){
+  return [[r,c2-2],[r,c2+2],[r-1,c2-1],[r-1,c2+1],[r+1,c2-1],[r+1,c2+1]]
+    .map(([rr,cc])=>cells[key(rr,cc)]).filter(Boolean);
+}
+function jumpOptions(r,c2){
+  const dirs = [
+    {mid:[r,c2-2],land:[r,c2-4]},
+    {mid:[r,c2+2],land:[r,c2+4]},
+    {mid:[r-1,c2-1],land:[r-2,c2-2]},
+    {mid:[r-1,c2+1],land:[r-2,c2+2]},
+    {mid:[r+1,c2-1],land:[r+2,c2-2]},
+    {mid:[r+1,c2+1],land:[r+2,c2+2]},
+  ];
+  const out=[];
+  for(const d of dirs){
+    const mid = cells[key(...d.mid)];
+    const land = cells[key(...d.land)];
+    if(mid && mid.piece && land && !land.piece) out.push(land);
+  }
+  return out;
+}
+
+// camps: top rows 0-3 (10 cells) = black start / red goal
+//        bottom rows 13-16 (10 cells) = red start / black goal
+const topCells = Object.values(cells).filter(c=>c.r<=3);
+const bottomCells = Object.values(cells).filter(c=>c.r>=13);
+
+let board, turn, mode, selected, moveMode, chainPiece, gameOver;
+
+function initGame(){
+  Object.values(cells).forEach(c=>c.piece=null);
+  topCells.forEach(c=>c.piece='black');
+  bottomCells.forEach(c=>c.piece='red');
+  let startColor = 'red';
+  if(firstMove==='ai') startColor='black';
+  else if(firstMove==='random') startColor = Math.random()<0.5 ? 'red':'black';
+  turn = startColor;
+  selected = null;
+  chainPiece = null;
+  gameOver = false;
+  hideWinModal();
+  render();
+  updateStatus();
+  if(mode==='ai' && turn==='black'){
+    setTimeout(aiMove, 550);
+  }
+}
+
+function updateStatus(){
+  const s = document.getElementById('status');
+  if(gameOver) return;
+  if(mode==='ai'){
+    s.innerHTML = turn==='red' ? T[lang].yourTurn : T[lang].aiTurn;
+  } else {
+    s.innerHTML = turn==='red' ? T[lang].p2turnRed : T[lang].p2turnBlack;
+  }
+}
+
+function checkWin(){
+  if(topCells.every(c=>c.piece==='red')) return 'red';
+  if(bottomCells.every(c=>c.piece==='black')) return 'black';
+  return null;
+}
+
+function render(){
+  const svg = document.getElementById('board');
+  svg.innerHTML = '';
+  const legalTargets = selected ? getLegalTargets(selected) : [];
+
+  Object.values(cells).forEach(c=>{
+    const isTarget = legalTargets.includes(c);
+    const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',c.x); el.setAttribute('cy',c.y); el.setAttribute('r',9);
+    el.setAttribute('class','hole'+(isTarget?' movable':''));
+    el.addEventListener('click',()=>onCellClick(c));
+    svg.appendChild(el);
+
+    if(c.piece){
+      const p = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      p.setAttribute('cx',c.x); p.setAttribute('cy',c.y); p.setAttribute('r',11.5);
+      let cls = 'piece '+(c.piece==='red'?'red':'black');
+      if(selected===c) cls+=' selected';
+      p.setAttribute('class',cls);
+      p.addEventListener('click',(e)=>{ e.stopPropagation(); onPieceClick(c); });
+      svg.appendChild(p);
+    }
+  });
+}
+
+function getLegalTargets(c){
+  if(chainPiece===c){
+    return jumpOptions(c.r,c.c2);
+  }
+  const simple = neighbors(c.r,c.c2).filter(n=>!n.piece);
+  const jumps = jumpOptions(c.r,c.c2);
+  return simple.concat(jumps);
+}
+
+function onPieceClick(c){
+  if(gameOver) return;
+  if(mode==='ai' && turn!=='red') return;
+  if(c.piece!==turn) {
+    if(chainPiece) return; // mid-chain, ignore other pieces
+    return;
+  }
+  if(chainPiece===c){
+    // end chain
+    endTurn();
+    return;
+  }
+  if(chainPiece && chainPiece!==c) return;
+  selected = c;
+  render();
+}
+
+function onCellClick(c){
+  if(gameOver || !selected) return;
+  const targets = getLegalTargets(selected);
+  if(!targets.includes(c)) return;
+
+  const isJump = Math.abs(c.r-selected.r)===2 || Math.abs(c.c2-selected.c2)===4 && c.r===selected.r;
+  const wasChain = !!chainPiece;
+  c.piece = selected.piece;
+  selected.piece = null;
+
+  const further = jumpOptions(c.r,c.c2);
+  if((isJump || wasChain) && further.length>0){
+    chainPiece = c;
+    selected = c;
+    render();
+    document.getElementById('status').innerHTML = T[lang].chainHint;
+    return;
+  }
+  selected = c;
+  endTurn();
+}
+
+function showWinModal(text){
+  document.getElementById('winModalText').textContent = text;
+  document.getElementById('winModal').classList.add('show');
+}
+function hideWinModal(){
+  document.getElementById('winModal').classList.remove('show');
+}
+
+function endTurn(){
+  selected = null; chainPiece = null;
+  const w = checkWin();
+  render();
+  if(w){
+    gameOver = true;
+    const s = document.getElementById('status');
+    const text = mode==='ai' ? (w==='red'? T[lang].winYou : T[lang].winAI) : (w==='red'? T[lang].winRed : T[lang].winBlack);
+    s.textContent = text;
+    showWinModal(text);
+    return;
+  }
+  turn = turn==='red' ? 'black' : 'red';
+  updateStatus();
+  if(mode==='ai' && turn==='black'){
+    setTimeout(aiMove, 550);
+  }
+}
+
+// ---------- AI ----------
+function progress(color,r){
+  return color==='black' ? r : (16-r);
+}
+
+function enumerateMoves(color){
+  const moves = []; // {from,to,isJump}
+  const pieces = Object.values(cells).filter(c=>c.piece===color);
+  for(const p of pieces){
+    neighbors(p.r,p.c2).filter(n=>!n.piece).forEach(n=>moves.push({from:p,to:n,isJump:false}));
+    // BFS jump chains
+    const visited = new Set([key(p.r,p.c2)]);
+    const queue = [p];
+    while(queue.length){
+      const cur = queue.shift();
+      jumpOptions(cur.r,cur.c2).forEach(land=>{
+        const k = key(land.r,land.c2);
+        if(!visited.has(k)){
+          visited.add(k);
+          moves.push({from:p,to:land,isJump:true});
+          queue.push(land);
+        }
+      });
+    }
+  }
+  return moves;
+}
+
+function aiMove(){
+  if(gameOver) return;
+  const moves = enumerateMoves('black');
+  if(moves.length===0){ endTurn(); return; }
+  const lvl = AI_LEVELS[aiLevel];
+  let best=[], bestScore=-Infinity;
+  for(const m of moves){
+    const gain = progress('black',m.to.r) - progress('black',m.from.r);
+    const centerBias = -Math.abs(m.to.c2)*0.02;
+    const score = gain*lvl.gainW + centerBias + Math.random()*lvl.rand;
+    if(score>bestScore){ bestScore=score; best=[m]; }
+    else if(score>bestScore-0.05){ best.push(m); }
+  }
+  const m = best[Math.floor(Math.random()*best.length)];
+  m.to.piece = m.from.piece;
+  m.from.piece = null;
+  render();
+  const w = checkWin();
+  if(w){
+    gameOver = true;
+    const text = w==='red'? T[lang].winYou : T[lang].winAI;
+    document.getElementById('status').textContent = text;
+    showWinModal(text);
+    return;
+  }
+  turn = 'red';
+  updateStatus();
+}
+
+// ---------- UI wiring ----------
+function setLang(l){
+  lang = l;
+  document.getElementById('langBtn').textContent = l==='ja' ? 'EN' : 'JA';
+  document.getElementById('title').textContent = T[l].title;
+  document.getElementById('subtitle').textContent = T[l].sub;
+  document.getElementById('modeAI').textContent = T[l].vsAI;
+  document.getElementById('mode2P').textContent = T[l].p2;
+  document.getElementById('resetBtn').textContent = T[l].reset;
+  document.getElementById('legRed').textContent = T[l].legRed;
+  document.getElementById('legBlack').textContent = T[l].legBlack;
+  document.getElementById('firstLabel').textContent = T[l].firstLabel;
+  document.getElementById('firstYou').textContent = T[l].firstYou;
+  document.getElementById('firstAI').textContent = T[l].firstAI;
+  document.getElementById('firstRandom').textContent = T[l].firstRandom;
+  document.getElementById('aiLabel').textContent = T[l].aiLabel;
+  document.getElementById('winModalClose').textContent = T[l].close;
+  document.documentElement.lang = l;
+  updateStatus();
+}
+
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeBtn').textContent = t==='light' ? '☀️' : '🌙';
+}
+
+document.getElementById('langBtn').addEventListener('click',()=>setLang(lang==='ja'?'en':'ja'));
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur = document.documentElement.dataset.theme;
+  setTheme(cur==='light' ? 'dark' : 'light');
+});
+document.getElementById('modeAI').addEventListener('click',()=>{
+  mode='ai';
+  document.getElementById('modeAI').classList.add('active');
+  document.getElementById('mode2P').classList.remove('active');
+  document.getElementById('settingsAI').style.display='flex';
+  initGame();
+});
+document.getElementById('mode2P').addEventListener('click',()=>{
+  mode='2p';
+  document.getElementById('mode2P').classList.add('active');
+  document.getElementById('modeAI').classList.remove('active');
+  document.getElementById('settingsAI').style.display='none';
+  initGame();
+});
+document.getElementById('resetBtn').addEventListener('click',initGame);
+document.getElementById('winModalClose').addEventListener('click',hideWinModal);
+
+function wireSeg(ids, onPick){
+  ids.forEach(id=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      ids.forEach(i=>document.getElementById(i).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      onPick(id);
+    });
+  });
+}
+wireSeg(['firstYou','firstAI','firstRandom'], (id)=>{
+  firstMove = id==='firstYou' ? 'you' : id==='firstAI' ? 'ai' : 'random';
+  initGame();
+});
+wireSeg(['lv1','lv2','lv3','lv4','lv5'], (id)=>{
+  aiLevel = parseInt(id.slice(2),10);
+});
+
+mode='ai';
+setTheme('dark');
+initGame();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ナイン・メンズ・モリス | Nine Men's Morris — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1310; --panel:#162019; --panel2:#1c2820; --line:#3a4c40;
+    --brass:#c19a5b; --brass-dim:#8a7248; --cream:#efe8d8; --cream-dim:#a9b6ac;
+    --wood:#4a3826; --hole:#6b5238; --highlight:#f0d27a;
+    --white-p:#e8dfc8; --white-p-stroke:#a89468;
+    --black-p:#2a2320; --black-p-stroke:#141210;
+    --removable:#c05f42;
+  }
+  html[data-theme="light"]{
+    --bg:#f4efe2; --panel:#ffffff; --panel2:#eee6d3; --line:#d8cbab;
+    --brass:#9c7530; --brass-dim:#b89a5e; --cream:#2c2418; --cream-dim:#6c6250;
+    --wood:#e4d8bc; --hole:#cfc09a; --highlight:#c8930f;
+    --white-p:#fffdf7; --white-p-stroke:#b8a878;
+    --black-p:#3a352d; --black-p-stroke:#141210;
+    --removable:#b5533b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:radial-gradient(ellipse at 20% -10%, color-mix(in srgb, var(--panel2) 60%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 110%, color-mix(in srgb, var(--panel2) 50%, transparent) 0%, transparent 55%), var(--bg);
+    color:var(--cream); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:20px 12px 60px; overflow-x:hidden;
+    transition:background .2s, color .2s;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,5vw,34px); margin:6px 0 2px; text-align:center; }
+  .sub{ color:var(--brass); font-size:13px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:18px; text-align:center; }
+  .topbar{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px; }
+  .settings{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 16px; }
+  .settings .group{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .settings .label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass-dim); }
+  .seg{ display:flex; gap:4px; flex-wrap:wrap; justify-content:center; }
+  button{ font-family:'Instrument Sans',sans-serif; font-size:13px; font-weight:600;
+    background:var(--panel2); color:var(--cream); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; cursor:pointer; transition:.15s; }
+  .seg button{ padding:6px 10px; font-size:12px; }
+  button:hover{ border-color:var(--brass); color:var(--brass); }
+  button.active{ background:var(--brass); color:#1a140a; border-color:var(--brass); }
+  .status{ background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 20px; margin-bottom:16px; font-size:15px; text-align:center; min-width:260px; }
+  .status b{ color:var(--brass); }
+  .stock{ display:flex; gap:18px; margin-bottom:14px; font-size:13px; color:var(--cream-dim); }
+  .stock b{ color:var(--brass); }
+  .board-wrap{ background:linear-gradient(160deg, color-mix(in srgb, var(--wood) 82%, #000 10%), color-mix(in srgb, var(--wood) 115%, #fff 6%));
+    border:1px solid color-mix(in srgb, var(--brass) 45%, var(--line)); border-radius:18px;
+    padding:14px; max-width:100%; box-shadow:0 20px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06); }
+  svg{ display:block; touch-action:manipulation; max-width:100%; height:auto; }
+  .gridline{ stroke:var(--brass-dim); stroke-width:2; opacity:.6; }
+  .hole{ fill:var(--hole); stroke:var(--bg); stroke-width:1; }
+  .hole.movable{ fill:color-mix(in srgb, var(--highlight) 40%, var(--hole)); cursor:pointer; }
+  .hole.movable:hover{ fill:color-mix(in srgb, var(--highlight) 65%, var(--hole)); }
+  .piece{ cursor:pointer; }
+  .piece.white circle.body{ fill:var(--white-p); stroke:var(--white-p-stroke); stroke-width:1.5; }
+  .piece.black circle.body{ fill:var(--black-p); stroke:var(--black-p-stroke); stroke-width:1.5; }
+  .piece.selected circle.body{ stroke:var(--highlight); stroke-width:3; }
+  .piece.removable circle.body{ stroke:var(--removable); stroke-width:3; cursor:pointer; }
+  .legend{ display:flex; gap:18px; margin-top:14px; font-size:13px; color:var(--cream-dim); align-items:center; flex-wrap:wrap; justify-content:center; }
+  .dot{ width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:-2px; border:1px solid var(--line); }
+  .footer-links{ margin-top:22px; text-align:center; }
+  .footer-links a{ color:var(--brass-dim); text-decoration:none; font-size:12px; }
+  .footer-links a:hover{ color:var(--brass); }
+
+  .modal-overlay{ position:fixed; inset:0; background:rgba(10,14,11,.72); display:flex; align-items:center; justify-content:center; z-index:50; opacity:0; pointer-events:none; transition:opacity .25s; }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{ background:var(--panel); border:1px solid var(--brass); border-radius:18px; padding:36px 40px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5); transform:scale(.9); transition:transform .25s; }
+  .modal-overlay.show .modal-box{ transform:scale(1); }
+  .modal-box .big{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(24px,7vw,38px); color:var(--brass); margin-bottom:18px; }
+  .modal-box button{ margin-top:6px; }
+</style>
+</head>
+<body>
+
+<h1 id="title">ナイン・メンズ・モリス</h1>
+<div class="sub" id="subtitle">NINE MEN'S MORRIS · MILL GAME</div>
+
+<div class="topbar">
+  <button id="langBtn">EN</button>
+  <button id="themeBtn">🌙</button>
+  <button id="modeAI" class="active">vs AI</button>
+  <button id="mode2P">2人プレイ</button>
+  <button id="resetBtn">リセット</button>
+</div>
+
+<div class="settings" id="settingsAI">
+  <div class="group">
+    <div class="label" id="firstLabel">先攻・後攻</div>
+    <div class="seg">
+      <button id="firstYou" class="active">先手</button>
+      <button id="firstAI">後手</button>
+      <button id="firstRandom">ランダム</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="label" id="aiLabel">AIの強さ</div>
+    <div class="seg">
+      <button id="lv1">1</button><button id="lv2">2</button><button id="lv3" class="active">3</button><button id="lv4">4</button><button id="lv5">5</button>
+    </div>
+  </div>
+</div>
+
+<div class="status" id="status">あなたの番です（白）— 駒を配置してください</div>
+<div class="stock">
+  <span>白: <b id="stockWhite">9</b></span>
+  <span>黒: <b id="stockBlack">9</b></span>
+</div>
+
+<div class="board-wrap"><svg id="board" width="420" height="420" viewBox="0 0 420 420"></svg></div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--white-p)"></span><span id="legWhite">あなた（白）</span></span>
+  <span><span class="dot" style="background:var(--black-p)"></span><span id="legBlack">相手（黒）</span></span>
+</div>
+
+<div class="footer-links"><a href="https://mossgreen5273.github.io/mossgreen/">← Mossgreen Games</a></div>
+
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box">
+    <div class="big" id="winModalText"></div>
+    <button id="winModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const T = {
+  ja:{ title:"ナイン・メンズ・モリス", sub:"NINE MEN'S MORRIS · MILL GAME", vsAI:"vs AI", p2:"2人プレイ", reset:"リセット",
+       placeYou:"あなたの番です（白）— 駒を配置してください", placeAI:"相手（黒）の番です…",
+       moveYou:"あなたの番です（白）— 駒を移動してください", moveAI:"相手（黒）の番です…",
+       removeYou:"ミル成立！相手の駒を1つ取ってください", removeAI:"相手がミルを作りました…",
+       p2placeW:"白の番です — 配置", p2placeB:"黒の番です — 配置",
+       p2moveW:"白の番です — 移動", p2moveB:"黒の番です — 移動",
+       p2removeW:"白：ミル成立！相手の駒を取ってください", p2removeB:"黒：ミル成立！相手の駒を取ってください",
+       winYou:"あなたの勝ちです！", winAI:"相手（黒）の勝ちです", winW:"白の勝ちです！", winB:"黒の勝ちです！",
+       legWhite:"あなた（白）", legBlack:"相手（黒）",
+       firstLabel:"先攻・後攻", firstYou:"先手", firstAI:"後手", firstRandom:"ランダム",
+       aiLabel:"AIの強さ", close:"閉じる"},
+  en:{ title:"Nine Men's Morris", sub:"NINE MEN'S MORRIS · MILL GAME", vsAI:"vs AI", p2:"2 Player", reset:"Reset",
+       placeYou:"Your turn (White) — place a piece", placeAI:"Opponent (Black) is thinking…",
+       moveYou:"Your turn (White) — move a piece", moveAI:"Opponent (Black) is thinking…",
+       removeYou:"Mill! Remove one of your opponent's pieces", removeAI:"Opponent formed a mill…",
+       p2placeW:"White's turn — place", p2placeB:"Black's turn — place",
+       p2moveW:"White's turn — move", p2moveB:"Black's turn — move",
+       p2removeW:"White: mill formed! Remove an opponent piece", p2removeB:"Black: mill formed! Remove an opponent piece",
+       winYou:"You win!", winAI:"Black wins.", winW:"White wins!", winB:"Black wins!",
+       legWhite:"You (White)", legBlack:"Opponent (Black)",
+       firstLabel:"Who goes first", firstYou:"You", firstAI:"Opponent", firstRandom:"Random",
+       aiLabel:"AI strength", close:"Close"}
+};
+let lang='ja';
+let firstMove='you', aiLevel=3;
+const AI_LEVELS = {
+  1:{rand:6, millW:6, blockW:2},
+  2:{rand:3, millW:10, blockW:5},
+  3:{rand:1.2, millW:16, blockW:10},
+  4:{rand:0.4, millW:22, blockW:16},
+  5:{rand:0.1, millW:30, blockW:24}
+};
+
+// ---------- board topology ----------
+const POINTS = [
+ [0,0],[0,3],[0,6],
+ [1,1],[1,3],[1,5],
+ [2,2],[2,3],[2,4],
+ [3,0],[3,1],[3,2],[3,4],[3,5],[3,6],
+ [4,2],[4,3],[4,4],
+ [5,1],[5,3],[5,5],
+ [6,0],[6,3],[6,6]
+];
+function idxOf(r,c){ return POINTS.findIndex(p=>p[0]===r&&p[1]===c); }
+// explicit edge list (24 edges)
+const EDGES = [
+ [[0,0],[0,3]],[[0,3],[0,6]],[[0,6],[3,6]],[[3,6],[6,6]],[[6,6],[6,3]],[[6,3],[6,0]],[[6,0],[3,0]],[[3,0],[0,0]],
+ [[1,1],[1,3]],[[1,3],[1,5]],[[1,5],[3,5]],[[3,5],[5,5]],[[5,5],[5,3]],[[5,3],[5,1]],[[5,1],[3,1]],[[3,1],[1,1]],
+ [[2,2],[2,3]],[[2,3],[2,4]],[[2,4],[3,4]],[[3,4],[4,4]],[[4,4],[4,3]],[[4,3],[4,2]],[[4,2],[3,2]],[[3,2],[2,2]],
+ [[0,3],[1,3]],[[1,3],[2,3]],
+ [[3,0],[3,1]],[[3,1],[3,2]],
+ [[3,6],[3,5]],[[3,5],[3,4]],
+ [[6,3],[5,3]],[[5,3],[4,3]]
+];
+const MILLS = [
+ [[0,0],[0,3],[0,6]], [[0,6],[3,6],[6,6]], [[6,6],[6,3],[6,0]], [[6,0],[3,0],[0,0]],
+ [[1,1],[1,3],[1,5]], [[1,5],[3,5],[5,5]], [[5,5],[5,3],[5,1]], [[5,1],[3,1],[1,1]],
+ [[2,2],[2,3],[2,4]], [[2,4],[3,4],[4,4]], [[4,4],[4,3],[4,2]], [[4,2],[3,2],[2,2]],
+ [[0,3],[1,3],[2,3]], [[3,0],[3,1],[3,2]], [[3,6],[3,5],[3,4]], [[6,3],[5,3],[4,3]]
+];
+const adjacency = POINTS.map(()=>[]);
+EDGES.forEach(([a,b])=>{
+  const ia=idxOf(a[0],a[1]), ib=idxOf(b[0],b[1]);
+  adjacency[ia].push(ib); adjacency[ib].push(ia);
+});
+const millIdx = MILLS.map(m=>m.map(p=>idxOf(p[0],p[1])));
+
+let cells; // array[24] of 'white'|'black'|null
+let stock; // {white:9, black:9}
+let phase; // 'place' | 'move' | 'remove'
+let turn, mode, selected, gameOver, pendingRemoveFor;
+
+function initGame(){
+  cells = new Array(24).fill(null);
+  stock = {white:9, black:9};
+  let start='white';
+  if(firstMove==='ai') start='black';
+  else if(firstMove==='random') start = Math.random()<0.5?'white':'black';
+  turn=start; phase='place'; selected=null; gameOver=false; pendingRemoveFor=null;
+  hideWinModal();
+  render(); updateStatus();
+  if(mode==='ai' && turn==='black'){ setTimeout(aiTurn,550); }
+}
+
+function updateStatus(){
+  if(gameOver) return;
+  const s=document.getElementById('status');
+  document.getElementById('stockWhite').textContent = stock.white;
+  document.getElementById('stockBlack').textContent = stock.black;
+  if(phase==='remove'){
+    if(mode==='ai') s.textContent = pendingRemoveFor==='white'? T[lang].removeYou : T[lang].removeAI;
+    else s.textContent = pendingRemoveFor==='white'? T[lang].p2removeW : T[lang].p2removeB;
+    return;
+  }
+  const placing = isPlacingPhaseFor(turn);
+  if(mode==='ai'){
+    if(turn==='white') s.textContent = placing ? T[lang].placeYou : T[lang].moveYou;
+    else s.textContent = placing ? T[lang].placeAI : T[lang].moveAI;
+  } else {
+    if(turn==='white') s.textContent = placing ? T[lang].p2placeW : T[lang].p2moveW;
+    else s.textContent = placing ? T[lang].p2placeB : T[lang].p2moveB;
+  }
+}
+
+function countOnBoard(owner){ return cells.filter(c=>c===owner).length; }
+function isPlacingPhaseFor(owner){ return (owner==='white'?stock.white:stock.black) > 0; }
+
+function formsMill(idx, owner){
+  return millIdx.some(m => m.includes(idx) && m.every(i=>cells[i]===owner));
+}
+function pieceInAnyMill(idx){
+  const owner = cells[idx];
+  if(!owner) return false;
+  return millIdx.some(m => m.includes(idx) && m.every(i=>cells[i]===owner));
+}
+function removablePieces(owner){
+  const all = [];
+  for(let i=0;i<24;i++) if(cells[i]===owner) all.push(i);
+  const nonMill = all.filter(i=>!pieceInAnyMill(i));
+  return nonMill.length ? nonMill : all;
+}
+
+function emptyNeighbors(idx){ return adjacency[idx].filter(n=>!cells[n]); }
+
+function onPointClick(idx){
+  if(gameOver) return;
+  if(mode==='ai' && turn!=='white' && phase!=='remove') return;
+  if(mode==='ai' && phase==='remove' && pendingRemoveFor!=='white') return;
+
+  if(phase==='remove'){
+    if(cells[idx] === (turn==='white'?'black':'white') && removablePieces(turn==='white'?'black':'white').includes(idx)){
+      cells[idx] = null;
+      phase = isPlacingPhaseFor(turn) || countBothHaveMoves() ? 'place' : 'move';
+      afterAction();
+    }
+    return;
+  }
+
+  const owner = turn;
+  if(isPlacingPhaseFor(owner)){
+    if(cells[idx]) return;
+    cells[idx] = owner;
+    stock[owner]--;
+    handlePostMoveOrPlace(idx, owner);
+  } else {
+    if(selected===null){
+      if(cells[idx]===owner) { selected = idx; render(); }
+      return;
+    }
+    if(idx===selected){ selected=null; render(); return; }
+    if(cells[idx]) {
+      if(cells[idx]===owner){ selected=idx; render(); }
+      return;
+    }
+    if(!adjacency[selected].includes(idx)) return;
+    cells[idx]=owner; cells[selected]=null;
+    const moved = idx;
+    selected=null;
+    handlePostMoveOrPlace(moved, owner);
+  }
+}
+
+function handlePostMoveOrPlace(idx, owner){
+  render();
+  if(formsMill(idx, owner)){
+    const opp = owner==='white'?'black':'white';
+    if(removablePieces(opp).length>0){
+      phase='remove'; pendingRemoveFor=owner;
+      render(); updateStatus();
+      if(mode==='ai' && owner==='black'){ setTimeout(aiRemove,500); }
+      return;
+    }
+  }
+  afterAction();
+}
+
+function afterAction(){
+  pendingRemoveFor=null;
+  render();
+  const w = checkWin();
+  if(w){ finishGame(w); return; }
+  turn = turn==='white'?'black':'white';
+  phase = isPlacingPhaseFor(turn) ? 'place' : 'move';
+  updateStatus();
+  if(mode==='ai' && turn==='black' && !gameOver){ setTimeout(aiTurn,550); }
+}
+
+function countBothHaveMoves(){ return true; }
+
+function checkWin(){
+  if(stock.white===0 && countOnBoard('white')<3) return 'black';
+  if(stock.black===0 && countOnBoard('black')<3) return 'white';
+  const opponent = turn==='white'?'black':'white';
+  if(!isPlacingPhaseFor(opponent) && !hasAnyMove(opponent)) return turn;
+  return null;
+}
+function hasAnyMove(owner){
+  if(isPlacingPhaseFor(owner)) return true;
+  for(let i=0;i<24;i++) if(cells[i]===owner && emptyNeighbors(i).length) return true;
+  return false;
+}
+
+function finishGame(winner){
+  gameOver=true;
+  let text;
+  if(mode==='ai') text = winner==='white'? T[lang].winYou : T[lang].winAI;
+  else text = winner==='white'? T[lang].winW : T[lang].winB;
+  document.getElementById('status').textContent = text;
+  showWinModal(text);
+}
+function showWinModal(text){
+  document.getElementById('winModalText').textContent = text;
+  document.getElementById('winModal').classList.add('show');
+}
+function hideWinModal(){ document.getElementById('winModal').classList.remove('show'); }
+
+// ---------- AI ----------
+function aiTurn(){
+  if(gameOver) return;
+  if(!hasAnyMove('black')){ finishGame('white'); return; }
+  const lvl = AI_LEVELS[aiLevel];
+  if(isPlacingPhaseFor('black')){
+    let candidates=[];
+    for(let i=0;i<24;i++) if(!cells[i]) candidates.push(i);
+    let best=candidates[0], bestScore=-Infinity;
+    for(const idx of candidates){
+      let score=0;
+      cells[idx]='black';
+      if(formsMill(idx,'black')) score += lvl.millW;
+      cells[idx]=null;
+      cells[idx]='white';
+      if(formsMill(idx,'white')) score += lvl.blockW;
+      cells[idx]=null;
+      score += Math.random()*lvl.rand;
+      if(score>bestScore){ bestScore=score; best=idx; }
+    }
+    cells[best]='black'; stock.black--;
+    handlePostMoveOrPlace(best,'black');
+  } else {
+    let moves=[];
+    for(let i=0;i<24;i++) if(cells[i]==='black'){
+      emptyNeighbors(i).forEach(n=>moves.push({from:i,to:n}));
+    }
+    if(moves.length===0){ finishGame('white'); return; }
+    let best=moves[0], bestScore=-Infinity;
+    for(const mv of moves){
+      let score=0;
+      cells[mv.from]=null; cells[mv.to]='black';
+      if(formsMill(mv.to,'black')) score+=lvl.millW;
+      cells[mv.to]=null; cells[mv.from]='black';
+      score += Math.random()*lvl.rand;
+      if(score>bestScore){ bestScore=score; best=mv; }
+    }
+    cells[best.from]=null; cells[best.to]='black';
+    handlePostMoveOrPlace(best.to,'black');
+  }
+}
+
+function aiRemove(){
+  if(gameOver) return;
+  const lvl = AI_LEVELS[aiLevel];
+  const options = removablePieces('white');
+  if(options.length===0){ phase = isPlacingPhaseFor('black')?'place':'move'; afterAction(); return; }
+  let best=options[0], bestScore=-Infinity;
+  options.forEach(idx=>{
+    let score = Math.random()*lvl.rand;
+    const neighborsOpen = emptyNeighbors(idx).length;
+    score += neighborsOpen*0.5;
+    if(score>bestScore){ bestScore=score; best=idx; }
+  });
+  cells[best]=null;
+  phase = isPlacingPhaseFor('black') ? 'place' : 'move';
+  afterAction();
+}
+
+// ---------- render ----------
+const S=60, O=30;
+function px(c){ return O + c*S; }
+function py(r){ return O + r*S; }
+
+function render(){
+  const svg = document.getElementById('board');
+  svg.innerHTML='';
+  EDGES.forEach(([a,b])=>{
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',px(a[1])); l.setAttribute('y1',py(a[0]));
+    l.setAttribute('x2',px(b[1])); l.setAttribute('y2',py(b[0]));
+    l.setAttribute('class','gridline');
+    svg.appendChild(l);
+  });
+
+  const canRemove = phase==='remove' && (mode!=='ai' || pendingRemoveFor==='white');
+  const removOpp = canRemove ? removablePieces(pendingRemoveFor==='white'?'black':'white') : [];
+
+  POINTS.forEach((p,idx)=>{
+    const isMovableTarget = selected!==null && adjacency[selected].includes(idx) && !cells[idx] && phase!=='remove' && phase!=='place';
+    const isPlaceTarget = phase==='place' && !cells[idx] && (mode!=='ai' || turn==='white');
+    const hole = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    hole.setAttribute('cx',px(p[1])); hole.setAttribute('cy',py(p[0])); hole.setAttribute('r',8);
+    hole.setAttribute('class','hole'+((isMovableTarget||isPlaceTarget)?' movable':''));
+    hole.addEventListener('click',()=>onPointClick(idx));
+    svg.appendChild(hole);
+  });
+
+  POINTS.forEach((p,idx)=>{
+    const owner = cells[idx];
+    if(!owner) return;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    let cls='piece '+owner;
+    if(selected===idx) cls+=' selected';
+    if(canRemove && removOpp.includes(idx)) cls+=' removable';
+    g.setAttribute('class',cls);
+    const body = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    body.setAttribute('class','body');
+    body.setAttribute('cx',px(p[1])); body.setAttribute('cy',py(p[0])); body.setAttribute('r',14);
+    g.appendChild(body);
+    g.addEventListener('click',(e)=>{ e.stopPropagation(); onPointClick(idx); });
+    svg.appendChild(g);
+  });
+}
+
+// ---------- UI wiring ----------
+function setLang(l){
+  lang=l;
+  document.getElementById('langBtn').textContent = l==='ja'?'EN':'JA';
+  document.getElementById('title').textContent = T[l].title;
+  document.getElementById('subtitle').textContent = T[l].sub;
+  document.getElementById('modeAI').textContent = T[l].vsAI;
+  document.getElementById('mode2P').textContent = T[l].p2;
+  document.getElementById('resetBtn').textContent = T[l].reset;
+  document.getElementById('legWhite').textContent = T[l].legWhite;
+  document.getElementById('legBlack').textContent = T[l].legBlack;
+  document.getElementById('firstLabel').textContent = T[l].firstLabel;
+  document.getElementById('firstYou').textContent = T[l].firstYou;
+  document.getElementById('firstAI').textContent = T[l].firstAI;
+  document.getElementById('firstRandom').textContent = T[l].firstRandom;
+  document.getElementById('aiLabel').textContent = T[l].aiLabel;
+  document.getElementById('winModalClose').textContent = T[l].close;
+  document.documentElement.lang = l;
+  updateStatus();
+}
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeBtn').textContent = t==='light'?'☀️':'🌙';
+}
+
+document.getElementById('langBtn').addEventListener('click',()=>setLang(lang==='ja'?'en':'ja'));
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur = document.documentElement.dataset.theme;
+  setTheme(cur==='light'?'dark':'light');
+});
+document.getElementById('modeAI').addEventListener('click',()=>{
+  mode='ai';
+  document.getElementById('modeAI').classList.add('active');
+  document.getElementById('mode2P').classList.remove('active');
+  document.getElementById('settingsAI').style.display='flex';
+  initGame();
+});
+document.getElementById('mode2P').addEventListener('click',()=>{
+  mode='2p';
+  document.getElementById('mode2P').classList.add('active');
+  document.getElementById('modeAI').classList.remove('active');
+  document.getElementById('settingsAI').style.display='none';
+  initGame();
+});
+document.getElementById('resetBtn').addEventListener('click',initGame);
+document.getElementById('winModalClose').addEventListener('click',hideWinModal);
+
+function wireSeg(ids,onPick){
+  ids.forEach(id=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      ids.forEach(i=>document.getElementById(i).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      onPick(id);
+    });
+  });
+}
+wireSeg(['firstYou','firstAI','firstRandom'], id=>{
+  firstMove = id==='firstYou'?'you':id==='firstAI'?'ai':'random';
+  initGame();
+});
+wireSeg(['lv1','lv2','lv3','lv4','lv5'], id=>{ aiLevel = parseInt(id.slice(2),10); });
+
+mode='ai';
+setTheme('dark');
+initGame();
+})();
+</script>
+</body>
+</html>

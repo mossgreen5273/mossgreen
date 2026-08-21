@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アリマー | Arimaa — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1310; --panel:#162019; --panel2:#1c2820; --line:#3a4c40;
+    --brass:#c19a5b; --brass-dim:#8a7248; --cream:#efe8d8; --cream-dim:#a9b6ac;
+    --wood:#4a3826; --cell:#5a4632; --trap:#231a12; --highlight:#f0d27a;
+    --gold-p:#c99a3e; --gold-p-stroke:#7a5c1e;
+    --silver-p:#a8b0b8; --silver-p-stroke:#5c6268;
+    --pushmark:#c05f42; --pullmark:#5a8ca8;
+  }
+  html[data-theme="light"]{
+    --bg:#f4efe2; --panel:#ffffff; --panel2:#eee6d3; --line:#d8cbab;
+    --brass:#9c7530; --brass-dim:#b89a5e; --cream:#2c2418; --cream-dim:#6c6250;
+    --wood:#e4d8bc; --cell:#d8c8a0; --trap:#a89468; --highlight:#c8930f;
+    --gold-p:#c99a3e; --gold-p-stroke:#7a5c1e;
+    --silver-p:#98a0a8; --silver-p-stroke:#5c6268;
+    --pushmark:#b5533b; --pullmark:#3f6a8a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:radial-gradient(ellipse at 20% -10%, color-mix(in srgb, var(--panel2) 60%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 110%, color-mix(in srgb, var(--panel2) 50%, transparent) 0%, transparent 55%), var(--bg);
+    color:var(--cream); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:20px 12px 60px; overflow-x:hidden;
+    transition:background .2s, color .2s;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,5vw,34px); margin:6px 0 2px; text-align:center; }
+  .sub{ color:var(--brass); font-size:13px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:18px; text-align:center; }
+  .topbar{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px; }
+  .settings{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 16px; }
+  .settings .group{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .settings .label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass-dim); }
+  .seg{ display:flex; gap:4px; flex-wrap:wrap; justify-content:center; }
+  button{ font-family:'Instrument Sans',sans-serif; font-size:13px; font-weight:600;
+    background:var(--panel2); color:var(--cream); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; cursor:pointer; transition:.15s; }
+  .seg button{ padding:6px 10px; font-size:12px; }
+  button:hover{ border-color:var(--brass); color:var(--brass); }
+  button.active{ background:var(--brass); color:#1a140a; border-color:var(--brass); }
+  .status{ background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 20px; margin-bottom:10px; font-size:14px; text-align:center; min-width:280px; line-height:1.5; }
+  .status b{ color:var(--brass); }
+  .steps{ display:flex; gap:8px; margin-bottom:14px; align-items:center; }
+  .steps .pip{ width:16px; height:16px; border-radius:50%; background:var(--panel2); border:1px solid var(--line); }
+  .steps .pip.used{ background:var(--brass); border-color:var(--brass); }
+  .endTurnBtn{ background:var(--panel2); }
+  .choicePanel{ display:none; gap:8px; margin-bottom:12px; }
+  .choicePanel.show{ display:flex; }
+  .board-wrap{ background:linear-gradient(160deg, color-mix(in srgb, var(--wood) 82%, #000 10%), color-mix(in srgb, var(--wood) 115%, #fff 6%));
+    border:1px solid color-mix(in srgb, var(--brass) 45%, var(--line)); border-radius:18px;
+    padding:14px; max-width:100%; box-shadow:0 20px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06); }
+  svg{ display:block; touch-action:manipulation; max-width:100%; height:auto; }
+  .cellbg{ fill:var(--cell); stroke:var(--bg); stroke-width:1; }
+  .cellbg.trap{ fill:var(--trap); }
+  .cellbg.movetarget{ fill:color-mix(in srgb, var(--highlight) 40%, var(--cell)); cursor:pointer; }
+  .cellbg.movetarget:hover{ fill:color-mix(in srgb, var(--highlight) 60%, var(--cell)); }
+  .cellbg.pushtarget{ fill:color-mix(in srgb, var(--pushmark) 45%, var(--cell)); cursor:pointer; }
+  .cellbg.pushtarget:hover{ fill:color-mix(in srgb, var(--pushmark) 65%, var(--cell)); }
+  .cellbg.pulltarget{ fill:color-mix(in srgb, var(--pullmark) 45%, var(--cell)); cursor:pointer; }
+  .cellbg.pulltarget:hover{ fill:color-mix(in srgb, var(--pullmark) 65%, var(--cell)); }
+  .piece{ cursor:pointer; }
+  .piece.gold circle.body{ fill:var(--gold-p); stroke:var(--gold-p-stroke); stroke-width:1.5; }
+  .piece.silver circle.body{ fill:var(--silver-p); stroke:var(--silver-p-stroke); stroke-width:1.5; }
+  .piece.selected circle.body{ stroke:var(--highlight); stroke-width:3; }
+  .piece.frozen circle.body{ opacity:.55; }
+  .piece text{ font-family:'Fraunces',serif; font-weight:700; text-anchor:middle; dominant-baseline:central; pointer-events:none; font-size:15px; }
+  .piece.gold text{ fill:#3a2a08; }
+  .piece.silver text{ fill:#1c2226; }
+  .legend{ display:flex; gap:18px; margin-top:14px; font-size:13px; color:var(--cream-dim); align-items:center; flex-wrap:wrap; justify-content:center; }
+  .dot{ width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:-2px; border:1px solid var(--line); }
+  .note{ max-width:500px; font-size:12px; color:var(--cream-dim); text-align:center; margin-top:14px; line-height:1.7; }
+  .footer-links{ margin-top:18px; text-align:center; }
+  .footer-links a{ color:var(--brass-dim); text-decoration:none; font-size:12px; }
+  .footer-links a:hover{ color:var(--brass); }
+  .credit{ font-size:11px; color:var(--cream-dim); opacity:.7; margin-top:6px; }
+
+  .modal-overlay{ position:fixed; inset:0; background:rgba(10,14,11,.72); display:flex; align-items:center; justify-content:center; z-index:50; opacity:0; pointer-events:none; transition:opacity .25s; }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{ background:var(--panel); border:1px solid var(--brass); border-radius:18px; padding:36px 40px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5); transform:scale(.9); transition:transform .25s; }
+  .modal-overlay.show .modal-box{ transform:scale(1); }
+  .modal-box .big{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(24px,7vw,38px); color:var(--brass); margin-bottom:18px; }
+  .modal-box button{ margin-top:6px; }
+</style>
+</head>
+<body>
+
+<h1 id="title">アリマー</h1>
+<div class="sub" id="subtitle">ARIMAA · PUSH &amp; PULL STRATEGY</div>
+
+<div class="topbar">
+  <button id="langBtn">EN</button>
+  <button id="themeBtn">🌙</button>
+  <button id="modeAI" class="active">vs AI</button>
+  <button id="mode2P">2人プレイ</button>
+  <button id="resetBtn">リセット</button>
+</div>
+
+<div class="settings" id="settingsAI">
+  <div class="group">
+    <div class="label" id="firstLabel">陣営</div>
+    <div class="seg">
+      <button id="firstGold" class="active">ゴールド（先手）</button>
+      <button id="firstSilver">シルバー（後手）</button>
+      <button id="firstRandom">ランダム</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="label" id="aiLabel">AIの強さ</div>
+    <div class="seg">
+      <button id="lv1">1</button><button id="lv2">2</button><button id="lv3" class="active">3</button><button id="lv4">4</button><button id="lv5">5</button>
+    </div>
+  </div>
+</div>
+
+<div class="status" id="status">あなたの番です（ゴールド）</div>
+<div class="steps" id="stepsRow">
+  <span id="stepsLabel">ステップ:</span>
+  <span class="pip" id="pip0"></span><span class="pip" id="pip1"></span><span class="pip" id="pip2"></span><span class="pip" id="pip3"></span>
+  <button id="endTurnBtn" class="endTurnBtn">手番終了</button>
+</div>
+<div class="choicePanel" id="choicePanel">
+  <button id="choiceMoveBtn">移動のみ</button>
+  <button id="choicePullBtn">引く (Pull)</button>
+</div>
+
+<div class="board-wrap"><svg id="board" width="480" height="480" viewBox="0 0 480 480"></svg></div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--gold-p)"></span><span id="legGold">ゴールド</span></span>
+  <span><span class="dot" style="background:var(--silver-p)"></span><span id="legSilver">シルバー</span></span>
+</div>
+
+<div class="note" id="ruleNote">
+  8x8盤・4つのトラップマス。強い駒は弱い相手の駒を押す/引くことができます（各2ステップ消費）。弱い駒は隣接する強い敵駒があると「フリーズ」して動けません（味方が隣接していれば解除）。トラップに乗った駒は、隣に味方がいないと即座に取り除かれます。兎が相手側の最奥列に到達するか、相手の兎を全滅させれば勝利。
+</div>
+<div class="credit">Arimaa © Omar Syed / arimaa.com — Arimaa Public Licenseに基づく非営利・個人利用として実装</div>
+
+<div class="footer-links"><a href="https://mossgreen5273.github.io/mossgreen/">← Mossgreen Games</a></div>
+
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box">
+    <div class="big" id="winModalText"></div>
+    <button id="winModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const T = {
+  ja:{ title:"アリマー", sub:"ARIMAA · PUSH &amp; PULL STRATEGY", vsAI:"vs AI", p2:"2人プレイ", reset:"リセット",
+       yourTurn:"あなたの番です（ゴールド）", yourTurnS:"あなたの番です（シルバー）", aiTurn:"相手の番です…",
+       p2gold:"ゴールドの番です", p2silver:"シルバーの番です",
+       winYou:"あなたの勝ちです！", winAI:"相手の勝ちです", winGold:"ゴールドの勝ちです！", winSilver:"シルバーの勝ちです！",
+       legGold:"ゴールド", legSilver:"シルバー",
+       firstLabel:"陣営", firstGold:"ゴールド（先手）", firstSilver:"シルバー（後手）", firstRandom:"ランダム",
+       aiLabel:"AIの強さ", close:"閉じる", stepsLabel:"ステップ:", endTurn:"手番終了",
+       moveOnly:"移動のみ", pull:"引く (Pull)",
+       ruleNote:'8x8盤・4つのトラップマス。強い駒は弱い相手の駒を押す/引くことができます（各2ステップ消費）。弱い駒は隣接する強い敵駒があると「フリーズ」して動けません（味方が隣接していれば解除）。トラップに乗った駒は、隣に味方がいないと即座に取り除かれます。兎が相手側の最奥列に到達するか、相手の兎を全滅させれば勝利。',
+       noMoves:"合法手がありません。あなたの負けです。"
+     },
+  en:{ title:"Arimaa", sub:"ARIMAA · PUSH & PULL STRATEGY", vsAI:"vs AI", p2:"2 Player", reset:"Reset",
+       yourTurn:"Your turn (Gold)", yourTurnS:"Your turn (Silver)", aiTurn:"Opponent is thinking…",
+       p2gold:"Gold's turn", p2silver:"Silver's turn",
+       winYou:"You win!", winAI:"Opponent wins.", winGold:"Gold wins!", winSilver:"Silver wins!",
+       legGold:"Gold", legSilver:"Silver",
+       firstLabel:"Side", firstGold:"Gold (first)", firstSilver:"Silver (second)", firstRandom:"Random",
+       aiLabel:"AI strength", close:"Close", stepsLabel:"Steps:", endTurn:"End turn",
+       moveOnly:"Move only", pull:"Pull",
+       ruleNote:"8x8 board with 4 trap squares. A stronger piece may push or pull an adjacent weaker enemy piece (2 steps each). A weaker piece adjacent to a stronger enemy is frozen unless a friendly piece is also adjacent. A piece on a trap with no friendly piece adjacent is removed immediately. Get a rabbit to the far row, or eliminate all enemy rabbits, to win.",
+       noMoves:"No legal moves. You lose."
+     }
+};
+let lang='ja';
+let firstMove='gold', aiLevel=3;
+const AI_LEVELS = {
+  1:{rand:10, capW:5, safeW:1, advW:0.3},
+  2:{rand:6, capW:8, safeW:2, advW:0.5},
+  3:{rand:3, capW:14, safeW:4, advW:0.8},
+  4:{rand:1, capW:22, safeW:7, advW:1.2},
+  5:{rand:0.3, capW:32, safeW:11, advW:1.6}
+};
+
+const N=8;
+const RANK = {rabbit:1, cat:2, dog:3, horse:4, camel:5, elephant:6};
+const KANJI = {rabbit:'兎', cat:'猫', dog:'犬', horse:'馬', camel:'駱', elephant:'象'};
+const LETTER = {rabbit:'R', cat:'C', dog:'D', horse:'H', camel:'M', elephant:'E'};
+const TRAPS = [[2,2],[2,5],[5,2],[5,5]];
+function isTrap(r,c){ return TRAPS.some(t=>t[0]===r&&t[1]===c); }
+function inb(r,c){ return r>=0&&r<N&&c>=0&&c<N; }
+const DIRS=[[-1,0],[1,0],[0,-1],[0,1]];
+
+let board; // board[r][c] = {owner,type} | null
+let turn, mode, gameOver, stepsLeft, selected, pendingPullOption;
+
+function startSetup(){
+  board=[];
+  for(let r=0;r<N;r++) board.push(new Array(N).fill(null));
+  const backSilver = ['horse','cat','dog','camel','elephant','dog','cat','horse'];
+  for(let c=0;c<N;c++){ board[0][c]={owner:'silver',type:backSilver[c]}; board[1][c]={owner:'silver',type:'rabbit'}; }
+  const backGold = ['horse','cat','dog','camel','elephant','dog','cat','horse'];
+  for(let c=0;c<N;c++){ board[7][c]={owner:'gold',type:backGold[c]}; board[6][c]={owner:'gold',type:'rabbit'}; }
+}
+
+function initGame(){
+  startSetup();
+  let human='gold';
+  if(firstMove==='silver') human='silver';
+  else if(firstMove==='random') human = Math.random()<0.5?'gold':'silver';
+  window.__humanSide = human;
+  turn='gold'; // gold always moves first per the rules
+  stepsLeft=4; selected=null; gameOver=false; pendingPullOption=null;
+  hideWinModal(); hideChoicePanel();
+  render(); updateStatus();
+  if(mode==='ai' && turn!==window.__humanSide){ setTimeout(aiTurnStep,600); }
+}
+
+function isHumanTurn(){ return mode==='2p' || turn===window.__humanSide; }
+
+function updateStatus(){
+  if(gameOver) return;
+  const s=document.getElementById('status');
+  if(mode==='ai'){
+    s.textContent = isHumanTurn() ? (turn==='gold'? T[lang].yourTurn : T[lang].yourTurnS) : T[lang].aiTurn;
+  } else {
+    s.textContent = turn==='gold'? T[lang].p2gold : T[lang].p2silver;
+  }
+  for(let i=0;i<4;i++){
+    document.getElementById('pip'+i).classList.toggle('used', i>=stepsLeft);
+  }
+}
+
+// ---------- rules helpers ----------
+function isFrozen(r,c){
+  const p = board[r][c];
+  if(!p) return false;
+  let strongerAdj=false, ownAdj=false;
+  for(const [dr,dc] of DIRS){
+    const nr=r+dr,nc=c+dc;
+    if(!inb(nr,nc)) continue;
+    const q = board[nr][nc];
+    if(!q) continue;
+    if(q.owner===p.owner) ownAdj=true;
+    else if(RANK[q.type]>RANK[p.type]) strongerAdj=true;
+  }
+  return strongerAdj && !ownAdj;
+}
+
+function canStepTo(owner,type,r,c,nr,nc){
+  if(!inb(nr,nc) || board[nr][nc]) return false;
+  if(type==='rabbit'){
+    const backwardDir = owner==='gold' ? 1 : -1;
+    if(nr-r === backwardDir) return false;
+  }
+  return true;
+}
+
+function simpleStepsFor(r,c){
+  const p = board[r][c];
+  if(!p || isFrozen(r,c)) return [];
+  const out=[];
+  for(const [dr,dc] of DIRS){
+    const nr=r+dr,nc=c+dc;
+    if(canStepTo(p.owner,p.type,r,c,nr,nc)) out.push({r:nr,c:nc});
+  }
+  return out;
+}
+
+function pushOptionsFor(r,c){
+  // r,c = attacker (must not be frozen). Returns list of {enemyR,enemyC,escR,escC}
+  const p = board[r][c];
+  if(!p || isFrozen(r,c)) return [];
+  const out=[];
+  for(const [dr,dc] of DIRS){
+    const er=r+dr, ec=c+dc;
+    if(!inb(er,ec)) continue;
+    const e = board[er][ec];
+    if(!e || e.owner===p.owner) continue;
+    if(RANK[p.type] <= RANK[e.type]) continue;
+    for(const [dr2,dc2] of DIRS){
+      const esR=er+dr2, esC=ec+dc2;
+      if(esR===r && esC===c) continue;
+      if(inb(esR,esC) && !board[esR][esC]) out.push({enemyR:er,enemyC:ec,escR:esR,escC:esC});
+    }
+  }
+  return out;
+}
+
+function pullOptionsFor(r,c){
+  const p = board[r][c];
+  if(!p || isFrozen(r,c)) return [];
+  const out=[];
+  for(const [dr,dc] of DIRS){
+    const er=r+dr, ec=c+dc;
+    if(!inb(er,ec)) continue;
+    const e = board[er][ec];
+    if(!e || e.owner===p.owner) continue;
+    if(RANK[p.type] <= RANK[e.type]) continue;
+    for(const [dr2,dc2] of DIRS){
+      const retR=r+dr2, retC=c+dc2;
+      if(retR===er && retC===ec) continue;
+      if(inb(retR,retC) && !board[retR][retC]) out.push({enemyR:er,enemyC:ec,retR,retC});
+    }
+  }
+  return out;
+}
+
+function applyTrapChecks(){
+  TRAPS.forEach(([tr,tc])=>{
+    const p = board[tr][tc];
+    if(!p) return;
+    let supported=false;
+    for(const [dr,dc] of DIRS){
+      const nr=tr+dr,nc=tc+dc;
+      if(inb(nr,nc) && board[nr][nc] && board[nr][nc].owner===p.owner) supported=true;
+    }
+    if(!supported) board[tr][tc]=null;
+  });
+}
+
+function doStep(r,c,nr,nc){
+  board[nr][nc]=board[r][c];
+  board[r][c]=null;
+  stepsLeft--;
+  applyTrapChecks();
+}
+
+// ---------- interaction ----------
+function hideChoicePanel(){ document.getElementById('choicePanel').classList.remove('show'); }
+function showChoicePanel(onMove,onPull){
+  const panel = document.getElementById('choicePanel');
+  panel.classList.add('show');
+  document.getElementById('choiceMoveBtn').onclick=()=>{ hideChoicePanel(); onMove(); };
+  document.getElementById('choicePullBtn').onclick=()=>{ hideChoicePanel(); onPull(); };
+}
+
+function onPieceClick(r,c){
+  if(gameOver || !isHumanTurn() || stepsLeft<=0) return;
+  const p = board[r][c];
+  if(!p) return;
+  if(p.owner!==turn){ return; }
+  if(isFrozen(r,c)){ selected=null; render(); return; }
+  selected={r,c};
+  render();
+}
+
+function onCellClick(nr,nc){
+  if(gameOver || !isHumanTurn() || stepsLeft<=0 || !selected) return;
+  const {r,c} = selected;
+  const p = board[r][c];
+  if(!p){ selected=null; return; }
+
+  const moves = simpleStepsFor(r,c);
+  const pushes = pushOptionsFor(r,c);
+  const pulls = pullOptionsFor(r,c);
+
+  const isMoveTarget = moves.some(m=>m.r===nr&&m.c===nc);
+  const pushHere = pushes.find(ps=>ps.escR===nr && ps.escC===nc);
+  const pullHere = pulls.find(pl=>pl.retR===nr && pl.retC===nc);
+
+  if(pushHere){
+    // execute push: enemy -> escape cell, attacker -> enemy's old cell
+    if(stepsLeft<2) return;
+    doStep(pushHere.enemyR,pushHere.enemyC,pushHere.escR,pushHere.escC);
+    doStep(r,c,pushHere.enemyR,pushHere.enemyC);
+    selected={r:pushHere.enemyR,c:pushHere.enemyC};
+    afterStep();
+    return;
+  }
+
+  if(isMoveTarget && pullHere){
+    showChoicePanel(
+      ()=>{ doStep(r,c,nr,nc); selected={r:nr,c:nc}; afterStep(); },
+      ()=>{
+        if(stepsLeft<2) return;
+        doStep(r,c,nr,nc);
+        doStep(pullHere.enemyR,pullHere.enemyC,r,c);
+        selected={r:nr,c:nc};
+        afterStep();
+      }
+    );
+    return;
+  }
+
+  if(isMoveTarget){
+    doStep(r,c,nr,nc);
+    selected={r:nr,c:nc};
+    afterStep();
+    return;
+  }
+
+  if(pullHere){
+    if(stepsLeft<2) return;
+    doStep(r,c,nr,nc);
+    doStep(pullHere.enemyR,pullHere.enemyC,r,c);
+    selected={r:nr,c:nc};
+    afterStep();
+    return;
+  }
+}
+
+function afterStep(){
+  render();
+  const w = checkWin();
+  if(w){ finishGame(w); return; }
+  if(stepsLeft<=0){ endTurn(); return; }
+  updateStatus();
+}
+
+function endTurn(){
+  selected=null; hideChoicePanel();
+  render();
+  const w = checkWin();
+  if(w){ finishGame(w); return; }
+  turn = turn==='gold'?'silver':'gold';
+  stepsLeft=4;
+  updateStatus();
+  if(!hasAnyLegalAction(turn)){ finishGame(turn==='gold'?'silver':'gold'); return; }
+  if(mode==='ai' && !isHumanTurn() && !gameOver){ setTimeout(aiTurnStep,600); }
+}
+
+function hasAnyLegalAction(owner){
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const p = board[r][c];
+    if(p && p.owner===owner){
+      if(simpleStepsFor(r,c).length || pushOptionsFor(r,c).length || pullOptionsFor(r,c).length) return true;
+    }
+  }
+  return false;
+}
+
+function checkWin(){
+  for(let c=0;c<N;c++){
+    if(board[0][c] && board[0][c].owner==='gold' && board[0][c].type==='rabbit') return 'gold';
+    if(board[N-1][c] && board[N-1][c].owner==='silver' && board[N-1][c].type==='rabbit') return 'silver';
+  }
+  let goldRabbits=0, silverRabbits=0;
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const p=board[r][c];
+    if(p && p.type==='rabbit'){ if(p.owner==='gold') goldRabbits++; else silverRabbits++; }
+  }
+  if(goldRabbits===0 && silverRabbits===0) return turn;
+  if(silverRabbits===0) return 'gold';
+  if(goldRabbits===0) return 'silver';
+  return null;
+}
+
+function finishGame(winner){
+  gameOver=true;
+  let text;
+  if(mode==='ai') text = winner===window.__humanSide ? T[lang].winYou : T[lang].winAI;
+  else text = winner==='gold'? T[lang].winGold : T[lang].winSilver;
+  document.getElementById('status').textContent = text;
+  showWinModal(text);
+}
+function showWinModal(text){
+  document.getElementById('winModalText').textContent = text;
+  document.getElementById('winModal').classList.add('show');
+}
+function hideWinModal(){ document.getElementById('winModal').classList.remove('show'); }
+
+// ---------- AI ----------
+function boardValue(owner){
+  let val=0;
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const p=board[r][c];
+    if(!p) continue;
+    const sign = p.owner===owner ? 1 : -1;
+    val += sign * (RANK[p.type]*3 + (p.type==='rabbit'?2:0));
+    if(p.type==='rabbit'){
+      const dist = p.owner==='gold' ? r : (N-1-r);
+      val += sign * (N-1-dist) * 0.4;
+    }
+  }
+  return val;
+}
+
+function aiTurnStep(){
+  if(gameOver || isHumanTurn()) return;
+  const lvl = AI_LEVELS[aiLevel];
+  let guard=0;
+  function pickAndExecute(){
+    guard++;
+    if(guard>8 || gameOver || stepsLeft<=0) { finalizeAiTurn(); return; }
+    const owner=turn;
+    const candidates=[]; // {exec(), cost, score}
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+      const p=board[r][c];
+      if(!p || p.owner!==owner) continue;
+      simpleStepsFor(r,c).forEach(m=>{
+        candidates.push({cost:1, r,c,m, kind:'move'});
+      });
+      if(stepsLeft>=2){
+        pushOptionsFor(r,c).forEach(ps=>candidates.push({cost:2, r,c, ps, kind:'push'}));
+        pullOptionsFor(r,c).forEach(pl=>candidates.push({cost:2, r,c, pl, kind:'pull'}));
+      }
+    }
+    if(candidates.length===0){ finalizeAiTurn(); return; }
+    let best=null, bestScore=-Infinity;
+    for(const cand of candidates){
+      if(cand.cost>stepsLeft) continue;
+      const snapshot = JSON.stringify(board);
+      let scoreDelta=0;
+      if(cand.kind==='move'){
+        doStep(cand.r,cand.c,cand.m.r,cand.m.c);
+      } else if(cand.kind==='push'){
+        doStep(cand.ps.enemyR,cand.ps.enemyC,cand.ps.escR,cand.ps.escC);
+        doStep(cand.r,cand.c,cand.ps.enemyR,cand.ps.enemyC);
+      } else {
+        doStep(cand.r,cand.c,cand.pl.retR,cand.pl.retC);
+        doStep(cand.pl.enemyR,cand.pl.enemyC,cand.r,cand.c);
+      }
+      const val = boardValue(owner) + Math.random()*lvl.rand;
+      board = JSON.parse(snapshot);
+      if(val>bestScore){ bestScore=val; best=cand; }
+    }
+    if(!best){ finalizeAiTurn(); return; }
+    if(best.kind==='move'){
+      doStep(best.r,best.c,best.m.r,best.m.c);
+    } else if(best.kind==='push'){
+      doStep(best.ps.enemyR,best.ps.enemyC,best.ps.escR,best.ps.escC);
+      doStep(best.r,best.c,best.ps.enemyR,best.ps.enemyC);
+    } else {
+      doStep(best.r,best.c,best.pl.retR,best.pl.retC);
+      doStep(best.pl.enemyR,best.pl.enemyC,best.r,best.c);
+    }
+    render();
+    const w = checkWin();
+    if(w){ finishGame(w); return; }
+    if(stepsLeft<=0){ finalizeAiTurn(); return; }
+    setTimeout(pickAndExecute, 400);
+  }
+  pickAndExecute();
+}
+
+function finalizeAiTurn(){
+  render();
+  const w = checkWin();
+  if(w){ finishGame(w); return; }
+  turn = turn==='gold'?'silver':'gold';
+  stepsLeft=4;
+  selected=null;
+  updateStatus();
+  if(!hasAnyLegalAction(turn)){ finishGame(turn==='gold'?'silver':'gold'); return; }
+  render();
+  if(mode==='ai' && !isHumanTurn() && !gameOver){ setTimeout(aiTurnStep,600); }
+}
+
+// ---------- render ----------
+const S=54, O=10;
+function px(c){ return O + c*S + S/2; }
+function py(r){ return O + r*S + S/2; }
+
+function render(){
+  const svg = document.getElementById('board');
+  svg.innerHTML='';
+  const sel = selected;
+  const moves = sel ? simpleStepsFor(sel.r,sel.c) : [];
+  const pushes = sel ? pushOptionsFor(sel.r,sel.c) : [];
+  const pulls = sel ? pullOptionsFor(sel.r,sel.c) : [];
+
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',O+c*S); rect.setAttribute('y',O+r*S);
+    rect.setAttribute('width',S); rect.setAttribute('height',S);
+    let cls='cellbg'+(isTrap(r,c)?' trap':'');
+    if(moves.some(m=>m.r===r&&m.c===c)) cls+=' movetarget';
+    if(pushes.some(ps=>ps.escR===r&&ps.escC===c)) cls+=' pushtarget';
+    if(pulls.some(pl=>pl.retR===r&&pl.retC===c) && !moves.some(m=>m.r===r&&m.c===c)) cls+=' pulltarget';
+    rect.setAttribute('class',cls);
+    rect.addEventListener('click',()=>onCellClick(r,c));
+    svg.appendChild(rect);
+  }
+
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const p = board[r][c];
+    if(!p) continue;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    let cls='piece '+p.owner;
+    if(sel && sel.r===r && sel.c===c) cls+=' selected';
+    if(isFrozen(r,c)) cls+=' frozen';
+    g.setAttribute('class',cls);
+    const body = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    body.setAttribute('class','body');
+    body.setAttribute('cx',px(c)); body.setAttribute('cy',py(r)); body.setAttribute('r',22);
+    g.appendChild(body);
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',px(c)); t.setAttribute('y',py(r));
+    t.textContent = lang==='ja' ? KANJI[p.type] : LETTER[p.type];
+    g.appendChild(t);
+    g.addEventListener('click',(e)=>{ e.stopPropagation(); onPieceClick(r,c); });
+    svg.appendChild(g);
+  }
+}
+
+// ---------- UI wiring ----------
+function setLang(l){
+  lang=l;
+  document.getElementById('langBtn').textContent = l==='ja'?'EN':'JA';
+  document.getElementById('title').textContent = T[l].title;
+  document.getElementById('modeAI').textContent = T[l].vsAI;
+  document.getElementById('mode2P').textContent = T[l].p2;
+  document.getElementById('resetBtn').textContent = T[l].reset;
+  document.getElementById('legGold').textContent = T[l].legGold;
+  document.getElementById('legSilver').textContent = T[l].legSilver;
+  document.getElementById('firstLabel').textContent = T[l].firstLabel;
+  document.getElementById('firstGold').textContent = T[l].firstGold;
+  document.getElementById('firstSilver').textContent = T[l].firstSilver;
+  document.getElementById('firstRandom').textContent = T[l].firstRandom;
+  document.getElementById('aiLabel').textContent = T[l].aiLabel;
+  document.getElementById('winModalClose').textContent = T[l].close;
+  document.getElementById('ruleNote').textContent = T[l].ruleNote;
+  document.getElementById('stepsLabel').textContent = T[l].stepsLabel;
+  document.getElementById('endTurnBtn').textContent = T[l].endTurn;
+  document.getElementById('choiceMoveBtn').textContent = T[l].moveOnly;
+  document.getElementById('choicePullBtn').textContent = T[l].pull;
+  document.documentElement.lang = l;
+  render();
+  updateStatus();
+}
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeBtn').textContent = t==='light'?'☀️':'🌙';
+}
+
+document.getElementById('langBtn').addEventListener('click',()=>setLang(lang==='ja'?'en':'ja'));
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur = document.documentElement.dataset.theme;
+  setTheme(cur==='light'?'dark':'light');
+});
+document.getElementById('modeAI').addEventListener('click',()=>{
+  mode='ai';
+  document.getElementById('modeAI').classList.add('active');
+  document.getElementById('mode2P').classList.remove('active');
+  document.getElementById('settingsAI').style.display='flex';
+  initGame();
+});
+document.getElementById('mode2P').addEventListener('click',()=>{
+  mode='2p';
+  document.getElementById('mode2P').classList.add('active');
+  document.getElementById('modeAI').classList.remove('active');
+  document.getElementById('settingsAI').style.display='none';
+  initGame();
+});
+document.getElementById('resetBtn').addEventListener('click',initGame);
+document.getElementById('winModalClose').addEventListener('click',hideWinModal);
+document.getElementById('endTurnBtn').addEventListener('click',()=>{
+  if(gameOver || !isHumanTurn() || stepsLeft>=4) return;
+  endTurn();
+});
+
+function wireSeg(ids,onPick){
+  ids.forEach(id=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      ids.forEach(i=>document.getElementById(i).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      onPick(id);
+    });
+  });
+}
+wireSeg(['firstGold','firstSilver','firstRandom'], id=>{
+  firstMove = id==='firstGold'?'gold':id==='firstSilver'?'silver':'random';
+  initGame();
+});
+wireSeg(['lv1','lv2','lv3','lv4','lv5'], id=>{ aiLevel = parseInt(id.slice(2),10); });
+
+mode='ai';
+setTheme('dark');
+initGame();
+})();
+</script>
+</body>
+</html>

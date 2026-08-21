@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>闘獣棋 | Doushouqi — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1310;
+    --panel:#162019;
+    --panel2:#1c2820;
+    --line:#3a4c40;
+    --brass:#c19a5b;
+    --brass-dim:#8a7248;
+    --cream:#efe8d8;
+    --cream-dim:#a9b6ac;
+    --land:#4a3826;
+    --land2:#5a442e50;
+    --river:#2e5d78;
+    --trap-r:#7a4436;
+    --trap-b:#3a5878;
+    --den-r:#8a4c30;
+    --den-b:#3a5a86;
+    --sel:#f0d27a;
+  }
+  html[data-theme="light"]{
+    --bg:#f4efe2;
+    --panel:#ffffff;
+    --panel2:#eee6d3;
+    --line:#d8cbab;
+    --brass:#9c7530;
+    --brass-dim:#b89a5e;
+    --cream:#2c2418;
+    --cream-dim:#6c6250;
+    --land:#e4d8bc;
+    --river:#9dc1d6;
+    --trap-r:#e8b7a8;
+    --trap-b:#a9c4de;
+    --den-r:#e39872;
+    --den-b:#88a9d0;
+    --sel:#c8930f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:
+      radial-gradient(ellipse at 20% -10%, color-mix(in srgb, var(--panel2) 60%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 110%, color-mix(in srgb, var(--panel2) 50%, transparent) 0%, transparent 55%),
+      var(--bg);
+    color:var(--cream);
+    font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 12px 60px;
+    overflow-x:hidden;
+    transition:background .2s, color .2s;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,5vw,34px);
+    margin:6px 0 2px; letter-spacing:.01em; text-align:center;
+  }
+  .sub{
+    color:var(--brass); font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+    margin-bottom:18px; text-align:center;
+  }
+  .topbar{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px; }
+  .settings{
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 16px;
+  }
+  .settings .group{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .settings .label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass-dim); }
+  .seg{ display:flex; gap:4px; }
+  button{
+    font-family:'Instrument Sans',sans-serif; font-size:13px; font-weight:600;
+    background:var(--panel2); color:var(--cream); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; cursor:pointer; transition:.15s;
+  }
+  .seg button{ padding:6px 10px; font-size:12px; }
+  button:hover{ border-color:var(--brass); color:var(--brass); }
+  button.active{ background:var(--brass); color:#1a140a; border-color:var(--brass); }
+  .status{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 20px; margin-bottom:16px; font-size:15px; text-align:center;
+    min-width:260px;
+  }
+  .board-wrap{
+    background:linear-gradient(160deg, color-mix(in srgb, var(--land) 82%, #000 10%), color-mix(in srgb, var(--land) 115%, #fff 6%));
+    border:1px solid color-mix(in srgb, var(--brass) 45%, var(--line));
+    border-radius:18px;
+    padding:14px; box-shadow:0 20px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06);
+    max-width:100%;
+  }
+  svg{ display:block; touch-action:manipulation; max-width:100%; height:auto; }
+  .cell{ stroke:var(--bg); stroke-width:1; }
+  .cell.land{ fill:var(--land); }
+  .cell.river{ fill:var(--river); }
+  .cell.trapR{ fill:var(--trap-r); }
+  .cell.trapB{ fill:var(--trap-b); }
+  .cell.denR{ fill:var(--den-r); }
+  .cell.denB{ fill:var(--den-b); }
+  .cell.movable{ cursor:pointer; }
+  .cell.movable::after{ content:''; }
+  .moveMark{ fill:none; stroke:var(--sel); stroke-width:2.5; opacity:.9; pointer-events:none; }
+  .piece{ cursor:pointer; }
+  .piece.red circle{ fill:#8a3325; stroke:#3d150f; stroke-width:1.5; }
+  .piece.black circle{ fill:#2a2622; stroke:#0e0c0a; stroke-width:1.5; }
+  .piece text{ fill:#efe8d8; font-family:'Fraunces',serif; font-weight:700; text-anchor:middle; dominant-baseline:central; pointer-events:none; }
+  .piece.selected circle{ stroke:var(--sel); stroke-width:3; }
+  .legend{ margin-top:16px; font-size:12px; color:var(--cream-dim); text-align:center; max-width:480px; line-height:1.7; }
+  .legend b{ color:var(--brass); }
+  .footer-links{ margin-top:20px; }
+  .footer-links a{ color:var(--brass-dim); text-decoration:none; font-size:12px; }
+  .footer-links a:hover{ color:var(--brass); }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(10,14,11,.72);
+    display:flex; align-items:center; justify-content:center; z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    background:var(--panel); border:1px solid var(--brass); border-radius:18px;
+    padding:36px 40px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    transform:scale(.9); transition:transform .25s;
+  }
+  .modal-overlay.show .modal-box{ transform:scale(1); }
+  .modal-box .big{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(24px,7vw,38px);
+    color:var(--brass); margin-bottom:18px;
+  }
+  .modal-box button{ margin-top:6px; }
+</style>
+</head>
+<body>
+
+<h1 id="title">闘獣棋</h1>
+<div class="sub" id="subtitle">DOU SHOU QI · JUNGLE ANIMAL CHESS</div>
+
+<div class="topbar">
+  <button id="langBtn">EN</button>
+  <button id="themeBtn">🌙</button>
+  <button id="modeAI" class="active">vs AI</button>
+  <button id="mode2P">2人プレイ</button>
+  <button id="resetBtn">リセット</button>
+</div>
+
+<div class="settings" id="settingsAI">
+  <div class="group">
+    <div class="label" id="firstLabel">先攻・後攻</div>
+    <div class="seg">
+      <button id="firstYou" class="active">先手</button>
+      <button id="firstAI">後手</button>
+      <button id="firstRandom">ランダム</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="label" id="aiLabel">AIの強さ</div>
+    <div class="seg">
+      <button id="lv1">1</button>
+      <button id="lv2">2</button>
+      <button id="lv3" class="active">3</button>
+      <button id="lv4">4</button>
+      <button id="lv5">5</button>
+    </div>
+  </div>
+</div>
+
+<div class="status" id="status">あなたの番です（紅）</div>
+
+<div class="board-wrap"><svg id="board" width="420" height="540" viewBox="0 0 420 540"></svg></div>
+
+<div class="legend" id="legend">
+  強さ：象 &gt; 獅 &gt; 虎 &gt; 豹 &gt; 狼 &gt; 狗 &gt; 猫 &gt; 鼠（<b>鼠だけが象を取れます</b>）。
+  河には鼠だけが入れます。獅・虎は河を飛び越せます（河に鼠がいると阻止）。
+  相手の「落とし穴」に入った駒は誰にでも取られます。相手の獣穴に自分の駒を入れると勝利です。
+</div>
+
+<div class="footer-links"><a href="https://mossgreen5273.github.io/mossgreen/">← Mossgreen Games</a></div>
+
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box">
+    <div class="big" id="winModalText"></div>
+    <button id="winModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const T = {
+  ja:{ title:"闘獣棋", sub:"DOU SHOU QI · JUNGLE ANIMAL CHESS", vsAI:"vs AI", p2:"2人プレイ", reset:"リセット",
+       yourTurn:"あなたの番です（紅）", aiTurn:"相手（黒）の番です…",
+       p2R:"紅の番です", p2B:"黒の番です",
+       winYouDen:"あなたの勝ち！（相手の獣穴に到達）", winAIDen:"相手（黒）の勝ち（獣穴到達）",
+       winYouCap:"あなたの勝ち！（全駒撃破）", winAICap:"相手（黒）の勝ち（全駒撃破）",
+       winRedDen:"紅の勝ち！（獣穴到達）", winBlackDen:"黒の勝ち！（獣穴到達）",
+       winRedCap:"紅の勝ち！（全駒撃破）", winBlackCap:"黒の勝ち！（全駒撃破）",
+       legend:'強さ：象 &gt; 獅 &gt; 虎 &gt; 豹 &gt; 狼 &gt; 狗 &gt; 猫 &gt; 鼠（<b>鼠だけが象を取れます</b>）。河には鼠だけが入れます。獅・虎は河を飛び越せます（河に鼠がいると阻止）。相手の「落とし穴」に入った駒は誰にでも取られます。相手の獣穴に自分の駒を入れると勝利です。',
+       firstLabel:"先攻・後攻", firstYou:"先手", firstAI:"後手", firstRandom:"ランダム",
+       aiLabel:"AIの強さ", close:"閉じる"},
+  en:{ title:"Doushouqi", sub:"DOU SHOU QI · JUNGLE ANIMAL CHESS", vsAI:"vs AI", p2:"2 Player", reset:"Reset",
+       yourTurn:"Your move (Red)", aiTurn:"Opponent (Black) is thinking…",
+       p2R:"Red's turn", p2B:"Black's turn",
+       winYouDen:"You win! (reached the den)", winAIDen:"Black wins (reached the den)",
+       winYouCap:"You win! (all pieces captured)", winAICap:"Black wins (all pieces captured)",
+       winRedDen:"Red wins! (reached the den)", winBlackDen:"Black wins! (reached the den)",
+       winRedCap:"Red wins! (all pieces captured)", winBlackCap:"Black wins! (all pieces captured)",
+       legend:'Rank: Elephant &gt; Lion &gt; Tiger &gt; Leopard &gt; Wolf &gt; Dog &gt; Cat &gt; Rat (<b>only the Rat can capture the Elephant</b>). Only the Rat may enter the river. Lion/Tiger can leap the river (blocked if a Rat sits in the water). A piece on the opponent\'s trap can be captured by anything. Enter the opponent\'s den to win.',
+       firstLabel:"Who goes first", firstYou:"You", firstAI:"Opponent", firstRandom:"Random",
+       aiLabel:"AI strength", close:"Close"}
+};
+let lang='ja';
+let firstMove = 'you'; // 'you' | 'ai' | 'random'
+let aiLevel = 3; // 1-5
+const AI_LEVELS = {
+  1:{capW:2, denW:200, advW:0.1, rand:8},
+  2:{capW:5, denW:400, advW:0.2, rand:4},
+  3:{capW:10, denW:1000, advW:0.3, rand:1.5},
+  4:{capW:14, denW:1400, advW:0.4, rand:0.5},
+  5:{capW:18, denW:1800, advW:0.5, rand:0.15}
+};
+
+const RANK = {rat:1,cat:2,dog:3,wolf:4,leopard:5,tiger:6,lion:7,elephant:8};
+const KANJI = {rat:'鼠',cat:'猫',dog:'狗',wolf:'狼',leopard:'豹',tiger:'虎',lion:'獅',elephant:'象'};
+const LETTER = {rat:'R',cat:'C',dog:'D',wolf:'W',leopard:'L',tiger:'T',lion:'N',elephant:'E'};
+
+const W=7,H=9;
+function inb(r,c){ return r>=0&&r<H&&c>=0&&c<W; }
+function isRiver(r,c){ return r>=3&&r<=5 && (c===1||c===2||c===4||c===5); }
+function trapOwner(r,c){
+  if((r===0&&c===2)||(r===0&&c===4)||(r===1&&c===3)) return 'black'; // near black den
+  if((r===8&&c===2)||(r===8&&c===4)||(r===7&&c===3)) return 'red';
+  return null;
+}
+function denOwner(r,c){
+  if(r===0&&c===3) return 'black';
+  if(r===8&&c===3) return 'red';
+  return null;
+}
+
+let grid, turn, mode, selected, gameOver;
+
+function startSetup(){
+  grid = [];
+  for(let r=0;r<H;r++){ grid.push(new Array(W).fill(null)); }
+  const put=(r,c,type,owner)=>{ grid[r][c] = {type,owner}; };
+  // black (top)
+  put(0,0,'tiger','black'); put(0,6,'lion','black');
+  put(1,1,'cat','black');   put(1,5,'dog','black');
+  put(2,0,'elephant','black'); put(2,2,'wolf','black'); put(2,4,'leopard','black'); put(2,6,'rat','black');
+  // red (bottom)
+  put(8,0,'lion','red'); put(8,6,'tiger','red');
+  put(7,1,'dog','red');  put(7,5,'cat','red');
+  put(6,0,'rat','red'); put(6,2,'leopard','red'); put(6,4,'wolf','red'); put(6,6,'elephant','red');
+}
+
+function initGame(){
+  startSetup();
+  let startColor = 'red';
+  if(firstMove==='ai') startColor='black';
+  else if(firstMove==='random') startColor = Math.random()<0.5 ? 'red':'black';
+  turn=startColor; selected=null; gameOver=false;
+  hideWinModal();
+  render(); updateStatus();
+  if(mode==='ai' && turn==='black'){
+    setTimeout(aiMove,550);
+  }
+}
+
+function updateStatus(){
+  if(gameOver) return;
+  const s=document.getElementById('status');
+  if(mode==='ai') s.textContent = turn==='red'? T[lang].yourTurn : T[lang].aiTurn;
+  else s.textContent = turn==='red'? T[lang].p2R : T[lang].p2B;
+}
+
+function effRank(piece,r,c){
+  if(!piece) return 0;
+  if(trapOwner(r,c) && trapOwner(r,c)!==piece.owner) return 0;
+  return RANK[piece.type];
+}
+
+function canCapture(att,ar,ac,def,dr,dc){
+  if(att.type==='rat' && def.type==='elephant'){
+    if(isRiver(ar,ac)) return false; // rat in water cannot take elephant
+    return true;
+  }
+  if(att.type==='elephant' && def.type==='rat'){
+    if(isRiver(dr,dc)) return false; // elephant can't reach rat in water anyway
+  }
+  return effRank(att,ar,ac) >= effRank(def,dr,dc);
+}
+
+function riverJumpTarget(r,c,dr,dc,piece){
+  // dr,dc unit direction; steps while river
+  let rr=r+dr, cc=c+dc;
+  if(!inb(rr,cc) || !isRiver(rr,cc)) return null;
+  while(inb(rr,cc) && isRiver(rr,cc)){
+    const occ = grid[rr][cc];
+    if(occ && occ.type==='rat') return null; // blocked by rat
+    rr+=dr; cc+=dc;
+  }
+  if(!inb(rr,cc) || isRiver(rr,cc)) return null;
+  return {r:rr,c:cc};
+}
+
+function legalMoves(r,c){
+  const piece = grid[r][c];
+  if(!piece) return [];
+  const out=[];
+  const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+  for(const [dr,dc] of dirs){
+    const nr=r+dr,nc=c+dc;
+    if(inb(nr,nc)){
+      if(denOwner(nr,nc)!==piece.owner){
+        const canEnterWater = isRiver(nr,nc) ? piece.type==='rat' : true;
+        if(canEnterWater){
+          const target = grid[nr][nc];
+          if(!target) out.push({r:nr,c:nc});
+          else if(target.owner!==piece.owner && canCapture(piece,r,c,target,nr,nc)) out.push({r:nr,c:nc});
+        }
+      }
+    }
+    if((piece.type==='lion'||piece.type==='tiger')){
+      const land = riverJumpTarget(r,c,dr,dc,piece);
+      if(land && denOwner(land.r,land.c)!==piece.owner){
+        const target = grid[land.r][land.c];
+        if(!target) out.push({r:land.r,c:land.c});
+        else if(target.owner!==piece.owner && canCapture(piece,r,c,target,land.r,land.c)) out.push({r:land.r,c:land.c});
+      }
+    }
+  }
+  return out;
+}
+
+function checkWin(){
+  // den capture
+  for(let c2=0;c2<W;c2++){}
+  const blackDen = grid[0][3];
+  if(blackDen && blackDen.owner==='red') return {winner:'red',how:'den'};
+  const redDen = grid[8][3];
+  if(redDen && redDen.owner==='black') return {winner:'black',how:'den'};
+  // capture-all
+  let redCount=0, blackCount=0;
+  for(let r=0;r<H;r++) for(let c=0;c<W;c++){
+    const p = grid[r][c];
+    if(p){ if(p.owner==='red') redCount++; else blackCount++; }
+  }
+  if(redCount===0) return {winner:'black',how:'cap'};
+  if(blackCount===0) return {winner:'red',how:'cap'};
+  return null;
+}
+
+// ---------- render ----------
+const cw=56;
+function px(c){ return 12 + c*cw + cw/2; }
+function py(r){ return 12 + r*cw + cw/2; }
+
+function render(){
+  const svg = document.getElementById('board');
+  svg.innerHTML='';
+  const moves = selected ? legalMoves(selected.r,selected.c) : [];
+
+  for(let r=0;r<H;r++){
+    for(let c=0;c<W;c++){
+      const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x',12+c*cw); rect.setAttribute('y',12+r*cw);
+      rect.setAttribute('width',cw); rect.setAttribute('height',cw);
+      let cls='cell ';
+      const to = trapOwner(r,c), dOwn = denOwner(r,c);
+      if(dOwn) cls += dOwn==='red'?'denR':'denB';
+      else if(to) cls += to==='red'?'trapR':'trapB';
+      else if(isRiver(r,c)) cls+='river';
+      else cls+='land';
+      rect.setAttribute('class',cls);
+      rect.addEventListener('click',()=>onCellClick(r,c));
+      svg.appendChild(rect);
+
+      if(dOwn){
+        const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+        t.setAttribute('x',px(c)); t.setAttribute('y',py(r));
+        t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central');
+        t.setAttribute('fill','rgba(239,232,216,.25)'); t.setAttribute('font-size','11');
+        t.textContent = '穴';
+        svg.appendChild(t);
+      }
+    }
+  }
+  // grid lines
+  for(let r=0;r<=H;r++){
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',12); l.setAttribute('y1',12+r*cw);
+    l.setAttribute('x2',12+W*cw); l.setAttribute('y2',12+r*cw);
+    l.setAttribute('stroke','#111c15'); l.setAttribute('stroke-width',1);
+    svg.appendChild(l);
+  }
+  for(let c=0;c<=W;c++){
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',12+c*cw); l.setAttribute('y1',12);
+    l.setAttribute('x2',12+c*cw); l.setAttribute('y2',12+H*cw);
+    l.setAttribute('stroke','#111c15'); l.setAttribute('stroke-width',1);
+    svg.appendChild(l);
+  }
+
+  // move markers
+  moves.forEach(m=>{
+    const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circ.setAttribute('cx',px(m.c)); circ.setAttribute('cy',py(m.r));
+    circ.setAttribute('r',cw*0.42);
+    circ.setAttribute('class','moveMark');
+    svg.appendChild(circ);
+  });
+
+  // pieces
+  for(let r=0;r<H;r++){
+    for(let c=0;c<W;c++){
+      const piece = grid[r][c];
+      if(!piece) continue;
+      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+      let cls='piece '+piece.owner;
+      if(selected && selected.r===r && selected.c===c) cls+=' selected';
+      g.setAttribute('class',cls);
+      const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circ.setAttribute('cx',px(c)); circ.setAttribute('cy',py(r)); circ.setAttribute('r',cw*0.4);
+      g.appendChild(circ);
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x',px(c)); txt.setAttribute('y',py(r)); txt.setAttribute('font-size', lang==='ja'?20:15);
+      txt.textContent = lang==='ja' ? KANJI[piece.type] : LETTER[piece.type];
+      g.appendChild(txt);
+      g.addEventListener('click',(e)=>{ e.stopPropagation(); onPieceClick(r,c); });
+      svg.appendChild(g);
+    }
+  }
+}
+
+function onPieceClick(r,c){
+  if(gameOver) return;
+  if(mode==='ai' && turn!=='red') return;
+  const piece = grid[r][c];
+  if(piece && piece.owner===turn){ selected={r,c}; render(); return; }
+  if(selected) onCellClick(r,c);
+}
+
+function onCellClick(r,c){
+  if(gameOver || !selected) return;
+  const moves = legalMoves(selected.r,selected.c);
+  if(!moves.some(m=>m.r===r&&m.c===c)) return;
+  grid[r][c] = grid[selected.r][selected.c];
+  grid[selected.r][selected.c] = null;
+  selected = null;
+  finishMove();
+}
+
+function finishMove(){
+  render();
+  const res = checkWin();
+  if(res){
+    gameOver = true;
+    announceWin(res);
+    return;
+  }
+  turn = turn==='red' ? 'black' : 'red';
+  updateStatus();
+  if(mode==='ai' && turn==='black'){
+    setTimeout(aiMove,550);
+  }
+}
+
+function showWinModal(text){
+  document.getElementById('winModalText').textContent = text;
+  document.getElementById('winModal').classList.add('show');
+}
+function hideWinModal(){
+  document.getElementById('winModal').classList.remove('show');
+}
+
+function announceWin(res){
+  const s = document.getElementById('status');
+  let text;
+  if(mode==='ai'){
+    if(res.winner==='red') text = res.how==='den'? T[lang].winYouDen : T[lang].winYouCap;
+    else text = res.how==='den'? T[lang].winAIDen : T[lang].winAICap;
+  } else {
+    if(res.winner==='red') text = res.how==='den'? T[lang].winRedDen : T[lang].winRedCap;
+    else text = res.how==='den'? T[lang].winBlackDen : T[lang].winBlackCap;
+  }
+  s.textContent = text;
+  showWinModal(text);
+}
+
+// ---------- AI ----------
+function allMoves(color){
+  const out=[];
+  for(let r=0;r<H;r++) for(let c=0;c<W;c++){
+    const p = grid[r][c];
+    if(p && p.owner===color){
+      legalMoves(r,c).forEach(m=>out.push({from:{r,c},to:m}));
+    }
+  }
+  return out;
+}
+
+function evalBoardAfter(move,color){
+  const lvl = AI_LEVELS[aiLevel];
+  const from=move.from, to=move.to;
+  const piece = grid[from.r][from.c];
+  const captured = grid[to.r][to.c];
+  let score = 0;
+  if(captured) score += RANK[captured.type]*lvl.capW;
+  if(denOwner(to.r,to.c) && denOwner(to.r,to.c)!==color) score += lvl.denW;
+  // advance toward opponent den
+  const goalRow = color==='black' ? 8 : 0;
+  score += (7-Math.abs(to.r-goalRow))*lvl.advW;
+  // avoid stepping into own vulnerable trap
+  if(trapOwner(to.r,to.c) && trapOwner(to.r,to.c)!==color) score -= 5;
+  score += Math.random()*lvl.rand;
+  return score;
+}
+
+function aiMove(){
+  if(gameOver) return;
+  const moves = allMoves('black');
+  if(moves.length===0){ turn='red'; updateStatus(); return; }
+  let best=moves[0], bestScore=-Infinity;
+  for(const m of moves){
+    const sc = evalBoardAfter(m,'black');
+    if(sc>bestScore){ bestScore=sc; best=m; }
+  }
+  grid[best.to.r][best.to.c] = grid[best.from.r][best.from.c];
+  grid[best.from.r][best.from.c] = null;
+  finishMove();
+}
+
+// ---------- UI ----------
+function setLang(l){
+  lang=l;
+  document.getElementById('langBtn').textContent = l==='ja'?'EN':'JA';
+  document.getElementById('title').textContent = T[l].title;
+  document.getElementById('subtitle').textContent = T[l].sub;
+  document.getElementById('modeAI').textContent = T[l].vsAI;
+  document.getElementById('mode2P').textContent = T[l].p2;
+  document.getElementById('resetBtn').textContent = T[l].reset;
+  document.getElementById('legend').innerHTML = T[l].legend;
+  document.getElementById('firstLabel').textContent = T[l].firstLabel;
+  document.getElementById('firstYou').textContent = T[l].firstYou;
+  document.getElementById('firstAI').textContent = T[l].firstAI;
+  document.getElementById('firstRandom').textContent = T[l].firstRandom;
+  document.getElementById('aiLabel').textContent = T[l].aiLabel;
+  document.getElementById('winModalClose').textContent = T[l].close;
+  document.documentElement.lang = l;
+  render();
+  updateStatus();
+}
+
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeBtn').textContent = t==='light' ? '☀️' : '🌙';
+}
+
+document.getElementById('langBtn').addEventListener('click',()=>setLang(lang==='ja'?'en':'ja'));
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur = document.documentElement.dataset.theme;
+  setTheme(cur==='light' ? 'dark' : 'light');
+});
+document.getElementById('modeAI').addEventListener('click',()=>{
+  mode='ai';
+  document.getElementById('modeAI').classList.add('active');
+  document.getElementById('mode2P').classList.remove('active');
+  document.getElementById('settingsAI').style.display='flex';
+  initGame();
+});
+document.getElementById('mode2P').addEventListener('click',()=>{
+  mode='2p';
+  document.getElementById('mode2P').classList.add('active');
+  document.getElementById('modeAI').classList.remove('active');
+  document.getElementById('settingsAI').style.display='none';
+  initGame();
+});
+document.getElementById('resetBtn').addEventListener('click',initGame);
+document.getElementById('winModalClose').addEventListener('click',hideWinModal);
+
+function wireSeg(ids, onPick){
+  ids.forEach(id=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      ids.forEach(i=>document.getElementById(i).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      onPick(id);
+    });
+  });
+}
+wireSeg(['firstYou','firstAI','firstRandom'], (id)=>{
+  firstMove = id==='firstYou' ? 'you' : id==='firstAI' ? 'ai' : 'random';
+  initGame();
+});
+wireSeg(['lv1','lv2','lv3','lv4','lv5'], (id)=>{
+  aiLevel = parseInt(id.slice(2),10);
+});
+
+mode='ai';
+setTheme('dark');
+initGame();
+})();
+</script>
+</body>
+</html>

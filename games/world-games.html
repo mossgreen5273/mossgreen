@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mossgreen — world games</title>
+<meta name="description" content="世界各地に伝わる、チェスでも将棋でもない歴史的な盤上ゲームの一覧。">
+<meta property="og:title" content="Mossgreen — world games">
+<meta property="og:description" content="世界各地に伝わる歴史的な盤上ゲームを、ブラウザで遊べる形に作り直しています。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="images/og-cover.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Noto+Serif+JP:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15130f;
+    --bg-2:#1b1812;
+    --ink:#ece6d8;
+    --ink-dim:#9b9382;
+    --ink-faint:#6c6656;
+    --moss:#8ba076;
+    --moss-dim:#4d5a42;
+    --moss-line:rgba(139,160,118,.22);
+    --brass:#c9a05f;
+    --brass-bright:#e7c98a;
+    --panel:#1e1b15;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 900px 560px at 8% -8%, rgba(93,73,44,.22) 0%, transparent 60%),
+      radial-gradient(ellipse 800px 600px at 105% 30%, rgba(77,90,66,.16) 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Instrument Sans','Noto Sans JP',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  .jp{font-family:'Noto Sans JP','Instrument Sans',sans-serif;}
+  .wrap{max-width:760px; margin:0 auto; padding:0 24px 110px;}
+
+  header.nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:40px 96px 34px 0;
+    flex-wrap:wrap; gap:14px;
+  }
+  .nav-name{
+    font-family:'Fraunces','Noto Serif JP',serif;
+    font-size:21px;
+    font-weight:600;
+    letter-spacing:.01em;
+    color:var(--ink);
+    text-decoration:none;
+  }
+  .nav-links{
+    display:flex; align-items:center; gap:22px;
+    font-size:14.5px;
+    flex-wrap:wrap;
+  }
+  .nav-links a{
+    text-decoration:none; color:var(--moss);
+    letter-spacing:.04em;
+    transition:color .15s;
+  }
+  .nav-links a:hover{ color:var(--brass-bright); }
+  .nav-links a.current{ color:var(--brass-bright); }
+
+  .intro{ padding:6px 0 40px; }
+  .intro .kicker{
+    font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--moss); margin-bottom:14px;
+  }
+  .intro h1{
+    font-family:'Fraunces','Noto Serif JP',serif;
+    font-size:clamp(30px,5.6vw,44px);
+    font-weight:600;
+    font-optical-sizing:auto;
+    margin:0 0 20px;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  .intro p{
+    font-size:16px;
+    line-height:1.95;
+    color:var(--ink-dim);
+    margin:0;
+    max-width:560px;
+  }
+
+  .collections-divider{
+    border:none;
+    border-top:1px solid var(--moss-line);
+    margin:0 0 8px;
+  }
+
+  .game-entry{
+    padding:32px 0;
+    border-top:1px solid var(--moss-line);
+  }
+  .game-entry:last-child{ border-bottom:1px solid var(--moss-line); }
+
+  .game-date{
+    font-size:12px;
+    font-weight:600;
+    color:var(--moss);
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    margin-bottom:9px;
+  }
+  .game-title{
+    font-family:'Fraunces','Noto Serif JP',serif;
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 11px;
+    letter-spacing:-0.005em;
+    color:var(--ink);
+  }
+  .game-desc{
+    font-size:14.5px;
+    line-height:1.85;
+    color:var(--ink-dim);
+    margin:0 0 19px;
+    max-width:600px;
+  }
+  .game-action{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    font-size:13.5px;
+    font-weight:600;
+    letter-spacing:.02em;
+    text-decoration:none;
+    color:var(--brass-bright);
+    background:transparent;
+    border:1px solid rgba(201,160,95,.45);
+    padding:9px 18px;
+    border-radius:3px;
+    transition:background .15s, border-color .15s;
+  }
+  .game-action::after{
+    content:'→';
+    transition:transform .15s;
+  }
+  .game-action:hover{
+    background:rgba(201,160,95,.1);
+    border-color:var(--brass-bright);
+  }
+  .game-action:hover::after{ transform:translateX(3px); }
+
+  footer{
+    padding-top:56px;
+    font-size:13px;
+    color:var(--ink-faint);
+    letter-spacing:.02em;
+  }
+
+  .t-en{ display:none; }
+  body.en-mode .t-ja{ display:none; }
+  body.en-mode .t-en{ display:inline; }
+
+  .lang-toggle{
+    font-size:12.5px; font-weight:600;
+    letter-spacing:.04em;
+    border:1px solid rgba(201,160,95,.4); background:transparent;
+    border-radius:20px; padding:7px 16px;
+    cursor:pointer; color:var(--brass-bright);
+    font-family:inherit; transition:background .15s, border-color .15s;
+  }
+  .lang-toggle:hover{ background:rgba(201,160,95,.1); border-color:var(--brass-bright); }
+
+  a:focus-visible, button:focus-visible{
+    outline:1.5px solid var(--brass-bright);
+    outline-offset:2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ▼Ko-fiボタン▼ -->
+<a href="https://ko-fi.com/mossgreen" target="_blank" rel="noopener"
+   style="position:fixed; top:16px; right:16px; z-index:9999;
+          display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+          text-decoration:none;
+          font-family:'Instrument Sans','Noto Sans JP',sans-serif;">
+  <span style="display:inline-flex; align-items:center; gap:6px;
+               font-size:12.5px; font-weight:600; letter-spacing:.04em;
+               color:#e7c98a; background:rgba(30,27,21,.9);
+               border:1px solid rgba(201,160,95,.45);
+               padding:8px 14px; border-radius:20px;
+               backdrop-filter:blur(4px);">
+    ☕ Ko-fi
+  </span>
+  <span style="font-size:10.5px; color:#9b9382;">気に入ったら支援を</span>
+</a>
+<!-- ▲Ko-fiボタン▲ -->
+
+<div class="wrap">
+
+  <header class="nav">
+    <a class="nav-name" href="index.html">Mossgreen</a>
+    <nav class="nav-links">
+      <a href="chess-variants.html"><span class="t-ja">チェスバリアント</span><span class="t-en">Chess Variants</span></a>
+      <a href="shogi-variants.html"><span class="t-ja">変則将棋</span><span class="t-en">Shogi Variants</span></a>
+      <a class="current" href="world-games.html"><span class="t-ja">世界のゲーム</span><span class="t-en">World Games</span></a>
+      <a href="index.html#about">about</a>
+      <button class="lang-toggle" type="button">EN</button>
+    </nav>
+  </header>
+
+  <section class="intro">
+    <div class="kicker jp"><span class="t-ja">コレクション</span><span class="t-en">Collection</span></div>
+    <h1 class="jp"><span class="t-ja">世界のゲーム</span><span class="t-en">World Games</span></h1>
+    <p class="jp">
+      <span class="t-ja">
+        チェスでも将棋でもない、世界各地に伝わる歴史的な盤上ゲームをブラウザで遊べる形に
+        作り直しています。多くは対AI(強さ5段階)対応、先攻・後攻の選択、ダーク/ライト表示切替つき。
+      </span>
+      <span class="t-en">
+        Traditional board games from around the world, beyond chess and shogi, rebuilt to
+        play in the browser. Most include an AI opponent (5 difficulty levels), a choice of
+        who goes first, and a dark/light display toggle.
+      </span>
+    </p>
+  </section>
+  <hr class="collections-divider">
+
+  <section class="game-list">
+
+    <article class="game-entry">
+      <div class="game-date">2026-08</div>
+      <h2 class="game-title jp">
+        <span class="t-ja">アリマー</span>
+        <span class="t-en">Arimaa</span>
+      </h2>
+      <p class="game-desc jp">
+        <span class="t-ja">
+          コンピューターを負かすために設計された、8x8盤の押す・引く戦略ゲーム。
+          強い駒が弱い敵駒を押し引きし、隣接するだけで敵駒をフリーズさせる。
+          トラップに乗った駒は、味方の支援がなければ即座に消える。1ターン4ステップ、
+          兎を最奥列へ届ければ勝利。
+        </span>
+        <span class="t-en">
+          A push-and-pull strategy game on an 8x8 board, originally designed to be
+          hard for computers to play well. Stronger pieces push or pull weaker enemies,
+          and mere adjacency can freeze a weaker piece in place. Pieces on trap squares
+          vanish instantly without friendly support. Four steps per turn; get a rabbit
+          home to win.
+        </span>
+      </p>
+      <a class="game-action jp" href="games/arimaa.html">
+        <span class="t-ja">ブラウザで遊ぶ</span>
+        <span class="t-en">Play in Browser</span>
+      </a>
+    </article>
+
+    <article class="game-entry">
+      <div class="game-date">2026-08</div>
+      <h2 class="game-title jp">
+        <span class="t-ja">ナイン・メンズ・モリス</span>
+        <span class="t-en">Nine Men's Morris</span>
+      </h2>
+      <p class="game-desc jp">
+        <span class="t-ja">
+          24点の盤に9個ずつの駒を配置し、直線上に3つ並べる「ミル」で相手の駒を取り合う、
+          紀元前から遊ばれてきた古典ゲーム。配置フェーズから移動フェーズへ、
+          相手を2個まで減らせば勝利。
+        </span>
+        <span class="t-en">
+          A classic played since antiquity: place nine pieces each on a 24-point board,
+          and line up three in a row to form a "mill" and capture an enemy piece.
+          Placement gives way to movement, and reducing the opponent to two pieces wins
+          the game.
+        </span>
+      </p>
+      <a class="game-action jp" href="games/nine-mens-morris.html">
+        <span class="t-ja">ブラウザで遊ぶ</span>
+        <span class="t-en">Play in Browser</span>
+      </a>
+    </article>
+
+    <article class="game-entry">
+      <div class="game-date">2026-08</div>
+      <h2 class="game-title jp">
+        <span class="t-ja">アルケルク</span>
+        <span class="t-en">Alquerque</span>
+      </h2>
+      <p class="game-desc jp">
+        <span class="t-ja">
+          チェッカーの元祖とされる、紀元前3000年頃までさかのぼる古代の捕獲ゲーム。
+          斜め線の入った5x5盤、捕獲は義務、連続ジャンプ、最奥列でKingに昇格し
+          自由な距離を移動・捕獲できるようになる。13世紀のAlfonso X「ゲームの本」の
+          ルールを採用。
+        </span>
+        <span class="t-en">
+          An ancient capture game dating back to roughly 3000 BCE, considered the
+          ancestor of checkers. A 5x5 board crossed with diagonals, mandatory captures,
+          chain jumps, and a King promotion on the far row that grants free-distance
+          movement and capture. Rules follow Alfonso X's 13th-century "Libro de los juegos."
+        </span>
+      </p>
+      <a class="game-action jp" href="games/alquerque.html">
+        <span class="t-ja">ブラウザで遊ぶ</span>
+        <span class="t-en">Play in Browser</span>
+      </a>
+    </article>
+
+    <article class="game-entry">
+      <div class="game-date">2026-08</div>
+      <h2 class="game-title jp">
+        <span class="t-ja">ルド</span>
+        <span class="t-en">Ludo</span>
+      </h2>
+      <p class="game-desc jp">
+        <span class="t-ja">
+          十字型の盤を4色の駒が周回する、インド発祥のすごろく系ゲーム。6を出すまで
+          駒はヤードを出られず、相手の駒に着地すれば振り出しに戻せる。同色2個以上の
+          スタックは通過も阻止するブロックルールつき。サイコロで先手を決める伝統ルールも選択可。
+        </span>
+        <span class="t-en">
+          A cross-shaped race game of Indian origin for four colors. Rolling a six is
+          required to leave the yard, landing on an opponent sends their piece home,
+          and a stack of two or more same-color pieces blocks passage entirely.
+          Includes the traditional dice-off to decide who goes first.
+        </span>
+      </p>
+      <a class="game-action jp" href="games/ludo.html">
+        <span class="t-ja">ブラウザで遊ぶ</span>
+        <span class="t-en">Play in Browser</span>
+      </a>
+    </article>
+
+    <article class="game-entry">
+      <div class="game-date">2026-08</div>
+      <h2 class="game-title jp">
+        <span class="t-ja">闘獣棋</span>
+        <span class="t-en">Doushouqi</span>
+      </h2>
+      <p class="game-desc jp">
+        <span class="t-ja">
+          象・獅・虎・豹・狼・狗・猫・鼠、8種の動物が強さを競う中国の伝統ゲーム。
+          河には鼠だけが入れ、獅と虎は河を飛び越せる。鼠だけが象を倒せるという
+          逆転ルールが要。相手の獣穴に自分の駒を入れれば勝利。
+        </span>
+        <span class="t-en">
+          A traditional Chinese game where eight ranked animals — elephant, lion, tiger,
+          leopard, wolf, dog, cat, rat — vie for dominance. Only the rat may enter the
+          river, while lion and tiger can leap across it; and only the rat can topple
+          the elephant. Reach the opponent's den to win.
+        </span>
+      </p>
+      <a class="game-action jp" href="games/doushouqi.html">
+        <span class="t-ja">ブラウザで遊ぶ</span>
+        <span class="t-en">Play in Browser</span>
+      </a>
+    </article>
+
+    <article class="game-entry">
+      <div class="game-date">2026-08</div>
+      <h2 class="game-title jp">
+        <span class="t-ja">チャイニーズチェッカー</span>
+        <span class="t-en">Chinese Checkers</span>
+      </h2>
+      <p class="game-desc jp">
+        <span class="t-ja">
+          六芒星型の121マス盤を、自陣から対角の陣地へと駒を送り込む、ジャンプだけの
+          レースゲーム。連続ジャンプで盤を一気に横断することも。
+        </span>
+        <span class="t-en">
+          A jump-only race across a 121-hole star-shaped board, moving pieces from
+          your camp to the opposite one. Chain jumps can cross the board in a single
+          turn.
+        </span>
+      </p>
+      <a class="game-action jp" href="games/chinese-checkers.html">
+        <span class="t-ja">ブラウザで遊ぶ</span>
+        <span class="t-en">Play in Browser</span>
+      </a>
+    </article>
+
+  </section>
+
+  <footer id="about" class="jp">
+    <p>
+      <span class="t-ja">Mossgreen — 個人でカード・ボードゲームを作っています。© 2026</span>
+      <span class="t-en">Mossgreen — an independent card and board game maker. © 2026</span>
+    </p>
+  </footer>
+
+</div>
+<script src="js/lang.js"></script>
+</body>
+</html>

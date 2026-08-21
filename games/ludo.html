@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ルド | Ludo — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1310; --panel:#162019; --panel2:#1c2820; --line:#3a4c40;
+    --brass:#c19a5b; --brass-dim:#8a7248; --cream:#efe8d8; --cream-dim:#a9b6ac;
+    --land:#4a3826; --grid:#2c2015; --safe:#6b5238;
+    --red:#c05f42; --red-dk:#6e2c1e;
+    --green:#6a9a68; --green-dk:#2c4a2a;
+    --yellow:#d4b25e; --yellow-dk:#6e5620;
+    --blue:#5a8ca8; --blue-dk:#20404e;
+  }
+  html[data-theme="light"]{
+    --bg:#f4efe2; --panel:#ffffff; --panel2:#eee6d3; --line:#d8cbab;
+    --brass:#9c7530; --brass-dim:#b89a5e; --cream:#2c2418; --cream-dim:#6c6250;
+    --land:#e4d8bc; --grid:#cbbd97; --safe:#d7c99e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:radial-gradient(ellipse at 20% -10%, color-mix(in srgb, var(--panel2) 60%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 110%, color-mix(in srgb, var(--panel2) 50%, transparent) 0%, transparent 55%), var(--bg);
+    color:var(--cream); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:20px 12px 60px; overflow-x:hidden;
+    transition:background .2s, color .2s;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,5vw,34px);
+    margin:6px 0 2px; text-align:center; }
+  .sub{ color:var(--brass); font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+    margin-bottom:18px; text-align:center; }
+  .topbar{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:10px; }
+  .settings{
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 16px;
+  }
+  .settings .group{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .settings .label{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass-dim); }
+  .seg{ display:flex; gap:4px; flex-wrap:wrap; justify-content:center; }
+  button{ font-family:'Instrument Sans',sans-serif; font-size:13px; font-weight:600;
+    background:var(--panel2); color:var(--cream); border:1px solid var(--line);
+    border-radius:8px; padding:8px 14px; cursor:pointer; transition:.15s; }
+  .seg button{ padding:6px 10px; font-size:12px; }
+  button:hover{ border-color:var(--brass); color:var(--brass); }
+  button.active{ background:var(--brass); color:#1a140a; border-color:var(--brass); }
+  button:disabled{ opacity:.4; cursor:default; }
+  .status{ background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 20px; margin-bottom:14px; font-size:15px; text-align:center; min-width:280px; }
+  .status b{ color:var(--brass); }
+  .diceRow{ display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+  .die{ width:52px; height:52px; border-radius:12px; background:var(--panel2);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces',serif; font-weight:700; font-size:26px; color:var(--brass); }
+  .rollBtn{ background:var(--brass); color:#1a140a; border:none; font-size:14px; padding:10px 18px; }
+  .rollBtn:hover{ background:#d4ad70; }
+  .board-wrap{ background:linear-gradient(160deg, color-mix(in srgb, var(--land) 82%, #000 10%), color-mix(in srgb, var(--land) 115%, #fff 6%)); border:1px solid color-mix(in srgb, var(--brass) 45%, var(--line));
+    border-radius:18px; padding:14px; max-width:100%; box-shadow:0 20px 50px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06); }
+  svg{ display:block; touch-action:manipulation; max-width:100%; height:auto; }
+  .cellbg{ fill:var(--land); stroke:var(--grid); stroke-width:1; }
+  .cellbg.safe{ fill:var(--safe); }
+  .base{ opacity:.16; }
+  .yard-slot{ stroke:var(--grid); stroke-width:1; opacity:.5; }
+  .piece{ cursor:default; }
+  .piece.movable{ cursor:pointer; }
+  .piece.movable circle.body{ stroke:#e0c66a; stroke-width:2.5; }
+  .legend{ display:flex; gap:16px; margin-top:14px; font-size:13px; color:var(--cream-dim);
+    flex-wrap:wrap; justify-content:center; }
+  .dot{ width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:-2px; }
+  .footer-links{ margin-top:20px; }
+  .footer-links a{ color:var(--brass-dim); text-decoration:none; font-size:12px; }
+  .footer-links a:hover{ color:var(--brass); }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(10,14,11,.72);
+    display:flex; align-items:center; justify-content:center; z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    background:var(--panel); border:1px solid var(--brass); border-radius:18px;
+    padding:36px 40px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    transform:scale(.9); transition:transform .25s;
+  }
+  .modal-overlay.show .modal-box{ transform:scale(1); }
+  .modal-box .big{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(24px,7vw,38px);
+    color:var(--brass); margin-bottom:18px;
+  }
+  .modal-box button{ margin-top:6px; }
+</style>
+</head>
+<body>
+
+<h1 id="title">ルド</h1>
+<div class="sub" id="subtitle">LUDO · CROSS &amp; CIRCLE RACE GAME</div>
+
+<div class="topbar">
+  <button id="langBtn">EN</button>
+  <button id="themeBtn">🌙</button>
+  <button id="modeAI" class="active">vs AI</button>
+  <button id="modeHotseat">パス&amp;プレイ（4人）</button>
+  <button id="resetBtn">リセット</button>
+</div>
+
+<div class="settings" id="settingsAI">
+  <div class="group">
+    <div class="label" id="firstLabel">手番順</div>
+    <div class="seg">
+      <button id="firstYou" class="active">先手（あなた）</button>
+      <button id="firstDice">サイコロで決める</button>
+      <button id="firstRandom">ランダム</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="label" id="aiLabel">AIの強さ</div>
+    <div class="seg">
+      <button id="lv1">1</button>
+      <button id="lv2">2</button>
+      <button id="lv3" class="active">3</button>
+      <button id="lv4">4</button>
+      <button id="lv5">5</button>
+    </div>
+  </div>
+</div>
+
+<div class="status" id="status">あなたの番です（赤）— サイコロを振ってください</div>
+
+<div class="diceRow">
+  <div class="die" id="dieFace">–</div>
+  <button class="rollBtn" id="rollBtn">サイコロを振る</button>
+</div>
+
+<div class="board-wrap"><svg id="board" width="420" height="420" viewBox="0 0 420 420"></svg></div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--red)"></span><span id="legRed">赤（あなた）</span></span>
+  <span><span class="dot" style="background:var(--green)"></span>緑</span>
+  <span><span class="dot" style="background:var(--yellow)"></span>黄</span>
+  <span><span class="dot" style="background:var(--blue)"></span>青</span>
+</div>
+
+<div class="footer-links"><a href="https://mossgreen5273.github.io/mossgreen/">← Mossgreen Games</a></div>
+
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box">
+    <div class="big" id="winModalText"></div>
+    <button id="winModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const T = {
+  ja:{ title:"ルド", sub:"LUDO · CROSS &amp; CIRCLE RACE GAME", vsAI:"vs AI", hotseat:"パス&プレイ（4人）", reset:"リセット",
+       roll:"サイコロを振る", legRed:"赤（あなた）",
+       yourTurnRoll:(c)=>`あなたの番です（赤）— サイコロを振ってください`,
+       aiRolling:(name)=>`${name}の番です…`,
+       yourTurnMove:"駒をクリックして動かしてください",
+       hotseatRoll:(name)=>`${name}の番です — サイコロを振ってください`,
+       hotseatMove:(name)=>`${name}：駒をクリックして動かしてください`,
+       noMoves:"動かせる駒がありません。次の番へ。",
+       rolled6:"6が出ました！もう一度振れます。",
+       captured:"相手の駒を取りました！",
+       win:(name)=>`${name}の勝ちです！`,
+       names:{red:"赤",green:"緑",yellow:"黄",blue:"青"},
+       firstLabel:"手番順", firstYou:"先手（あなた）", firstDice:"サイコロで決める", firstRandom:"ランダム",
+       aiLabel:"AIの強さ", close:"閉じる"
+     },
+  en:{ title:"Ludo", sub:"LUDO · CROSS & CIRCLE RACE GAME", vsAI:"vs AI", hotseat:"Pass & Play (4P)", reset:"Reset",
+       roll:"Roll dice", legRed:"Red (You)",
+       yourTurnRoll:()=>"Your turn (Red) — roll the dice",
+       aiRolling:(name)=>`${name}'s turn…`,
+       yourTurnMove:"Click a piece to move it",
+       hotseatRoll:(name)=>`${name}'s turn — roll the dice`,
+       hotseatMove:(name)=>`${name}: click a piece to move it`,
+       noMoves:"No legal moves. Passing turn.",
+       rolled6:"You rolled a 6! Roll again.",
+       captured:"Captured an opponent's piece!",
+       win:(name)=>`${name} wins!`,
+       names:{red:"Red",green:"Green",yellow:"Yellow",blue:"Blue"},
+       firstLabel:"Turn order", firstYou:"You first", firstDice:"Dice-off (traditional)", firstRandom:"Random",
+       aiLabel:"AI strength", close:"Close"
+     }
+};
+let lang='ja';
+let firstMove = 'you'; // 'you' | 'dice' | 'random'
+let aiLevel = 3; // 1-5
+const AI_LEVELS = {
+  1:{finishW:40, capW:15, exitW:8,  advW:0.2, rand:8},
+  2:{finishW:60, capW:25, exitW:12, advW:0.3, rand:5},
+  3:{finishW:100,capW:50, exitW:20, advW:0.5, rand:3},
+  4:{finishW:140,capW:70, exitW:25, advW:0.6, rand:1},
+  5:{finishW:200,capW:90, exitW:30, advW:0.7, rand:0.2}
+};
+function diceOffStart(){
+  let candidates=[0,1,2,3];
+  while(candidates.length>1){
+    const rolls = candidates.map(()=>1+Math.floor(Math.random()*6));
+    const max = Math.max(...rolls);
+    candidates = candidates.filter((c,i)=>rolls[i]===max);
+  }
+  return candidates[0];
+}
+
+// ---------- board geometry ----------
+const RING = [
+ [6,1],[6,2],[6,3],[6,4],[6,5],
+ [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
+ [0,7],
+ [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],
+ [6,9],[6,10],[6,11],[6,12],[6,13],[6,14],
+ [7,14],
+ [8,14],[8,13],[8,12],[8,11],[8,10],[8,9],
+ [9,8],[10,8],[11,8],[12,8],[13,8],[14,8],
+ [14,7],
+ [14,6],[13,6],[12,6],[11,6],[10,6],[9,6],
+ [8,5],[8,4],[8,3],[8,2],[8,1],[8,0],
+ [7,0],
+ [6,0]
+];
+const COLORS = ['red','green','yellow','blue'];
+const RING_START = {red:0, green:13, yellow:26, blue:39};
+const HOME_STRETCH = {
+  red:   [[7,1],[7,2],[7,3],[7,4],[7,5]],
+  green: [[1,7],[2,7],[3,7],[4,7],[5,7]],
+  yellow:[[7,13],[7,12],[7,11],[7,10],[7,9]],
+  blue:  [[13,7],[12,7],[11,7],[10,7],[9,7]]
+};
+const FINAL_CELL = { red:[7,6], green:[6,7], yellow:[7,8], blue:[8,7] };
+const YARD_LOCAL = [[1,1],[1,4],[4,1],[4,4]];
+const BASE_ORIGIN = { red:[0,0], green:[0,9], yellow:[9,9], blue:[9,0] };
+const SAFE_IDX = new Set([0,8,13,21,26,34,39,47]);
+
+function yardSlot(color,i){
+  const o = BASE_ORIGIN[color];
+  return [o[0]+YARD_LOCAL[i][0], o[1]+YARD_LOCAL[i][1]];
+}
+function cellForStep(color,step){
+  if(step<=50) return RING[(RING_START[color]+step)%52];
+  if(step<=55) return HOME_STRETCH[color][step-51];
+  return FINAL_CELL[color];
+}
+
+// ---------- game state ----------
+let pieces; // {red:[{step:-1|0..56}], ...} -1 = yard, 56 = home
+let turnIdx, mode, die, canRoll, movable, sixStreak, gameOver, humanColors;
+let pendingTimer = null;
+function schedule(fn, ms){
+  clearTimeout(pendingTimer);
+  pendingTimer = setTimeout(fn, ms);
+}
+
+function initGame(){
+  clearTimeout(pendingTimer);
+  pieces = {};
+  COLORS.forEach(c=>{ pieces[c] = [{step:-1},{step:-1},{step:-1},{step:-1}]; });
+  if(firstMove==='dice') turnIdx = diceOffStart();
+  else if(firstMove==='random') turnIdx = Math.floor(Math.random()*4);
+  else turnIdx = 0;
+  die = null; canRoll = true; movable = []; sixStreak = 0; gameOver=false;
+  humanColors = mode==='ai' ? ['red'] : COLORS.slice();
+  hideWinModal();
+  render();
+  updateControls();
+}
+
+function currentColor(){ return COLORS[turnIdx]; }
+function isHumanTurn(){ return humanColors.includes(currentColor()); }
+
+function occupantsAt(step,color){
+  // returns list of {color,idx} of pieces from OTHER colors physically at same board cell as (color,step), ring-only meaningful
+  if(step<0||step>50) return [];
+  const cell = cellForStep(color,step);
+  const out=[];
+  COLORS.forEach(oc=>{
+    pieces[oc].forEach((p,idx)=>{
+      if(p.step>=0 && p.step<=50){
+        const oc_cell = cellForStep(oc,p.step);
+        if(oc_cell[0]===cell[0] && oc_cell[1]===cell[1]) out.push({color:oc,idx});
+      }
+    });
+  });
+  return out;
+}
+function ringIndexOf(color,step){ return (RING_START[color]+step)%52; }
+
+function pathBlocked(color, fromStep, toStep){
+  // check intermediate + landing ring cells for opponent 2+ stack on non-safe cell
+  for(let s=fromStep+1; s<=Math.min(toStep,50); s++){
+    const cell = cellForStep(color,s);
+    const ringIdx = RING.findIndex(rc=>rc[0]===cell[0]&&rc[1]===cell[1]);
+    if(SAFE_IDX.has(ringIdx)) continue;
+    // count opponent pieces stacked at this cell
+    const occ = occupantsAt(s,color).filter(o=>o.color!==color);
+    if(occ.length>=2) return true;
+  }
+  return false;
+}
+
+function legalMovesFor(color,rollVal){
+  const moves=[]; // {pieceIdx, fromStep, toStep, captures:[{color,idx}]}
+  pieces[color].forEach((p,idx)=>{
+    if(p.step===56) return; // already home
+    if(p.step===-1){
+      if(rollVal===6){
+        // check own start cell isn't blocked by own 2+ (allowed to stack) - always allowed, start is safe
+        moves.push({pieceIdx:idx, fromStep:-1, toStep:0, captures:[]});
+      }
+      return;
+    }
+    const to = p.step + rollVal;
+    if(to>56) return;
+    if(to<=50 && pathBlocked(color,p.step,to)) return;
+    let captures=[];
+    if(to<=50){
+      const cellIdx = ringIndexOf(color,to);
+      if(!SAFE_IDX.has(cellIdx)){
+        occupantsAt(to,color).forEach(o=>{ if(o.color!==color) captures.push(o); });
+      }
+    }
+    moves.push({pieceIdx:idx, fromStep:p.step, toStep:to, captures});
+  });
+  return moves;
+}
+
+function updateControls(){
+  const s = document.getElementById('status');
+  const roll = document.getElementById('rollBtn');
+  if(gameOver) { roll.disabled=true; return; }
+  const name = T[lang].names[currentColor()];
+  if(canRoll){
+    roll.disabled = !isHumanTurn();
+    if(mode==='ai'){
+      s.textContent = isHumanTurn() ? T[lang].yourTurnRoll() : T[lang].aiRolling(name);
+    } else {
+      s.textContent = T[lang].hotseatRoll(name);
+    }
+    if(!isHumanTurn() && !gameOver) schedule(doRoll, 600);
+  } else {
+    roll.disabled = true;
+    if(movable.length===0){
+      s.textContent = T[lang].noMoves;
+      schedule(advanceTurnAfterNoMoves, 700);
+    } else {
+      if(mode==='ai'){
+        s.textContent = isHumanTurn() ? T[lang].yourTurnMove : T[lang].aiRolling(name);
+      } else {
+        s.textContent = T[lang].hotseatMove(name);
+      }
+      if(!isHumanTurn() && !gameOver) schedule(aiPickMove, 700);
+    }
+  }
+}
+
+function doRoll(){
+  if(gameOver || !canRoll) return;
+  clearTimeout(pendingTimer);
+  die = 1+Math.floor(Math.random()*6);
+  document.getElementById('dieFace').textContent = die;
+  canRoll = false;
+  movable = legalMovesFor(currentColor(), die);
+  render();
+  updateControls();
+}
+
+function advanceTurnAfterNoMoves(){
+  if(gameOver) return;
+  handleSixOrAdvance(false);
+}
+
+function handleSixOrAdvance(moved){
+  if(die===6 && moved){
+    sixStreak++;
+    if(sixStreak>=3){
+      sixStreak=0;
+      nextPlayer();
+      return;
+    }
+    canRoll = true; die=null; movable=[];
+    document.getElementById('dieFace').textContent='–';
+    clearTimeout(pendingTimer);
+    render(); updateControls();
+    return;
+  }
+  if(die===6 && !moved){
+    // rolled 6 but had no legal move at all -> still pass
+    sixStreak=0;
+    nextPlayer();
+    return;
+  }
+  sixStreak=0;
+  nextPlayer();
+}
+
+function nextPlayer(){
+  clearTimeout(pendingTimer);
+  turnIdx = (turnIdx+1)%4;
+  canRoll = true; die=null; movable=[];
+  document.getElementById('dieFace').textContent='–';
+  render();
+  updateControls();
+}
+
+function showWinModal(text){
+  document.getElementById('winModalText').textContent = text;
+  document.getElementById('winModal').classList.add('show');
+}
+function hideWinModal(){
+  document.getElementById('winModal').classList.remove('show');
+}
+
+function executeMove(move){
+  const color = currentColor();
+  pieces[color][move.pieceIdx].step = move.toStep;
+  move.captures.forEach(o=>{ pieces[o.color][o.idx].step = -1; });
+  const finished = move.toStep===56;
+  render();
+  const win = checkWin();
+  if(win){
+    gameOver = true;
+    const text = T[lang].win(T[lang].names[win]);
+    document.getElementById('status').textContent = text;
+    document.getElementById('rollBtn').disabled = true;
+    showWinModal(text);
+    return;
+  }
+  handleSixOrAdvance(true);
+}
+
+function checkWin(){
+  for(const c of COLORS){
+    if(pieces[c].every(p=>p.step===56)) return c;
+  }
+  return null;
+}
+
+function onPieceClick(color,idx){
+  if(gameOver || !isHumanTurn() || canRoll) return;
+  if(color!==currentColor()) return;
+  const mv = movable.find(m=>m.pieceIdx===idx);
+  if(!mv) return;
+  executeMove(mv);
+}
+
+// ---------- AI ----------
+function aiPickMove(){
+  if(gameOver || canRoll || isHumanTurn()) return;
+  if(movable.length===0) return;
+  const lvl = AI_LEVELS[aiLevel];
+  let best=movable[0], bestScore=-Infinity;
+  for(const m of movable){
+    let score = 0;
+    if(m.toStep===56) score += lvl.finishW;
+    score += m.captures.length*lvl.capW;
+    if(m.fromStep===-1) score += lvl.exitW;
+    score += m.toStep*lvl.advW;
+    score += Math.random()*lvl.rand;
+    if(score>bestScore){ bestScore=score; best=m; }
+  }
+  executeMove(best);
+}
+
+// ---------- render ----------
+const S=26, O=8;
+function px(c){ return O + c*S + S/2; }
+function py(r){ return O + r*S + S/2; }
+
+function render(){
+  const svg = document.getElementById('board');
+  svg.innerHTML='';
+  const colorHex = {red:'var(--red)',green:'var(--green)',yellow:'var(--yellow)',blue:'var(--blue)'};
+
+  // base quadrants
+  const baseRects = { red:[0,0], green:[0,9], yellow:[9,9], blue:[9,0] };
+  Object.entries(baseRects).forEach(([c,[r,col]])=>{
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',O+col*S); rect.setAttribute('y',O+r*S);
+    rect.setAttribute('width',6*S); rect.setAttribute('height',6*S);
+    rect.setAttribute('rx',10);
+    rect.setAttribute('class','base');
+    rect.setAttribute('fill', colorHex[c].replace('var(','').replace(')',''));
+    rect.setAttribute('style','fill:'+colorHex[c]);
+    svg.appendChild(rect);
+  });
+
+  // 15x15 cross cells
+  for(let r=0;r<15;r++){
+    for(let c=0;c<15;c++){
+      const inTopBottomArm = (c>=6&&c<=8);
+      const inLeftRightArm = (r>=6&&r<=8);
+      if(!inTopBottomArm && !inLeftRightArm) continue;
+      const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x',O+c*S); rect.setAttribute('y',O+r*S);
+      rect.setAttribute('width',S); rect.setAttribute('height',S);
+      let cls='cellbg';
+      const ringIdx = RING.findIndex(rc=>rc[0]===r&&rc[1]===c);
+      if(ringIdx>=0 && SAFE_IDX.has(ringIdx)) cls+=' safe';
+      rect.setAttribute('class',cls);
+      // color tint for home stretch cells
+      COLORS.forEach(col=>{
+        HOME_STRETCH[col].forEach(cell=>{
+          if(cell[0]===r&&cell[1]===c) rect.setAttribute('style','fill:'+colorHex[col]+';opacity:.35');
+        });
+        if(FINAL_CELL[col][0]===r&&FINAL_CELL[col][1]===c) rect.setAttribute('style','fill:'+colorHex[col]+';opacity:.55');
+      });
+      svg.appendChild(rect);
+    }
+  }
+
+  // yard slot markers
+  COLORS.forEach(color=>{
+    for(let i=0;i<4;i++){
+      const [r,c] = yardSlot(color,i);
+      const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circ.setAttribute('cx',px(c)); circ.setAttribute('cy',py(r)); circ.setAttribute('r',S*0.38);
+      circ.setAttribute('class','yard-slot');
+      circ.setAttribute('style','fill:'+colorHex[color]+';opacity:.15');
+      svg.appendChild(circ);
+    }
+  });
+
+  // pieces
+  COLORS.forEach(color=>{
+    pieces[color].forEach((p,idx)=>{
+      if(p.step===56) return; // shown as finished, skip board render (could add center marker)
+      let coord;
+      if(p.step===-1) coord = yardSlot(color,idx);
+      else coord = cellForStep(color,p.step);
+      const isMovable = isHumanTurn() && !canRoll && color===currentColor() && movable.some(m=>m.pieceIdx===idx);
+      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+      g.setAttribute('class','piece'+(isMovable?' movable':''));
+      const circ = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circ.setAttribute('class','body');
+      circ.setAttribute('cx',px(coord[1])); circ.setAttribute('cy',py(coord[0])); circ.setAttribute('r',S*0.34);
+      circ.setAttribute('style','fill:'+colorHex[color]);
+      g.appendChild(circ);
+      if(isMovable) g.addEventListener('click',()=>onPieceClick(color,idx));
+      svg.appendChild(g);
+    });
+  });
+}
+
+// ---------- UI wiring ----------
+function setLang(l){
+  lang=l;
+  document.getElementById('langBtn').textContent = l==='ja'?'EN':'JA';
+  document.getElementById('title').textContent = T[l].title;
+  document.getElementById('modeAI').textContent = T[l].vsAI;
+  document.getElementById('modeHotseat').textContent = T[l].hotseat;
+  document.getElementById('resetBtn').textContent = T[l].reset;
+  document.getElementById('rollBtn').textContent = T[l].roll;
+  document.getElementById('legRed').textContent = T[l].legRed;
+  document.getElementById('firstLabel').textContent = T[l].firstLabel;
+  document.getElementById('firstYou').textContent = T[l].firstYou;
+  document.getElementById('firstDice').textContent = T[l].firstDice;
+  document.getElementById('firstRandom').textContent = T[l].firstRandom;
+  document.getElementById('aiLabel').textContent = T[l].aiLabel;
+  document.getElementById('winModalClose').textContent = T[l].close;
+  document.documentElement.lang = l;
+  updateControls();
+}
+
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeBtn').textContent = t==='light' ? '☀️' : '🌙';
+}
+
+document.getElementById('langBtn').addEventListener('click',()=>setLang(lang==='ja'?'en':'ja'));
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur = document.documentElement.dataset.theme;
+  setTheme(cur==='light' ? 'dark' : 'light');
+});
+document.getElementById('rollBtn').addEventListener('click',()=>{ if(isHumanTurn()) doRoll(); });
+document.getElementById('modeAI').addEventListener('click',()=>{
+  mode='ai';
+  document.getElementById('modeAI').classList.add('active');
+  document.getElementById('modeHotseat').classList.remove('active');
+  initGame();
+});
+document.getElementById('modeHotseat').addEventListener('click',()=>{
+  mode='hotseat';
+  document.getElementById('modeHotseat').classList.add('active');
+  document.getElementById('modeAI').classList.remove('active');
+  initGame();
+});
+document.getElementById('resetBtn').addEventListener('click',initGame);
+document.getElementById('winModalClose').addEventListener('click',hideWinModal);
+
+function wireSeg(ids, onPick){
+  ids.forEach(id=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      ids.forEach(i=>document.getElementById(i).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      onPick(id);
+    });
+  });
+}
+wireSeg(['firstYou','firstDice','firstRandom'], (id)=>{
+  firstMove = id==='firstYou' ? 'you' : id==='firstDice' ? 'dice' : 'random';
+  initGame();
+});
+wireSeg(['lv1','lv2','lv3','lv4','lv5'], (id)=>{
+  aiLevel = parseInt(id.slice(2),10);
+});
+
+mode='ai';
+setTheme('dark');
+initGame();
+})();
+</script>
+</body>
+</html>
