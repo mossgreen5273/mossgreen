@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ウサギと猟犬｜Hare and Hounds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#182922; --brass:#c9a06e; --brass-light:#eccb9c; --brass-dim:#a8875c;
+    --text:#f5f0e3; --text-dim:#c3cdc0; --good:#86ab6f; --danger:#c15b50; --line:#5c7a68;
+  }
+  body.light{
+    --bg:#f2e9d8; --text:#2a2016; --text-dim:#6b5f4e;
+    --brass:#8a6d3f; --brass-light:#6b5230; --brass-dim:#a9865a;
+    --good:#3f7a3a; --danger:#a5453d;
+  }
+  body.light{
+    background:
+      radial-gradient(ellipse at 20% 0%, #efe4c8 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #e9dcbb 0%, transparent 55%), var(--bg);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(ellipse at 20% 0%, #2e4939 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #223a2c 0%, transparent 55%), var(--bg);
+    color:var(--text); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(26px,5vw,42px); color:var(--brass-light); margin:8px 0 2px; text-align:center;}
+  .subtitle{ color:var(--text-dim); font-size:14px; margin-bottom:16px; text-align:center;}
+  .topbar{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; justify-content:center;}
+  button.lang, button.reset{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    padding:7px 16px; border-radius:20px; font-family:'Instrument Sans'; font-size:13px; cursor:pointer; transition:all .2s;
+  }
+  button.lang:hover, button.reset:hover{ background:var(--brass); color:#14201b; border-color:var(--brass);}
+  .icon-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    width:32px; height:32px; border-radius:50%; font-size:14px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; padding:0; line-height:1;
+  }
+  .icon-btn:hover{ background:var(--brass); color:#14201b; border-color:var(--brass); }
+  .difficulty-row{ display:flex; gap:8px; align-items:center; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+  .difficulty-row .dlabel{ font-size:12px; color:var(--text-dim); margin-right:2px; }
+  .diff-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light); width:28px; height:28px;
+    border-radius:50%; font-family:'Instrument Sans'; font-size:12px; cursor:pointer; padding:0;
+  }
+  .diff-btn.active{ background:var(--brass); color:#14201b; font-weight:700; border-color:var(--brass); }
+  .side-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light); height:28px;
+    border-radius:14px; font-family:'Instrument Sans'; font-size:12px; cursor:pointer; padding:0 14px;
+  }
+  .side-btn.active{ background:var(--brass); color:#14201b; font-weight:700; border-color:var(--brass); }
+  .status{ font-family:'Fraunces',serif; font-size:17px; color:var(--brass-light); min-height:24px; margin-bottom:14px; text-align:center;}
+  .board-wrap{
+    background:linear-gradient(160deg,#3c5747,#22362b); border-radius:20px; padding:22px;
+    box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 2px 6px rgba(255,255,255,.05); border:1px solid #3c5445; position:relative;
+  }
+  .board{ position:relative; width:320px; height:200px; }
+  @media(max-width:380px){ .board{ width:280px; height:175px; } }
+  svg.lines{ position:absolute; inset:0; width:100%; height:100%; }
+  svg.lines line{ stroke:var(--line); stroke-width:1.5; opacity:.7; }
+  .pt{
+    position:absolute; width:36px; height:36px; margin-left:-18px; margin-top:-18px;
+    border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:default;
+  }
+  .pt.legal{ box-shadow:0 0 0 2px var(--good); cursor:pointer; border-radius:50%; background:#2c4436aa;}
+  .pt .dot{ width:6px; height:6px; border-radius:50%; background:var(--line); }
+  .pt .lbl{ position:absolute; top:-16px; font-size:9px; color:var(--text-dim); opacity:.6; }
+  .piece{
+    width:28px; height:28px; border-radius:50%; box-shadow:0 3px 6px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.3);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:17px; line-height:1;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.5));
+  }
+  .piece.hound{ background:radial-gradient(circle at 35% 30%, var(--brass-light), var(--brass-dim)); }
+  .piece.hare{ background:radial-gradient(circle at 35% 30%, #f0e6d2, #c9b98f); }
+  .piece.hound.pickable{ outline:2px solid var(--good); outline-offset:2px;}
+  .legend{ display:flex; gap:22px; margin-top:18px; font-size:12px; color:var(--text-dim); align-items:center;}
+  .swatch{ width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:middle;}
+  .score-row{ display:flex; gap:24px; font-size:13px; color:var(--text-dim); margin-top:8px;}
+  .score-row b{ color:var(--brass-light); }
+  .rules{ max-width:580px; margin-top:28px; background:#1e2e26; border:1px solid #2c3c31; border-radius:16px; padding:20px 22px; font-size:13.5px; line-height:1.8; color:var(--text-dim);}
+  body.light .rules{ background:#fbf3df; border-color:#e6d9b8; }
+  .rules h2{ font-family:'Fraunces',serif; color:var(--brass-light); font-size:17px; margin:0 0 8px;}
+  .winmsg{ color:var(--brass-light); font-weight:600; }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(8,12,10,.72); display:flex; align-items:center; justify-content:center;
+    z-index:999; opacity:0; pointer-events:none; transition:opacity .25s; padding:20px;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    background:linear-gradient(160deg,#2a3f34,#182720); border:1px solid var(--brass-dim); border-radius:20px;
+    padding:34px 38px; text-align:center; box-shadow:0 30px 70px rgba(0,0,0,.6); max-width:86vw;
+    transform:translateY(10px); transition:transform .25s;
+  }
+  body.light .modal-box{ background:linear-gradient(160deg,#fbf3df,#efe0bd); }
+  .modal-overlay.show .modal-box{ transform:translateY(0); }
+  .modal-box .modal-msg{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,6vw,32px); color:var(--brass-light); margin-bottom:22px; }
+  .modal-box button{
+    background:var(--brass); color:#14201b; border:none; padding:10px 28px; border-radius:22px;
+    font-family:'Instrument Sans'; font-size:14px; font-weight:600; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="endModal">
+  <div class="modal-box">
+    <div class="modal-msg" id="endModalMsg"></div>
+    <button id="endModalBtn" data-ja="もう一度" data-en="Play again">もう一度</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <button class="lang" id="langBtn">EN</button>
+  <button class="reset" id="resetBtn" data-ja="はじめから" data-en="Restart">はじめから</button>
+  <button class="icon-btn" id="themeBtn" title="theme">☀️</button>
+</div>
+
+<div class="difficulty-row" id="sideRow">
+  <span class="dlabel" data-ja="操作する側" data-en="Play as">操作する側</span>
+  <button class="side-btn active" data-side="hound" data-ja="猟犬" data-en="Hounds">猟犬</button>
+  <button class="side-btn" data-side="hare" data-ja="ウサギ" data-en="Hare">ウサギ</button>
+</div>
+
+<div class="difficulty-row">
+  <span class="dlabel" data-ja="AIの強さ" data-en="AI strength">AIの強さ</span>
+  <button class="diff-btn" data-level="1">1</button>
+  <button class="diff-btn" data-level="2">2</button>
+  <button class="diff-btn active" data-level="3">3</button>
+  <button class="diff-btn" data-level="4">4</button>
+  <button class="diff-btn" data-level="5">5</button>
+</div>
+
+<h1 data-ja="ウサギと猟犬" data-en="Hare and Hounds">ウサギと猟犬</h1>
+<div class="subtitle" data-ja="中世北欧の伝統ゲーム、11点の盤" data-en="A traditional medieval Northern European game on an 11-point board">中世北欧の伝統ゲーム、11点の盤</div>
+
+<div class="status" id="status"></div>
+
+<div class="board-wrap"><div class="board" id="board"><svg class="lines" id="lines"></svg></div></div>
+
+<div class="legend">
+  <div><span style="font-size:16px; margin-right:4px;">🐕</span><span id="legendHound" data-ja="猟犬（あなた）" data-en="Hounds (you)">猟犬（あなた）</span></div>
+  <div><span style="font-size:16px; margin-right:4px;">🐇</span><span id="legendHare" data-ja="ウサギ（CPU）" data-en="Hare (CPU)">ウサギ（CPU）</span></div>
+</div>
+<div class="score-row">
+  <div><span data-ja="手数" data-en="Turn">手数</span>: <b id="turnCount">0</b>/30</div>
+</div>
+
+<div class="rules">
+  <h2 data-ja="遊び方" data-en="How to play">遊び方</h2>
+  <p data-ja="あなたは3匹の猟犬を操り、ウサギを追い詰めて動けなくすれば勝ちです。猟犬が先手です。
+① 猟犬は線でつながった隣のマスに1匹ずつ動かせますが、後ろ（自陣側）へは戻れません。横や前へは自由に動けます。
+② ウサギは隣接するどのマスへも、前後どちらへでも自由に動けます。
+③ ウサギが猟犬3匹すべてより後ろ側（猟犬の元の陣地A・D・I）に回り込めれば、ウサギの勝ちです。前方に猟犬が1匹もいなくなった時点でも同様です。
+④ 猟犬がウサギの逃げ場をすべて塞げば、猟犬の勝ちです。
+⑤ 合計30手が経過すると、ウサギの勝ちになります（千日手はウサギ有利）。
+盤の中央のマスだけは8方向に動ける特別なマスです。うまく使いましょう。"
+  data-en="You control three hounds. Trap the hare so it has no legal move, and the hounds win. Hounds move first.
+① Each hound moves one step along the board's lines to an adjacent point, but can never move backward toward its own starting side — sideways and forward are both fine.
+② The hare can move to any adjacent point, in any direction, forward or back.
+③ If the hare slips past all three hounds to reach the hounds' original squares (A, D, I) — or simply has no hound left ahead of it — the hare wins.
+④ The hounds win by blocking every square the hare could move to.
+⑤ If 30 total turns pass without a decision, the hare wins by default (a stalemate favors the hare).
+The single square at the board's centre is special — it connects in all 8 directions. Use it well.">
+  あなたは3匹の猟犬を操り、ウサギを追い詰めて動けなくすれば勝ちです。猟犬が先手です。<br>
+  ① 猟犬は線でつながった隣のマスに1匹ずつ動かせますが、後ろ（自陣側）へは戻れません。横や前へは自由に動けます。<br>
+  ② ウサギは隣接するどのマスへも、前後どちらへでも自由に動けます。<br>
+  ③ ウサギが猟犬3匹すべてより後ろ側（猟犬の元の陣地A・D・I）に回り込めれば、ウサギの勝ちです。前方に猟犬が1匹もいなくなった時点でも同様です。<br>
+  ④ 猟犬がウサギの逃げ場をすべて塞げば、猟犬の勝ちです。<br>
+  ⑤ 合計30手が経過すると、ウサギの勝ちになります（千日手はウサギ有利）。<br>
+  盤の中央のマスだけは8方向に動ける特別なマスです。うまく使いましょう。
+  </p>
+</div>
+
+<script>
+let lang='ja';
+
+// Point graph: classic 11-point Hare and Hounds board (as in Clubhouse Games 51 / "世界のアソビ大全51")
+const POINTS = {
+  A:{x:1,row:0}, B:{x:2,row:0}, C:{x:3,row:0},
+  D:{x:0,row:1}, E:{x:1,row:1}, F:{x:2,row:1}, G:{x:3,row:1}, H:{x:4,row:1},
+  I:{x:1,row:2}, J:{x:2,row:2}, K:{x:3,row:2}
+};
+const ADJ = {
+  A:['B','E','D','F'],
+  B:['A','C','F'],
+  C:['B','G','F','H'],
+  D:['E','A','I'],
+  E:['D','F','A','I'],
+  F:['E','G','B','J','A','C','I','K'],
+  G:['F','H','C','K'],
+  H:['G','C','K'],
+  I:['J','E','D','F'],
+  J:['I','K','F'],
+  K:['J','G','F','H']
+};
+const HOUND_START = ['A','D','I'];
+const HARE_START = 'H';
+const HARE_WIN_SQUARES = new Set(['A','D','I']);
+
+let hounds, hare, current, gameOver, selectedHound, turnCount;
+
+let playerSide = 'hound';
+let gameGen = 0;
+
+function scheduleCpuTurn(delay){
+  const myGen = gameGen;
+  setTimeout(()=>{ if(gameGen===myGen) cpuTurn(); }, delay);
+}
+
+function initGame(){
+  gameGen++;
+  hounds = [...HOUND_START];
+  hare = HARE_START;
+  current = 'hound'; // hounds always move first, regardless of who controls them
+  gameOver = false;
+  selectedHound = null;
+  turnCount = 0;
+  drawLines();
+  render(); setStatus();
+  if(current!==playerSide) scheduleCpuTurn(1600);
+}
+
+function updateLegendLabels(){
+  const houndEl = document.getElementById('legendHound');
+  const hareEl = document.getElementById('legendHare');
+  if(playerSide==='hound'){
+    houndEl.setAttribute('data-ja','猟犬（あなた）'); houndEl.setAttribute('data-en','Hounds (you)');
+    hareEl.setAttribute('data-ja','ウサギ（CPU）'); hareEl.setAttribute('data-en','Hare (CPU)');
+  } else {
+    houndEl.setAttribute('data-ja','猟犬（CPU）'); houndEl.setAttribute('data-en','Hounds (CPU)');
+    hareEl.setAttribute('data-ja','ウサギ（あなた）'); hareEl.setAttribute('data-en','Hare (you)');
+  }
+  applyLangStatic();
+}
+
+document.querySelectorAll('.side-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    playerSide = b.getAttribute('data-side');
+    document.querySelectorAll('.side-btn').forEach(x=>x.classList.toggle('active', x===b));
+    updateLegendLabels();
+    initGame();
+  });
+});
+
+function drawLines(){
+  const svg = document.getElementById('lines');
+  const boardEl = document.getElementById('board');
+  const w = boardEl.clientWidth || 320, h = boardEl.clientHeight || 200;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const margin = w*0.09;
+  const innerW = w - margin*2;
+  function px(pt){
+    const p = POINTS[pt];
+    return { x: margin + p.x*(innerW/4), y: h*0.2 + p.row*(h*0.3) };
+  }
+  let html='';
+  const seen = new Set();
+  for(const p in ADJ){
+    for(const q of ADJ[p]){
+      const key = [p,q].sort().join('-');
+      if(seen.has(key)) continue;
+      seen.add(key);
+      const a = px(p), b = px(q);
+      html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
+    }
+  }
+  svg.innerHTML = html;
+}
+
+function pxOf(pt){
+  const boardEl = document.getElementById('board');
+  const w = boardEl.clientWidth || 320, h = boardEl.clientHeight || 200;
+  const margin = w*0.09;
+  const innerW = w - margin*2;
+  const p = POINTS[pt];
+  return { x: margin + p.x*(innerW/4), y: h*0.2 + p.row*(h*0.3) };
+}
+
+function occupantAt(pt){
+  if(hare===pt) return 'hare';
+  if(hounds.includes(pt)) return 'hound';
+  return null;
+}
+
+function houndLegalMoves(pt){
+  const px0 = POINTS[pt].x;
+  return ADJ[pt].filter(n => POINTS[n].x >= px0 && occupantAt(n)===null);
+}
+
+function hareLegalMoves(){
+  return ADJ[hare].filter(n => occupantAt(n)===null);
+}
+
+function checkHareWin(){
+  if(HARE_WIN_SQUARES.has(hare)) return true;
+  const hareX = POINTS[hare].x;
+  if(hounds.every(h => POINTS[h].x <= hareX)) return true;
+  return false;
+}
+
+function checkHoundWin(){
+  return hareLegalMoves().length===0;
+}
+
+function onPointClick(pt){
+  if(gameOver || current!==playerSide) return;
+  if(playerSide==='hound'){
+    const occ = occupantAt(pt);
+    if(occ==='hound'){
+      selectedHound = pt;
+      render();
+      return;
+    }
+    if(occ===null && selectedHound){
+      const moves = houndLegalMoves(selectedHound);
+      if(moves.includes(pt)){
+        const idx = hounds.indexOf(selectedHound);
+        hounds[idx] = pt;
+        selectedHound = null;
+        afterPlayerMove();
+      }
+    }
+  } else {
+    if(occupantAt(pt)!==null) return;
+    const moves = hareLegalMoves();
+    if(moves.includes(pt)){
+      hare = pt;
+      afterPlayerMove();
+    }
+  }
+}
+
+function afterPlayerMove(){
+  turnCount++;
+  render();
+  if(checkGameEnd(playerSide)) return;
+  current = current==='hound' ? 'hare' : 'hound';
+  render(); setStatus();
+  scheduleCpuTurn(1600);
+}
+
+function checkGameEnd(sideThatJustMoved){
+  if(sideThatJustMoved==='hound'){
+    if(checkHoundWin()){ gameOver=true; render(); setStatus(); return true; }
+  } else {
+    if(checkHareWin()){ gameOver=true; render(); setStatus(); return true; }
+  }
+  if(turnCount>=30){ gameOver=true; render(); setStatus(); return true; }
+  return false;
+}
+
+function cpuTurn(){
+  if(gameOver) return;
+  if(current==='hound') houndsCpuTurn(); else hareCpuTurn();
+}
+
+function houndsCpuTurn(){
+  const allMoves = [];
+  for(const h of hounds){
+    for(const dest of houndLegalMoves(h)) allMoves.push({from:h, to:dest});
+  }
+  if(allMoves.length===0){
+    // no legal hound move at all: hand the turn back (rare edge case)
+    turnCount++;
+    current='hare';
+    render(); setStatus();
+    if(current!==playerSide) scheduleCpuTurn(1600);
+    return;
+  }
+  let chosen;
+  if(Math.random()<aiBlunderChance()){
+    chosen = allMoves[Math.floor(Math.random()*allMoves.length)];
+  } else {
+    let best=null, bestScore=-Infinity;
+    for(const mv of allMoves){
+      const idx = hounds.indexOf(mv.from);
+      const saved = hounds[idx];
+      hounds[idx] = mv.to;
+      let score = Math.random()*aiNoise(2);
+      score += (6 - hareLegalMoves().length)*3; // fewer hare escape routes is better
+      const hp = POINTS[hare], mp = POINTS[mv.to];
+      const dist = Math.abs(hp.x-mp.x) + Math.abs(hp.row-mp.row);
+      score += (6-dist)*0.5; // stay close to the hare
+      hounds[idx] = saved;
+      if(score>bestScore){ bestScore=score; best=mv; }
+    }
+    chosen = best || allMoves[0];
+  }
+  const idx = hounds.indexOf(chosen.from);
+  hounds[idx] = chosen.to;
+  turnCount++;
+  render();
+  if(checkGameEnd('hound')) return;
+  current='hare';
+  render(); setStatus();
+  if(current!==playerSide) scheduleCpuTurn(1600);
+}
+
+function hareCpuTurn(){
+  const moves = hareLegalMoves();
+  if(moves.length===0){ gameOver=true; render(); setStatus(); return; }
+
+  let chosen;
+  if(Math.random()<aiBlunderChance()){
+    chosen = moves[Math.floor(Math.random()*moves.length)];
+  } else {
+    let best=null, bestScore=-Infinity;
+    for(const m of moves){
+      let score = Math.random()*aiNoise(2);
+      if(HARE_WIN_SQUARES.has(m)) score += 50;
+      const mX = POINTS[m].x;
+      if(hounds.every(h=>POINTS[h].x<=mX)) score += 50;
+      score += (4-mX)*1.2; // prefer moving toward the hounds' home side (escaping)
+      const freeNeighbors = ADJ[m].filter(n => occupantAt(n)===null || n===hare).length;
+      score += freeNeighbors*1.5; // prefer mobility, avoid dead ends
+      if(score>bestScore){ bestScore=score; best=m; }
+    }
+    chosen = best || moves[0];
+  }
+  hare = chosen;
+  turnCount++;
+  render();
+  if(checkGameEnd('hare')) return;
+  current='hound';
+  render(); setStatus();
+  if(current!==playerSide) scheduleCpuTurn(1600);
+}
+
+function render(){
+  const boardEl = document.getElementById('board');
+  Array.from(boardEl.querySelectorAll('.pt')).forEach(el=>el.remove());
+
+  let legalTargets = [];
+  if(current===playerSide && !gameOver){
+    if(playerSide==='hound' && selectedHound) legalTargets = houndLegalMoves(selectedHound);
+    else if(playerSide==='hare') legalTargets = hareLegalMoves();
+  }
+
+  for(const pt in POINTS){
+    const div = document.createElement('div');
+    const isLegal = legalTargets.includes(pt);
+    div.className = 'pt' + (isLegal?' legal':'');
+    const p = pxOf(pt);
+    div.style.left = p.x+'px';
+    div.style.top = p.y+'px';
+    const occ = occupantAt(pt);
+    if(occ===null){
+      if(!isLegal){ const d=document.createElement('div'); d.className='dot'; div.appendChild(d); }
+    } else if(occ==='hound'){
+      const piece=document.createElement('div');
+      piece.className='piece hound' + (current==='hound' && playerSide==='hound' && !gameOver ? ' pickable':'');
+      piece.textContent = '🐕';
+      if(selectedHound===pt) piece.style.outline='3px solid #86ab6f';
+      div.appendChild(piece);
+    } else {
+      const piece=document.createElement('div'); piece.className='piece hare'; piece.textContent='🐇'; div.appendChild(piece);
+    }
+    div.addEventListener('click', ()=>onPointClick(pt));
+    boardEl.appendChild(div);
+  }
+  document.getElementById('turnCount').textContent = turnCount;
+  applyLangStatic();
+}
+
+function setStatus(){
+  const el = document.getElementById('status');
+  if(gameOver){
+    let msg;
+    const houndsWon = checkHoundWin() && !HARE_WIN_SQUARES.has(hare);
+    if(houndsWon){
+      msg = playerSide==='hound'
+        ? (lang==='ja' ? '猟犬（あなた）の勝ち！ウサギを追い詰めました' : 'The hounds (you) win! The hare is trapped.')
+        : (lang==='ja' ? '猟犬（CPU）の勝ち…追い詰められました' : 'The hounds (CPU) win — the hare is trapped.');
+    } else {
+      msg = playerSide==='hare'
+        ? (lang==='ja' ? 'ウサギ（あなた）の勝ち！逃げ切りました' : 'The hare (you) wins! It slipped past the hounds.')
+        : (lang==='ja' ? 'ウサギ（CPU）の勝ち…逃げ切られました' : 'The hare (CPU) wins — it slipped past your hounds.');
+    }
+    el.innerHTML = `<span class="winmsg">${msg}</span>`;
+    showEndModal(msg);
+    return;
+  }
+  if(current===playerSide){
+    if(playerSide==='hound'){
+      el.textContent = selectedHound
+        ? (lang==='ja' ? '移動先を選んでください' : 'Choose a destination')
+        : (lang==='ja' ? 'あなたの番：猟犬を選んで動かします' : 'Your turn: pick a hound and move it');
+    } else {
+      el.textContent = lang==='ja' ? 'あなたの番：ウサギを動かします' : 'Your turn: move the hare';
+    }
+  } else {
+    el.textContent = current==='hound'
+      ? (lang==='ja' ? '猟犬が動いています…' : 'The hounds are moving…')
+      : (lang==='ja' ? 'ウサギが動いています…' : 'The hare is moving…');
+  }
+}
+
+function applyLangStatic(){
+  document.querySelectorAll('[data-ja]').forEach(el=>{
+    el.textContent = el.getAttribute(lang==='ja'?'data-ja':'data-en');
+  });
+}
+function applyLang(){
+  document.documentElement.lang = lang==='ja'?'ja':'en';
+  applyLangStatic();
+  document.getElementById('langBtn').textContent = lang==='ja' ? 'EN' : 'JA';
+  setStatus();
+}
+
+document.getElementById('langBtn').addEventListener('click', ()=>{ lang = lang==='ja'?'en':'ja'; applyLang(); });
+document.getElementById('resetBtn').addEventListener('click', initGame);
+window.addEventListener('resize', drawLines);
+
+let theme='dark';
+function applyTheme(){
+  document.body.classList.toggle('light', theme==='light');
+  const btn=document.getElementById('themeBtn'); if(btn) btn.textContent = theme==='light' ? '\u{1F319}' : '\u2600\uFE0F';
+}
+document.getElementById('themeBtn').addEventListener('click', ()=>{ theme = theme==='light'?'dark':'light'; applyTheme(); });
+
+let aiLevel = 3;
+function aiNoise(scale){ const lv=Math.min(5,Math.max(1,aiLevel||3)); return [scale*3, scale*1.8, scale*1, scale*0.4, scale*0.05][lv-1]; }
+function aiBlunderChance(){ const lv=Math.min(5,Math.max(1,aiLevel||3)); return [0.45,0.22,0.06,0,0][lv-1]; }
+function renderDifficulty(){
+  document.querySelectorAll('.diff-btn').forEach(b=>{
+    b.classList.toggle('active', Number(b.getAttribute('data-level'))===aiLevel);
+  });
+}
+document.querySelectorAll('.diff-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{ aiLevel = Number(b.getAttribute('data-level')); renderDifficulty(); });
+});
+renderDifficulty();
+
+function showEndModal(msg){
+  const m=document.getElementById('endModalMsg'); if(m) m.textContent = msg;
+  const o=document.getElementById('endModal'); if(o) o.classList.add('show');
+}
+function hideEndModal(){
+  const o=document.getElementById('endModal'); if(o) o.classList.remove('show');
+}
+document.getElementById('endModalBtn').addEventListener('click', ()=>{ hideEndModal(); initGame(); });
+
+initGame();
+applyLang();
+applyTheme();
+</script>
+</body>
+</html>
