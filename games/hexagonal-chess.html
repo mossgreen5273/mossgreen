@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hexagonal Chess | 六角形のチェス</title>
+<style>
+  :root{
+    --bg:#14181a; --panel:#1b2320; --moss:#6f9a76; --moss-dim:#3c4f40;
+    --brass:#c69a5a; --ember:#d9714a; --ink:#e8e6df; --ink-dim:#9aa39c;
+    --hex-a:#22302a; --hex-b:#2c3c34; --hex-c:#334940;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background: radial-gradient(circle at 50% -10%, #232a20 0%, transparent 55%), var(--bg);
+    color:var(--ink); font-family:'Iowan Old Style','Georgia',serif;
+    display:flex; flex-direction:column; align-items:center; padding:28px 14px 60px;
+  }
+  h1{font-weight:400; letter-spacing:0.04em; font-size:clamp(20px,5vw,28px); margin:0 0 2px; text-align:center;}
+  .subtitle{color:var(--brass); font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:18px; text-align:center;}
+  .controls{display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-bottom:14px; font-size:13px;}
+  .status{
+    background:var(--panel); border:1px solid var(--moss-dim); border-radius:6px;
+    padding:10px 22px; margin-bottom:14px; font-size:14px; min-width:280px; text-align:center;
+  }
+  .status b{color:var(--ember);}
+  svg{ max-width:min(94vw,480px); width:100%; height:auto; }
+  .hex{ cursor:pointer; stroke:#0006; stroke-width:1; }
+  .hex.a{ fill:var(--hex-a); } .hex.b{ fill:var(--hex-b); } .hex.c{ fill:var(--hex-c); }
+  .hex.movable{ fill:#3c4f40; }
+  .hex.capturable{ fill:#5a3226; }
+  .hex.selected{ stroke:var(--ember); stroke-width:3; }
+  .piece-label{ font-size:19px; pointer-events:none; text-anchor:middle; dominant-baseline:central; font-family:'Iowan Old Style','Georgia',serif; }
+  .piece-w{ fill:#f4efe2; }
+  .piece-b{ fill:#2b2b2b; stroke:#7d9c85; stroke-width:0.6; }
+  .legend{margin-top:16px; font-size:12.5px; color:var(--ink-dim); text-align:center; max-width:460px;}
+  button{margin-top:20px; background:transparent; border:1px solid var(--brass); color:var(--brass); padding:8px 20px; border-radius:4px; font-family:inherit; font-size:13px; letter-spacing:0.08em; cursor:pointer;}
+  button:hover{background:rgba(198,154,90,0.12);}
+  select{background:var(--panel); color:var(--ink); border:1px solid var(--moss-dim); border-radius:4px; padding:2px 6px; font-family:inherit;}
+  .rules{max-width:520px; margin-top:24px; font-size:12.5px; line-height:1.75; color:var(--ink-dim); border-top:1px solid var(--moss-dim); padding-top:16px;}
+  .rules b{color:var(--moss);}
+  .en-only{ display:none; }
+  body.lang-en .ja-only{ display:none; }
+  body.lang-en .en-only{ display:inline; }
+  .rules.ja-only, .rules.en-only{ display:block; }
+  .rules.en-only{ display:none; }
+  body.lang-en .rules.ja-only{ display:none; }
+  body.lang-en .rules.en-only{ display:block; }
+  #langToggle, #themeToggle{ margin-top:0; padding:6px 14px; font-size:12px; }
+  body.light-mode{
+    --bg:#f5f1e8; --panel:#ffffff; --moss:#4f7255; --moss-dim:#c9d4c0;
+    --brass:#93732f; --ember:#b8492e; --ink:#2b2f2a; --ink-dim:#6f766a;
+    --hex-a:#eae5d6; --hex-b:#e0d9c6; --hex-c:#d3cbb4;
+    background: var(--bg) !important;
+  }
+  body.light-mode .piece-w{ fill:#ffffff; stroke:#2b2f2a; stroke-width:0.8; }
+  body.light-mode .piece-b{ fill:#1a1a1a; stroke:#4f7255; }
+</style>
+</head>
+<body>
+
+<h1>Hexagonal Chess</h1>
+<div class="subtitle">
+  <span class="ja-only">六角形のチェス &mdash; グリンスキー式、91マスの盤</span>
+  <span class="en-only">Gliński's Hexagonal Chess &mdash; a 91-cell board</span>
+</div>
+<button id="langToggle" type="button">EN</button>
+<button id="themeToggle" type="button">&#9728;</button>
+
+<div class="controls">
+  <span>
+    <label><input type="radio" name="humanSide" value="W" checked>
+      <span class="ja-only">白として戦う</span><span class="en-only">Play White</span>
+    </label>
+    <label><input type="radio" name="humanSide" value="B">
+      <span class="ja-only">黒として戦う</span><span class="en-only">Play Black</span>
+    </label>
+  </span>
+  <span>
+    <span class="ja-only">AIの強さ:</span><span class="en-only">AI strength:</span>
+    <select id="aiLevel">
+      <option value="l1" id="optL1">最弱</option>
+      <option value="l2" id="optL2">弱い</option>
+      <option value="l3" id="optL3" selected>普通</option>
+      <option value="l4" id="optL4">強い</option>
+      <option value="l5" id="optL5">最強</option>
+    </select>
+  </span>
+</div>
+
+<div class="status" id="status">白の番です</div>
+<svg id="board" viewBox="0 0 460 420"></svg>
+
+<div class="legend ja-only">ルークは6方向の直線、ビショップは6方向の頂点越えの斜め線を移動します(スライド)。キングは隣接6マス+斜め6方向の1歩で計12通り。クイーンはルーク+ビショップ。ナイトはヘクス版のL字跳躍です。</div>
+<div class="legend en-only">The rook slides along 6 straight directions; the bishop slides along 6 vertex-crossing diagonal directions. The king steps to any of the 6 adjacent hexes or 6 diagonal hexes (12 destinations total). The queen combines rook and bishop. The knight leaps in a hex-adapted L-shape.</div>
+
+<button id="reset"><span class="ja-only">やり直す</span><span class="en-only">Reset</span></button>
+
+<div class="rules ja-only">
+  1936年、ポーランドのヴワディスワフ・グリンスキーが考案。91個の六角マス(3色)の盤で、駒はキング・クイーン・ルーク×2・ビショップ×3・ナイト×2・ポーン×9(通常のチェスよりビショップとポーンが1つずつ多い)。ビショップは色ごとに1体ずつ、互いに交わることのない3本の斜め軸を移動します。ポーンは初期位置から2マス前進でき、前方の斜め2方向に捕獲します。<br><br>
+  簡易化: 開始配置は公式のグリンスキー配置を厳密に再現したものではなく、駒数・movement・盤の形をそのままに独自に組んだ対称配置です。アンパッサン・キャスリングは省略しています。チェック・チェックメイトの概念も省略し、<b>王を直接捕獲した時点で即決着</b>とします。
+</div>
+<div class="rules en-only">
+  Invented in 1936 by Władysław Gliński of Poland. A board of 91 hex cells in three colors, with a king, queen, 2 rooks, 3 bishops, 2 knights, and 9 pawns per side (one extra bishop and one extra pawn compared to ordinary chess). Each bishop is confined to one of the three cell colors, so the three together cover the whole board. Pawns may advance two squares from their starting cell, and capture to the two forward-diagonal cells.<br><br>
+  Simplification: the starting array here is an original, symmetric arrangement matching the correct piece counts and movement rather than an exact reproduction of the official Gliński diagram. En passant and castling are omitted. Check and checkmate aren't enforced &mdash; <b>capturing the king directly ends the game</b>.
+</div>
+
+<script>
+// Axial coordinates (q,r); implied cube s = -q-r. Board: |q|<=5, |r|<=5, |q+r|<=5 (91 cells).
+const RADIUS=5;
+const ROOK_DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+const DIAG_DIRS=[[2,-1],[1,-2],[-1,-1],[-2,1],[-1,2],[1,1]];
+const KNIGHT_OFFS=[[3,-1],[2,1],[2,-3],[3,-2],[-1,-2],[1,-3],[-3,1],[-2,-1],[-2,3],[-3,2],[1,2],[-1,3]];
+const KING_DIRS=ROOK_DIRS.concat(DIAG_DIRS);
+const PVAL={K:1000,Q:9,R:5,B:3,N:3,P:1};
+const GLYPH={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'};
+
+let board; // Map "q,r" -> {t,s}
+let turn, selected, gameOver, humanSide='W', lang='ja', aiLevel='l3';
+let statusState={type:'turn', side:'W'};
+
+function key(q,r){ return q+','+r; }
+function getP(bd,q,r){ return bd.get(key(q,r)) || null; }
+function setP(bd,q,r,v){ if(v===null) bd.delete(key(q,r)); else bd.set(key(q,r), v); }
+function cloneBd(bd){ return new Map(bd); }
+function inBoard(q,r){ return Math.abs(q)<=RADIUS && Math.abs(r)<=RADIUS && Math.abs(q+r)<=RADIUS; }
+function qRange(r){
+  const lo = Math.max(-RADIUS, -RADIUS-r), hi = Math.min(RADIUS, RADIUS-r);
+  return [lo,hi];
+}
+
+function setup(){
+  board = new Map();
+  const backOrder=['B','N','R','Q','K','R','N','B'];
+  // White (positive r side)
+  { const [lo,hi]=qRange(2); for(let q=lo;q<=hi;q++) setP(board,q,2,{t:'P', s:'W'}); }
+  { const [lo,hi]=qRange(3); for(let i=0;i<backOrder.length;i++) setP(board,lo+i,3,{t:backOrder[i], s:'W'}); }
+  { const [lo,hi]=qRange(4); const mid=Math.round((lo+hi)/2); setP(board,mid,4,{t:'B', s:'W'}); }
+  // Black (negative r side), mirrored
+  { const [lo,hi]=qRange(-2); for(let q=lo;q<=hi;q++) setP(board,q,-2,{t:'P', s:'B'}); }
+  { const [lo,hi]=qRange(-3); for(let i=0;i<backOrder.length;i++) setP(board,lo+i,-3,{t:backOrder[i], s:'B'}); }
+  { const [lo,hi]=qRange(-4); const mid=Math.round((lo+hi)/2); setP(board,mid,-4,{t:'B', s:'B'}); }
+
+  turn='W'; selected=null; gameOver=false;
+  statusState={type:'turn', side:'W'};
+}
+setup();
+
+function labelOf(s){ return lang==='ja' ? (s==='W'?'白':'黒') : (s==='W'?'White':'Black'); }
+function statusText(){
+  const s=statusState;
+  if(s.type==='turn') return s.side===humanSide ? (lang==='ja'?`${labelOf(s.side)}の番です`:`${labelOf(s.side)}'s turn`) : (lang==='ja'?`${labelOf(s.side)}(AI)が考え中…`:`${labelOf(s.side)} (AI) is thinking…`);
+  if(s.type==='winKing') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — 王を捕獲しました` : `<b>${labelOf(s.winner)} wins</b> — the king was captured`;
+  if(s.type==='winNoMoves') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — ${labelOf(s.loser)}に合法手がありません` : `<b>${labelOf(s.winner)} wins</b> — ${labelOf(s.loser)} has no legal moves`;
+  return '';
+}
+
+function slide(bd,q,r,side,dirs){
+  const out=[];
+  for(const [dq,dr] of dirs){
+    let nq=q+dq, nr=r+dr;
+    while(inBoard(nq,nr)){
+      const t=getP(bd,nq,nr);
+      if(!t){ out.push([nq,nr]); }
+      else { if(t.s!==side) out.push([nq,nr]); break; }
+      nq+=dq; nr+=dr;
+    }
+  }
+  return out;
+}
+
+function pieceMoves(bd,q,r){
+  const p=getP(bd,q,r), side=p.s, out=[];
+  if(p.t==='R'){ out.push(...slide(bd,q,r,side,ROOK_DIRS)); }
+  else if(p.t==='B'){ out.push(...slide(bd,q,r,side,DIAG_DIRS)); }
+  else if(p.t==='Q'){ out.push(...slide(bd,q,r,side,ROOK_DIRS)); out.push(...slide(bd,q,r,side,DIAG_DIRS)); }
+  else if(p.t==='N'){
+    for(const [dq,dr] of KNIGHT_OFFS){
+      const nq=q+dq, nr=r+dr;
+      if(inBoard(nq,nr)){ const t=getP(bd,nq,nr); if(!t || t.s!==side) out.push([nq,nr]); }
+    }
+  } else if(p.t==='K'){
+    for(const [dq,dr] of KING_DIRS){
+      const nq=q+dq, nr=r+dr;
+      if(inBoard(nq,nr)){ const t=getP(bd,nq,nr); if(!t || t.s!==side) out.push([nq,nr]); }
+    }
+  } else if(p.t==='P'){
+    const fwd = side==='W' ? [0,-1] : [0,1];
+    const startR = side==='W' ? 2 : -2;
+    const nq1=q+fwd[0], nr1=r+fwd[1];
+    if(inBoard(nq1,nr1) && !getP(bd,nq1,nr1)){
+      out.push([nq1,nr1]);
+      if(r===startR){
+        const nq2=q+2*fwd[0], nr2=r+2*fwd[1];
+        if(inBoard(nq2,nr2) && !getP(bd,nq2,nr2)) out.push([nq2,nr2]);
+      }
+    }
+    const capDirs = side==='W' ? [[1,-1],[-1,0]] : [[-1,1],[1,0]];
+    for(const [dq,dr] of capDirs){
+      const nq=q+dq, nr=r+dr;
+      if(inBoard(nq,nr)){ const t=getP(bd,nq,nr); if(t && t.s!==side) out.push([nq,nr]); }
+    }
+  }
+  return out;
+}
+
+function piecesOf(bd, side){
+  const list=[];
+  for(const [k,p] of bd){
+    if(p.s===side){
+      const [q,r]=k.split(',').map(Number);
+      if(pieceMoves(bd,q,r).length>0) list.push([q,r]);
+    }
+  }
+  return list;
+}
+
+const svg=document.getElementById('board');
+const statusEl=document.getElementById('status');
+const CX=230, CY=210, HSIZE=22;
+
+function hexCenter(q,r){ return {x: CX + HSIZE*Math.sqrt(3)*(q+r/2), y: CY + HSIZE*1.5*r}; }
+function hexCorners(cx,cy){
+  const pts=[];
+  for(let i=0;i<6;i++){
+    const ang = Math.PI/180*(60*i-30);
+    pts.push([cx+HSIZE*Math.cos(ang), cy+HSIZE*Math.sin(ang)]);
+  }
+  return pts.map(p=>p.join(',')).join(' ');
+}
+function hexColorClass(q,r){
+  const c = ((q - r) % 3 + 3) % 3;
+  return c===0 ? 'a' : c===1 ? 'b' : 'c';
+}
+
+function render(){
+  svg.innerHTML='';
+  const NS='http://www.w3.org/2000/svg';
+  let targets=[];
+  if(selected) targets = pieceMoves(board, selected[0], selected[1]);
+
+  for(let r=-RADIUS;r<=RADIUS;r++){
+    const [lo,hi]=qRange(r);
+    for(let q=lo;q<=hi;q++){
+      const {x,y}=hexCenter(q,r);
+      const poly=document.createElementNS(NS,'polygon');
+      poly.setAttribute('points', hexCorners(x,y));
+      let cls='hex '+hexColorClass(q,r);
+      if(selected && selected[0]===q && selected[1]===r) cls+=' selected';
+      const isTarget = targets.some(([tq,tr])=>tq===q&&tr===r);
+      if(isTarget) cls += getP(board,q,r) ? ' capturable' : ' movable';
+      poly.setAttribute('class', cls);
+      poly.addEventListener('click', ()=>onClick(q,r));
+      svg.appendChild(poly);
+
+      const p = getP(board,q,r);
+      if(p){
+        const text=document.createElementNS(NS,'text');
+        text.setAttribute('x', x); text.setAttribute('y', y+1);
+        text.setAttribute('class', 'piece-label '+(p.s==='W'?'piece-w':'piece-b'));
+        text.textContent = GLYPH[p.t];
+        text.style.pointerEvents='none';
+        svg.appendChild(text);
+      }
+    }
+  }
+  statusEl.innerHTML = statusText();
+}
+
+function onClick(q,r){
+  if(gameOver || turn!==humanSide) return;
+  const p = getP(board,q,r);
+  if(selected){
+    const targets = pieceMoves(board, selected[0], selected[1]);
+    if(targets.some(([tq,tr])=>tq===q&&tr===r)){
+      const mv=selected; selected=null;
+      doMove(mv,[q,r]);
+      return;
+    }
+    if(p && p.s===turn && pieceMoves(board,q,r).length>0){ selected=[q,r]; render(); return; }
+    selected=null; render(); return;
+  }
+  if(p && p.s===turn && pieceMoves(board,q,r).length>0){ selected=[q,r]; render(); }
+}
+
+function doMove(from,to){
+  const [fq,fr]=from, [tq,tr]=to;
+  const mover=getP(board,fq,fr);
+  const captured=getP(board,tq,tr);
+  setP(board,tq,tr,mover); setP(board,fq,fr,null);
+  if(mover.t==='P' && ((mover.s==='W'&&tr<=-RADIUS) || (mover.s==='B'&&tr>=RADIUS))) mover.t='Q';
+
+  if(captured && captured.t==='K'){
+    gameOver=true;
+    statusState={type:'winKing', winner:mover.s};
+    render();
+    return;
+  }
+  const opp = mover.s==='W' ? 'B' : 'W';
+  if(piecesOf(board, opp).length===0){
+    gameOver=true;
+    statusState={type:'winNoMoves', winner:mover.s, loser:opp};
+    turn=opp;
+    render();
+    return;
+  }
+  turn=opp;
+  statusState={type:'turn', side:opp};
+  render();
+  if(turn!==humanSide) setTimeout(aiTurn, 500);
+}
+
+function aiTurnEasy(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  const [q,r]=pcs[Math.floor(Math.random()*pcs.length)];
+  const dests=pieceMoves(board,q,r);
+  const [tq,tr]=dests[Math.floor(Math.random()*dests.length)];
+  doMove([q,r],[tq,tr]);
+}
+function aiTurnL2(){
+  if(Math.random()<0.65){ aiTurnEasy(); } else { aiTurnNormal(); }
+}
+function aiTurnNormal(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [q,r] of pcs){
+    for(const [tq,tr] of pieceMoves(board,q,r)){
+      const t=getP(board,tq,tr);
+      const score=(t?(PVAL[t.t]||1):0) + Math.random()*0.3;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[q,r],to:[tq,tr]}]; }
+      else if(Math.abs(score-bestScore)<0.05){ bestMoves.push({from:[q,r],to:[tq,tr]}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.to);
+}
+function simulateMove(bd, from, to){
+  const nb=cloneBd(bd);
+  const mover={...getP(nb,from[0],from[1])};
+  setP(nb,to[0],to[1],mover); setP(nb,from[0],from[1],null);
+  if(mover.t==='P' && ((mover.s==='W'&&to[1]<=-RADIUS)||(mover.s==='B'&&to[1]>=RADIUS))) mover.t='Q';
+  return nb;
+}
+function opponentBestCaptureValue(nb, opp){
+  let best=0;
+  for(const [q,r] of piecesOf(nb, opp)){
+    for(const [tq,tr] of pieceMoves(nb,q,r)){
+      const t=getP(nb,tq,tr);
+      if(t){ const v=PVAL[t.t]||1; if(v>best) best=v; }
+    }
+  }
+  return best;
+}
+function aiTurnHard(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [q,r] of pcs){
+    for(const [tq,tr] of pieceMoves(board,q,r)){
+      const t=getP(board,tq,tr);
+      if(t && t.t==='K'){ bestMoves=[{from:[q,r],to:[tq,tr]}]; bestScore=1e6; continue; }
+      const captureVal=t?(PVAL[t.t]||1):0;
+      const nb=simulateMove(board,[q,r],[tq,tr]);
+      const oppBest=opponentBestCaptureValue(nb,opp);
+      const score=captureVal-oppBest*0.8;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[q,r],to:[tq,tr]}]; }
+      else if(Math.abs(score-bestScore)<0.01){ bestMoves.push({from:[q,r],to:[tq,tr]}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.to);
+}
+function aiTurnL5(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [q,r] of pcs){
+    for(const [tq,tr] of pieceMoves(board,q,r)){
+      const t=getP(board,tq,tr);
+      if(t && t.t==='K'){ bestMoves=[{from:[q,r],to:[tq,tr]}]; bestScore=1e6; continue; }
+      const captureVal=t?(PVAL[t.t]||1):0;
+      const nb=simulateMove(board,[q,r],[tq,tr]);
+      const oppBest=opponentBestCaptureValue(nb,opp);
+      const score=captureVal-oppBest*1.1;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[q,r],to:[tq,tr]}]; }
+    }
+  }
+  const mv=bestMoves[0];
+  doMove(mv.from,mv.to);
+}
+function aiTurn(){
+  if(gameOver) return;
+  if(aiLevel==='l1') aiTurnEasy();
+  else if(aiLevel==='l2') aiTurnL2();
+  else if(aiLevel==='l4') aiTurnHard();
+  else if(aiLevel==='l5') aiTurnL5();
+  else aiTurnNormal();
+}
+
+function applyLangTexts(){
+  document.getElementById('optL1').textContent = lang==='ja' ? '最弱' : 'Weakest';
+  document.getElementById('optL2').textContent = lang==='ja' ? '弱い' : 'Easy';
+  document.getElementById('optL3').textContent = lang==='ja' ? '普通' : 'Normal';
+  document.getElementById('optL4').textContent = lang==='ja' ? '強い' : 'Hard';
+  document.getElementById('optL5').textContent = lang==='ja' ? '最強' : 'Strongest';
+  document.getElementById('langToggle').textContent = lang==='ja' ? 'EN' : '日本語';
+  document.title = lang==='ja' ? 'Hexagonal Chess | 六角形のチェス' : "Hexagonal Chess | Gliński's";
+}
+document.getElementById('langToggle').addEventListener('click', ()=>{
+  lang = lang==='ja' ? 'en' : 'ja';
+  document.body.classList.toggle('lang-en', lang==='en');
+  applyLangTexts();
+  render();
+});
+let theme='dark';
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  theme = theme==='dark' ? 'light' : 'dark';
+  document.body.classList.toggle('light-mode', theme==='light');
+  document.getElementById('themeToggle').textContent = theme==='dark' ? '\u2600' : '\u{1F319}';
+});
+
+document.getElementById('aiLevel').addEventListener('change', e=>{ aiLevel=e.target.value; });
+document.querySelectorAll('input[name="humanSide"]').forEach(radio=>{
+  radio.addEventListener('change', e=>{
+    humanSide=e.target.value;
+    setup(); render();
+    if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+  });
+});
+document.getElementById('reset').addEventListener('click', ()=>{
+  setup(); render();
+  if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+});
+
+applyLangTexts();
+render();
+</script>
+</body>
+</html>
