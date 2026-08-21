@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>カラハ｜Kalah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#182922; --bg2:#1b2a22; --panel:#20302711; --panel-solid:#1e2e26;
+    --brass:#c9a06e; --brass-light:#eccb9c; --brass-dim:#a8875c;
+    --text:#f5f0e3; --text-dim:#c3cdc0; --wood:#3a2c1f; --pit:#33473b;
+    --seed:#c9a25a; --danger:#c15b50; --good:#86ab6f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(ellipse at 20% 0%, #2e4939 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #223a2c 0%, transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:700; font-size:clamp(28px,5vw,44px);
+    color:var(--brass-light); margin:8px 0 2px; letter-spacing:0.5px; text-align:center;
+  }
+  .subtitle{ color:var(--text-dim); font-size:14px; margin-bottom:20px; text-align:center; letter-spacing:0.5px;}
+  .topbar{ display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; justify-content:center;}
+  button.lang, button.reset{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    padding:7px 16px; border-radius:20px; font-family:'Instrument Sans'; font-size:13px;
+    cursor:pointer; transition:all .2s;
+  }
+  button.lang:hover, button.reset:hover{ background:var(--brass); color:#14201b; border-color:var(--brass);}
+  .status{
+    font-family:'Fraunces',serif; font-size:19px; color:var(--brass-light); min-height:28px;
+    margin-bottom:18px; text-align:center;
+  }
+  .board-wrap{
+    background:linear-gradient(160deg,#5e4933,#3a2a18);
+    border-radius:28px; padding:22px 18px; box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 2px 6px rgba(255,255,255,.06);
+    border:1px solid #5c452c;
+  }
+  .board{
+    display:grid; grid-template-columns:70px repeat(6,minmax(52px,72px)) 70px;
+    grid-template-rows:auto auto; gap:10px; align-items:center;
+  }
+  .store{
+    grid-row:1/3; width:70px; height:150px; border-radius:35px;
+    background:radial-gradient(ellipse at 40% 30%, #33241a, #1c1209);
+    border:2px solid var(--brass-dim); display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative;
+  }
+  .store .count{ font-family:'Fraunces',serif; font-size:26px; color:var(--brass-light); font-weight:600;}
+  .store .lbl{ position:absolute; bottom:8px; font-size:10px; color:var(--text-dim); letter-spacing:1px;}
+  .pit{
+    width:100%; aspect-ratio:1/1; border-radius:50%;
+    background:radial-gradient(ellipse at 40% 30%, #3a2c1f, #201509);
+    border:2px solid var(--brass-dim); display:flex; align-items:center; justify-content:center;
+    position:relative; cursor:default; transition:transform .15s, box-shadow .15s;
+  }
+  .pit.playable{ cursor:pointer; border-color:var(--brass); }
+  .pit.playable:hover{ transform:translateY(-3px); box-shadow:0 6px 16px rgba(184,147,95,.35); }
+  .pit .count{ font-family:'Fraunces',serif; font-size:20px; color:var(--seed); font-weight:600; z-index:2;}
+  .seeds{ position:absolute; inset:6px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:2px; opacity:.55;}
+  .seeds span{ width:7px; height:7px; border-radius:50%; background:var(--seed); }
+  .row-label{ grid-column:1/9; font-size:11px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin:2px 0; }
+  .legend{ display:flex; gap:22px; margin-top:22px; font-size:12px; color:var(--text-dim); }
+  .rules{
+    max-width:560px; margin-top:32px; background:var(--panel-solid); border:1px solid #2c3c31;
+    border-radius:16px; padding:20px 22px; font-size:13.5px; line-height:1.8; color:var(--text-dim);
+  }
+  .rules h2{ font-family:'Fraunces',serif; color:var(--brass-light); font-size:17px; margin:0 0 8px;}
+  .hidden{ display:none !important; }
+  .winmsg{ color:var(--brass-light); font-weight:600; }
+  @media(max-width:520px){
+    .board{ grid-template-columns:44px repeat(6,minmax(38px,1fr)) 44px; gap:6px;}
+    .store{ width:44px; height:120px; }
+    .store .count{ font-size:19px;}
+  }
+
+  /* --- theme / difficulty / end-game modal (added) --- */
+  body.light{
+    --bg:#f2e9d8; --text:#2a2016; --text-dim:#6b5f4e;
+    --brass:#8a6d3f; --brass-light:#6b5230; --brass-dim:#a9865a;
+    --good:#3f7a3a; --danger:#c15b50;
+  }
+  body.light{
+    background:
+      radial-gradient(ellipse at 20% 0%, #efe4c8 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #e9dcbb 0%, transparent 55%), var(--bg);
+  }
+  .icon-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    width:32px; height:32px; border-radius:50%; font-size:14px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; padding:0; line-height:1;
+  }
+  .icon-btn:hover{ background:var(--brass); color:#14201b; border-color:var(--brass); }
+  .difficulty-row{ display:flex; gap:8px; align-items:center; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+  .difficulty-row .dlabel{ font-size:12px; color:var(--text-dim); margin-right:2px; }
+  .diff-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light); width:28px; height:28px;
+    border-radius:50%; font-family:'Instrument Sans',sans-serif; font-size:12px; cursor:pointer; padding:0;
+  }
+  .diff-btn.active{ background:var(--brass); color:#14201b; font-weight:700; border-color:var(--brass); }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(8,12,10,.72); display:flex; align-items:center; justify-content:center;
+    z-index:999; opacity:0; pointer-events:none; transition:opacity .25s; padding:20px;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    background:linear-gradient(160deg,#3c5747,#22362b); border:1px solid var(--brass-dim); border-radius:20px;
+    padding:34px 38px; text-align:center; box-shadow:0 30px 70px rgba(0,0,0,.6); max-width:86vw;
+    transform:translateY(10px); transition:transform .25s;
+  }
+  body.light .modal-box{ background:linear-gradient(160deg,#fbf3df,#efe0bd); }
+  .modal-overlay.show .modal-box{ transform:translateY(0); }
+  .modal-box .modal-msg{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,6vw,32px); color:var(--brass-light); margin-bottom:22px; }
+  .modal-box button{
+    background:var(--brass); color:#14201b; border:none; padding:10px 28px; border-radius:22px;
+    font-family:'Instrument Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="endModal">
+  <div class="modal-box">
+    <div class="modal-msg" id="endModalMsg"></div>
+    <button id="endModalBtn" data-ja="もう一度" data-en="Play again">もう一度</button>
+  </div>
+</div>
+
+
+<div class="topbar">
+  <button class="lang" id="langBtn">EN</button>
+  <button class="reset" id="resetBtn" data-ja="はじめから" data-en="Restart">はじめから</button>
+  <button class="icon-btn" id="themeBtn" title="theme">☀️</button>
+</div>
+
+<div class="difficulty-row">
+  <span class="dlabel" data-ja="AIの強さ" data-en="AI strength">AIの強さ</span>
+  <button class="diff-btn" data-level="1">1</button>
+  <button class="diff-btn" data-level="2">2</button>
+  <button class="diff-btn active" data-level="3">3</button>
+  <button class="diff-btn" data-level="4">4</button>
+  <button class="diff-btn" data-level="5">5</button>
+</div>
+
+<h1 data-ja="カラハ" data-en="Kalah">カラハ</h1>
+<div class="subtitle" data-ja="世界標準ルールのマンカラ" data-en="The world-standard mancala ruleset">世界標準ルールのマンカラ</div>
+
+<div class="status" id="status"></div>
+
+<div class="board-wrap">
+  <div class="row-label" data-ja="相手（CPU）" data-en="Opponent (CPU)">相手（CPU）</div>
+  <div class="board" id="board"></div>
+  <div class="row-label" data-ja="あなた" data-en="You">あなた</div>
+</div>
+
+<div class="legend">
+  <div><span data-ja="● 自分の穴をクリックして種をまきます" data-en="● Click your pit to sow seeds">● 自分の穴をクリックして種をまきます</span></div>
+</div>
+
+<div class="rules">
+  <h2 data-ja="遊び方" data-en="How to play">遊び方</h2>
+  <p data-ja="① 自分の穴を選ぶと、そこに入っていた石が反時計回りに1個ずつ隣の穴（自分のゴールを含む）にまかれます。相手のゴールは飛ばされます。
+② 最後の石が自分のゴールに入ると、もう一度自分の番になります。
+③ 最後の石が自分側の空の穴に入ると、その石と向かい合う相手の穴の石をすべて自分のゴールに獲得します。
+④ どちらかの陣地の穴がすべて空になったらゲーム終了。残った石は持ち主のゴールに加算されます。ゴールの石が多い方の勝ちです。"
+     data-en="① Pick one of your pits. Its seeds are sown one-by-one counter-clockwise into each following pit, including your own store — but skipping your opponent's store.
+② If your last seed lands in your own store, you get another turn.
+③ If your last seed lands in an empty pit on your own side, you capture that seed plus all seeds in the opposite pit, adding them to your store.
+④ When one side's pits are all empty, the game ends. Remaining seeds go to their owner's store. Most seeds in your store wins.">
+  ① 自分の穴を選ぶと、そこに入っていた石が反時計回りに1個ずつ隣の穴（自分のゴールを含む）にまかれます。相手のゴールは飛ばされます。<br>
+  ② 最後の石が自分のゴールに入ると、もう一度自分の番になります。<br>
+  ③ 最後の石が自分側の空の穴に入ると、その石と向かい合う相手の穴の石をすべて自分のゴールに獲得します。<br>
+  ④ どちらかの陣地の穴がすべて空になったらゲーム終了。残った石は持ち主のゴールに加算されます。ゴールの石が多い方の勝ちです。
+  </p>
+</div>
+
+<script>
+// pits index: 0-5 = player pits (left to right as seen by player), 6 = player store
+// 7-12 = CPU pits (left to right as seen by player, but sowing order wraps), 13 = CPU store
+let board, current, gameOver, lang='ja';
+
+function initGame(){
+  board = [4,4,4,4,4,4,0, 4,4,4,4,4,4,0];
+  current = 'player';
+  gameOver = false;
+  render();
+  setStatus();
+}
+
+function opponentOf(store){ return store===6?13:6; }
+
+function sow(startIdx, owner){
+  let stones = board[startIdx];
+  board[startIdx] = 0;
+  let idx = startIdx;
+  const skipStore = owner==='player' ? 13 : 6;
+  while(stones>0){
+    idx = (idx+1)%14;
+    if(idx===skipStore) continue;
+    board[idx]++;
+    stones--;
+  }
+  return idx;
+}
+
+function isOwnPit(idx, owner){
+  if(owner==='player') return idx>=0 && idx<=5;
+  return idx>=7 && idx<=12;
+}
+function isOwnStore(idx, owner){
+  return owner==='player' ? idx===6 : idx===13;
+}
+function opposite(idx){ return 12-idx; }
+
+function playMove(pitIdx, owner){
+  if(gameOver) return;
+  const lastIdx = sow(pitIdx, owner);
+  // capture check
+  if(isOwnPit(lastIdx, owner) && board[lastIdx]===1){
+    const oppIdx = opposite(lastIdx);
+    if(board[oppIdx] > 0){
+      const store = owner==='player' ? 6 : 13;
+      board[store] += board[oppIdx] + 1;
+      board[oppIdx] = 0;
+      board[lastIdx] = 0;
+    }
+  }
+  checkEnd();
+  if(gameOver){ render(); setStatus(); return; }
+
+  if(isOwnStore(lastIdx, owner)){
+    // extra turn, same player goes again
+    render();
+    setStatus();
+    if(owner==='cpu') setTimeout(cpuTurn, 1600);
+    return;
+  }
+  // switch turn
+  current = owner==='player' ? 'cpu' : 'player';
+  render();
+  setStatus();
+  if(current==='cpu' && !gameOver) setTimeout(cpuTurn, 1600);
+}
+
+function checkEnd(){
+  const playerEmpty = board.slice(0,6).every(v=>v===0);
+  const cpuEmpty = board.slice(7,13).every(v=>v===0);
+  if(playerEmpty || cpuEmpty){
+    for(let i=0;i<6;i++){ board[6]+=board[i]; board[i]=0; }
+    for(let i=7;i<13;i++){ board[13]+=board[i]; board[i]=0; }
+    gameOver = true;
+  }
+}
+
+function cpuTurn(){
+  if(gameOver) return;
+  const options = [];
+  for(let i=7;i<=12;i++) if(board[i]>0) options.push(i);
+  if(options.length===0){ checkEnd(); render(); setStatus(); return; }
+  if(Math.random()<aiBlunderChance()){
+    playMove(options[Math.floor(Math.random()*options.length)], 'cpu');
+    return;
+  }
+  // simple heuristic: prefer extra-turn moves, then captures, then random
+  let best=null, bestScore=-1;
+  for(const idx of options){
+    let score = Math.random()*aiNoise(2);
+    const stones = board[idx];
+    const landing = (idx + stones + (idx+stones>=13 && idx<13 && (idx+ (stones>= (13-idx) ?1:0)) ? 0:0)) ; // unused, compute precisely below
+    // simulate landing index accounting for store skip (6)
+    let pos = idx, remain = stones;
+    while(remain>0){ pos=(pos+1)%14; if(pos===6) continue; remain--; }
+    if(pos===13) score += 10; // extra turn
+    if(pos>=7 && pos<=12 && board[pos]===0){
+      const opp = 12-pos;
+      if(board[opp]>0) score += board[opp]*1.5;
+    }
+    if(score>bestScore){ bestScore=score; best=idx; }
+  }
+  playMove(best, 'cpu');
+}
+
+function onPitClick(idx){
+  if(gameOver || current!=='player') return;
+  if(idx<0||idx>5) return;
+  if(board[idx]===0) return;
+  playMove(idx, 'player');
+}
+
+function seedDots(n){
+  const cap = Math.min(n,10);
+  let s='';
+  for(let i=0;i<cap;i++) s+='<span></span>';
+  return s;
+}
+
+function render(){
+  const b = document.getElementById('board');
+  b.innerHTML='';
+  // Row 1: CPU store(left, spans 2 rows via grid) ... actually simpler layout below
+  // We'll build a 2-row grid manually: row1 = cpu pits reversed (12..7), row2 = player pits (0..5)
+  // stores span both rows at far left (player store) and far right (cpu store)... 
+  // Simplify: left store = player's store, right store = cpu's store, matches counter-clockwise flow.
+  const playerStore = document.createElement('div');
+  playerStore.className='store';
+  playerStore.innerHTML = `<div class="count">${board[6]}</div><div class="lbl">GOAL</div>`;
+  playerStore.style.gridRow='1/3'; playerStore.style.gridColumn='1';
+  b.appendChild(playerStore);
+
+  // top row: cpu pits 12..7 (right to left visually so sowing direction feels counter-clockwise)
+  for(let col=0; col<6; col++){
+    const idx = 12-col;
+    const pit = document.createElement('div');
+    pit.className='pit';
+    pit.style.gridRow='1'; pit.style.gridColumn=(col+2);
+    pit.innerHTML = `<div class="seeds">${seedDots(board[idx])}</div><div class="count">${board[idx]}</div>`;
+    b.appendChild(pit);
+  }
+
+  const cpuStore = document.createElement('div');
+  cpuStore.className='store';
+  cpuStore.innerHTML = `<div class="count">${board[13]}</div><div class="lbl">GOAL</div>`;
+  cpuStore.style.gridRow='1/3'; cpuStore.style.gridColumn='8';
+  b.appendChild(cpuStore);
+
+  // bottom row: player pits 0..5 left to right
+  for(let col=0; col<6; col++){
+    const idx = col;
+    const pit = document.createElement('div');
+    pit.className='pit' + (current==='player' && board[idx]>0 && !gameOver ? ' playable':'');
+    pit.style.gridRow='2'; pit.style.gridColumn=(col+2);
+    pit.innerHTML = `<div class="seeds">${seedDots(board[idx])}</div><div class="count">${board[idx]}</div>`;
+    if(current==='player' && board[idx]>0 && !gameOver){
+      pit.addEventListener('click', ()=>onPitClick(idx));
+    }
+    b.appendChild(pit);
+  }
+}
+
+function setStatus(){
+  const el = document.getElementById('status');
+  if(gameOver){
+    const p = board[6], c = board[13];
+    let msg;
+    if(p>c) msg = lang==='ja' ? `あなたの勝ち！（${p} 対 ${c}）` : `You win! (${p} to ${c})`;
+    else if(c>p) msg = lang==='ja' ? `CPUの勝ち（${c} 対 ${p}）` : `CPU wins (${c} to ${p})`;
+    else msg = lang==='ja' ? `引き分け（${p} 対 ${c}）` : `Draw (${p} to ${p})`;
+    el.innerHTML = `<span class="winmsg">${msg}</span>`;
+    showEndModal(msg);
+    return;
+  }
+  el.textContent = current==='player'
+    ? (lang==='ja' ? 'あなたの番です' : 'Your turn')
+    : (lang==='ja' ? 'CPUが考えています…' : 'CPU is thinking…');
+}
+
+function applyLang(){
+  document.documentElement.lang = lang==='ja' ? 'ja' : 'en';
+  document.querySelectorAll('[data-ja]').forEach(el=>{
+    el.textContent = el.getAttribute(lang==='ja'?'data-ja':'data-en');
+  });
+  document.getElementById('langBtn').textContent = lang==='ja' ? 'EN' : 'JA';
+  setStatus();
+}
+
+document.getElementById('langBtn').addEventListener('click', ()=>{
+  lang = lang==='ja' ? 'en' : 'ja';
+  applyLang();
+});
+document.getElementById('resetBtn').addEventListener('click', initGame);
+
+
+let theme='dark';
+function applyTheme(){
+  document.body.classList.toggle('light', theme==='light');
+  const btn=document.getElementById('themeBtn'); if(btn) btn.textContent = theme==='light' ? '\u{1F319}' : '\u2600\uFE0F';
+}
+document.getElementById('themeBtn').addEventListener('click', ()=>{ theme = theme==='light'?'dark':'light'; applyTheme(); });
+
+let aiLevel = 3;
+function aiNoise(scale){ return [scale*3, scale*1.8, scale*1, scale*0.4, scale*0.05][aiLevel-1]; }
+function aiBlunderChance(){ return [0.45,0.22,0.06,0,0][aiLevel-1]; }
+function renderDifficulty(){
+  document.querySelectorAll('.diff-btn').forEach(b=>{
+    b.classList.toggle('active', Number(b.getAttribute('data-level'))===aiLevel);
+  });
+}
+document.querySelectorAll('.diff-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{ aiLevel = Number(b.getAttribute('data-level')); renderDifficulty(); });
+});
+renderDifficulty();
+
+function showEndModal(msg){
+  const m=document.getElementById('endModalMsg'); if(m) m.textContent = msg;
+  const o=document.getElementById('endModal'); if(o) o.classList.add('show');
+}
+function hideEndModal(){
+  const o=document.getElementById('endModal'); if(o) o.classList.remove('show');
+}
+document.getElementById('endModalBtn').addEventListener('click', ()=>{ hideEndModal(); initGame(); });
+
+initGame();
+applyLang();
+applyTheme();
+</script>
+</body>
+</html>
