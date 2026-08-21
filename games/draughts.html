@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ドラフツ｜International Draughts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#182922; --brass:#c9a06e; --brass-light:#eccb9c; --brass-dim:#a8875c;
+    --text:#f5f0e3; --text-dim:#c3cdc0; --good:#86ab6f; --danger:#c15b50;
+    --dark-sq:#332215; --light-sq:#c9a25a55;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(ellipse at 20% 0%, #2e4939 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #223a2c 0%, transparent 55%), var(--bg);
+    color:var(--text); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 12px 60px;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(24px,5vw,40px); color:var(--brass-light); margin:8px 0 2px; text-align:center;}
+  .subtitle{ color:var(--text-dim); font-size:14px; margin-bottom:16px; text-align:center;}
+  .topbar{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; justify-content:center;}
+  button.lang, button.reset{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    padding:7px 16px; border-radius:20px; font-family:'Instrument Sans'; font-size:13px; cursor:pointer; transition:all .2s;
+  }
+  button.lang:hover, button.reset:hover{ background:var(--brass); color:#14201b; border-color:var(--brass);}
+  .status{ font-family:'Fraunces',serif; font-size:16px; color:var(--brass-light); min-height:24px; margin-bottom:12px; text-align:center; max-width:340px;}
+  .board-wrap{
+    background:linear-gradient(160deg,#5e4933,#3a2a18); border-radius:14px; padding:10px;
+    box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 2px 6px rgba(255,255,255,.06); border:1px solid #5c452c;
+  }
+  .board{ display:grid; grid-template-columns:repeat(10,32px); grid-template-rows:repeat(10,32px); }
+  @media(max-width:400px){ .board{ grid-template-columns:repeat(10,28px); grid-template-rows:repeat(10,28px);} }
+  .sq{ display:flex; align-items:center; justify-content:center; position:relative; }
+  .sq.light{ background:var(--light-sq); }
+  .sq.dark{ background:var(--dark-sq); cursor:default; }
+  .sq.legal{ box-shadow:inset 0 0 0 2px var(--good); cursor:pointer; }
+  .man{ width:76%; height:76%; border-radius:50%; box-shadow:0 3px 5px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.25); cursor:pointer;}
+  .man.player{ background:radial-gradient(circle at 35% 30%, var(--brass-light), var(--brass-dim)); }
+  .man.cpu{ background:radial-gradient(circle at 35% 30%, #6f95b0, #2c4258); }
+  .man.king::after{ content:'♛'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; color:#241a10; }
+  .man.selectable{ outline:2px solid var(--good); outline-offset:1px;}
+  .legend{ display:flex; gap:20px; margin-top:16px; font-size:12px; color:var(--text-dim); align-items:center;}
+  .swatch{ width:14px; height:14px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:middle;}
+  .score-row{ display:flex; gap:24px; font-size:13px; color:var(--text-dim); margin-top:8px;}
+  .score-row b{ color:var(--brass-light); }
+  .rules{ max-width:580px; margin-top:28px; background:#1e2e26; border:1px solid #2c3c31; border-radius:16px; padding:20px 22px; font-size:13.5px; line-height:1.8; color:var(--text-dim);}
+  .rules h2{ font-family:'Fraunces',serif; color:var(--brass-light); font-size:17px; margin:0 0 8px;}
+  .winmsg{ color:var(--brass-light); font-weight:600; }
+
+  /* --- theme / difficulty / end-game modal (added) --- */
+  body.light{
+    --bg:#f2e9d8; --text:#2a2016; --text-dim:#6b5f4e;
+    --brass:#8a6d3f; --brass-light:#6b5230; --brass-dim:#a9865a;
+    --good:#3f7a3a; --danger:#c15b50;
+  }
+  body.light{
+    background:
+      radial-gradient(ellipse at 20% 0%, #efe4c8 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #e9dcbb 0%, transparent 55%), var(--bg);
+  }
+  .icon-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    width:32px; height:32px; border-radius:50%; font-size:14px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; padding:0; line-height:1;
+  }
+  .icon-btn:hover{ background:var(--brass); color:#14201b; border-color:var(--brass); }
+  .difficulty-row{ display:flex; gap:8px; align-items:center; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+  .difficulty-row .dlabel{ font-size:12px; color:var(--text-dim); margin-right:2px; }
+  .diff-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light); width:28px; height:28px;
+    border-radius:50%; font-family:'Instrument Sans',sans-serif; font-size:12px; cursor:pointer; padding:0;
+  }
+  .diff-btn.active{ background:var(--brass); color:#14201b; font-weight:700; border-color:var(--brass); }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(8,12,10,.72); display:flex; align-items:center; justify-content:center;
+    z-index:999; opacity:0; pointer-events:none; transition:opacity .25s; padding:20px;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    background:linear-gradient(160deg,#3c5747,#22362b); border:1px solid var(--brass-dim); border-radius:20px;
+    padding:34px 38px; text-align:center; box-shadow:0 30px 70px rgba(0,0,0,.6); max-width:86vw;
+    transform:translateY(10px); transition:transform .25s;
+  }
+  body.light .modal-box{ background:linear-gradient(160deg,#fbf3df,#efe0bd); }
+  .modal-overlay.show .modal-box{ transform:translateY(0); }
+  .modal-box .modal-msg{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,6vw,32px); color:var(--brass-light); margin-bottom:22px; }
+  .modal-box button{
+    background:var(--brass); color:#14201b; border:none; padding:10px 28px; border-radius:22px;
+    font-family:'Instrument Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="endModal">
+  <div class="modal-box">
+    <div class="modal-msg" id="endModalMsg"></div>
+    <button id="endModalBtn" data-ja="もう一度" data-en="Play again">もう一度</button>
+  </div>
+</div>
+
+
+<div class="topbar">
+  <button class="lang" id="langBtn">EN</button>
+  <button class="reset" id="resetBtn" data-ja="はじめから" data-en="Restart">はじめから</button>
+  <button class="icon-btn" id="themeBtn" title="theme">☀️</button>
+</div>
+
+<div class="difficulty-row">
+  <span class="dlabel" data-ja="AIの強さ" data-en="AI strength">AIの強さ</span>
+  <button class="diff-btn" data-level="1">1</button>
+  <button class="diff-btn" data-level="2">2</button>
+  <button class="diff-btn active" data-level="3">3</button>
+  <button class="diff-btn" data-level="4">4</button>
+  <button class="diff-btn" data-level="5">5</button>
+</div>
+
+<h1 data-ja="100マスドラフツ" data-en="International Draughts">100マスドラフツ</h1>
+<div class="subtitle" data-ja="10×10盤・フライングキング・最大数取り必須" data-en="10×10 board, flying kings, mandatory majority capture">10×10盤・フライングキング・最大数取り必須</div>
+
+<div class="status" id="status"></div>
+
+<div class="board-wrap"><div class="board" id="board"></div></div>
+
+<div class="legend">
+  <div><span class="swatch" style="background:radial-gradient(circle at 35% 30%,#eccb9c,#a8875c)"></span><span data-ja="あなた" data-en="You">あなた</span></div>
+  <div><span class="swatch" style="background:radial-gradient(circle at 35% 30%,#6f95b0,#2c4258)"></span><span data-ja="CPU" data-en="CPU">CPU</span></div>
+</div>
+<div class="score-row">
+  <div><span data-ja="あなたの駒" data-en="Your pieces">あなたの駒</span>: <b id="pCount">20</b></div>
+  <div><span data-ja="CPUの駒" data-en="CPU pieces">CPUの駒</span>: <b id="cCount">20</b></div>
+</div>
+
+<div class="rules">
+  <h2 data-ja="遊び方" data-en="How to play">遊び方</h2>
+  <p data-ja="10×10マスの盤で、各20個の駒を使います。あなたは下側、CPUは上側からスタートします。
+① 駒は斜め前方に1マスずつ進みます。
+② 隣の斜めマスに相手の駒があり、その先が空いていれば、飛び越えて取ることができます。取れる時は必ず取らなければならず、複数の取り方がある場合は、最も多く取れる手を選ばなければなりません（連続ジャンプも同様）。
+③ 敵陣の最奥列に到達すると「王（キング）」に成ります。キングは斜め方向に何マスでも進め、離れた位置からでも駒を飛び越して取れます。
+④ 相手の駒をすべて取るか、動けなくしたら勝ちです。"
+  data-en="Each side has 20 pieces on a 10×10 board — you start at the bottom, the CPU at the top.
+① Pieces move one square diagonally forward.
+② If an opposing piece sits diagonally adjacent with an empty square just beyond, you can jump over and capture it. Capturing is mandatory whenever possible, and if multiple capture options exist, you must choose the one capturing the most pieces (chained jumps count together).
+③ Reaching the far back row promotes a piece to a King, which can then glide any distance diagonally and capture from a distance too.
+④ Capture all of your opponent's pieces, or leave them with no legal move, to win.">
+  10×10マスの盤で、各20個の駒を使います。あなたは下側、CPUは上側からスタートします。<br>
+  ① 駒は斜め前方に1マスずつ進みます。<br>
+  ② 隣の斜めマスに相手の駒があり、その先が空いていれば、飛び越えて取ることができます。取れる時は必ず取らなければならず、複数の取り方がある場合は、最も多く取れる手を選ばなければなりません（連続ジャンプも同様）。<br>
+  ③ 敵陣の最奥列に到達すると「王（キング）」に成ります。キングは斜め方向に何マスでも進め、離れた位置からでも駒を飛び越して取れます。<br>
+  ④ 相手の駒をすべて取るか、動けなくしたら勝ちです。
+  </p>
+</div>
+
+<script>
+let lang='ja';
+let grid; // 10x10 array: null | {color:'player'/'cpu', king:bool}
+let current, gameOver;
+let selected=null; // [r,c]
+let chainState=null; // {from:[r,c], candidates:[...seqs], progressPath:[], progressCaptured:[]}
+
+const DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+function inBounds(r,c){ return r>=0&&r<10&&c>=0&&c<10; }
+function isDark(r,c){ return (r+c)%2===1; }
+
+function initGame(){
+  grid = Array.from({length:10}, ()=>Array(10).fill(null));
+  for(let r=0;r<4;r++) for(let c=0;c<10;c++) if(isDark(r,c)) grid[r][c]={color:'cpu', king:false};
+  for(let r=6;r<10;r++) for(let c=0;c<10;c++) if(isDark(r,c)) grid[r][c]={color:'player', king:false};
+  current='player'; gameOver=false; selected=null; chainState=null;
+  render(); setStatus();
+}
+
+function cloneGrid(g){ return g.map(row=>row.map(cell=>cell?{...cell}:null)); }
+
+function pieceCaptureOptions(r,c,color,king,board,capturedSet){
+  const results=[];
+  if(!king){
+    for(const [dr,dc] of DIRS){
+      const mr=r+dr, mc=c+dc, lr=r+2*dr, lc=c+2*dc;
+      if(!inBounds(lr,lc)) continue;
+      const mid = board[mr][mc];
+      if(!mid || mid.color===color) continue;
+      if(capturedSet.has(mr+','+mc)) continue;
+      if(board[lr][lc]!==null) continue;
+      results.push({to:[lr,lc], capturedSq:[mr,mc]});
+    }
+  } else {
+    for(const [dr,dc] of DIRS){
+      let nr=r+dr, nc=c+dc, foundEnemy=null;
+      while(inBounds(nr,nc)){
+        const cell = board[nr][nc];
+        if(cell===null){
+          if(foundEnemy) results.push({to:[nr,nc], capturedSq:foundEnemy});
+          nr+=dr; nc+=dc; continue;
+        } else {
+          if(!foundEnemy){
+            if(cell.color===color) break;
+            if(capturedSet.has(nr+','+nc)) break;
+            foundEnemy=[nr,nc];
+            nr+=dr; nc+=dc; continue;
+          } else break;
+        }
+      }
+    }
+  }
+  return results;
+}
+
+function fullCaptureSequences(r,c,color,king,board,capturedSet){
+  const options = pieceCaptureOptions(r,c,color,king,board,capturedSet);
+  if(options.length===0) return [{path:[], captured:[]}];
+  let sequences=[];
+  for(const opt of options){
+    const newCaptured = new Set(capturedSet); newCaptured.add(opt.capturedSq[0]+','+opt.capturedSq[1]);
+    const savedFrom = board[r][c];
+    board[r][c]=null;
+    const savedTo = board[opt.to[0]][opt.to[1]];
+    board[opt.to[0]][opt.to[1]] = savedFrom;
+    const subs = fullCaptureSequences(opt.to[0],opt.to[1],color,king,board,newCaptured);
+    board[opt.to[0]][opt.to[1]] = savedTo;
+    board[r][c] = savedFrom;
+    for(const sub of subs){
+      sequences.push({ path:[opt.to, ...sub.path], captured:[opt.capturedSq, ...sub.captured] });
+    }
+  }
+  return sequences;
+}
+
+function allCaptureSequences(color, board){
+  let all=[];
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++){
+    const cell = board[r][c];
+    if(cell && cell.color===color){
+      const seqs = fullCaptureSequences(r,c,color,cell.king,board,new Set());
+      for(const s of seqs) if(s.captured.length>0) all.push({from:[r,c], ...s});
+    }
+  }
+  return all;
+}
+
+function simpleMoves(color, board){
+  const moves=[];
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++){
+    const cell = board[r][c];
+    if(!cell || cell.color!==color) continue;
+    if(!cell.king){
+      const fwd = color==='player' ? -1 : 1;
+      for(const dc of [-1,1]){
+        const nr=r+fwd, nc=c+dc;
+        if(inBounds(nr,nc) && board[nr][nc]===null) moves.push({from:[r,c], to:[nr,nc]});
+      }
+    } else {
+      for(const [dr,dc] of DIRS){
+        let nr=r+dr, nc=c+dc;
+        while(inBounds(nr,nc) && board[nr][nc]===null){
+          moves.push({from:[r,c], to:[nr,nc]});
+          nr+=dr; nc+=dc;
+        }
+      }
+    }
+  }
+  return moves;
+}
+
+function maybePromote(cell, r, color){
+  if(cell.king) return;
+  if(color==='player' && r===0) cell.king=true;
+  if(color==='cpu' && r===9) cell.king=true;
+}
+
+function countPieces(color){
+  let n=0;
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++) if(grid[r][c] && grid[r][c].color===color) n++;
+  return n;
+}
+
+function getForcedInfo(color){
+  const seqs = allCaptureSequences(color, grid);
+  if(seqs.length===0) return {M:0, seqs:[]};
+  const M = Math.max(...seqs.map(s=>s.captured.length));
+  return {M, seqs: seqs.filter(s=>s.captured.length===M)};
+}
+
+function onSquareClick(r,c){
+  if(gameOver || current!=='player') return;
+  const forced = getForcedInfo('player');
+
+  if(chainState){
+    // must click next step among remaining candidates
+    const stepIdx = chainState.progressPath.length;
+    const matches = chainState.candidates.filter(s=>s.path[stepIdx] && s.path[stepIdx][0]===r && s.path[stepIdx][1]===c);
+    if(matches.length===0) return;
+    const capSq = matches[0].captured[stepIdx];
+    executeSingleCapture(chainState.currentPos, [r,c], capSq, 'player');
+    chainState.progressPath.push([r,c]);
+    chainState.progressCaptured.push(capSq);
+    chainState.currentPos = [r,c];
+    chainState.candidates = matches;
+    const cellNow = grid[r][c];
+    if(chainState.progressPath.length === chainState.candidates[0].path.length){
+      // sequence complete
+      maybePromote(cellNow, r, 'player');
+      finishPlayerTurn();
+    } else {
+      render();
+    }
+    return;
+  }
+
+  if(forced.M>0){
+    const val = grid[r][c];
+    if(val && val.color==='player'){
+      const has = forced.seqs.some(s=>s.from[0]===r && s.from[1]===c);
+      if(has){ selected=[r,c]; render(); }
+      return;
+    }
+    if(selected){
+      const relevant = forced.seqs.filter(s=>s.from[0]===selected[0] && s.from[1]===selected[1]);
+      const stepMatches = relevant.filter(s=>s.path[0][0]===r && s.path[0][1]===c);
+      if(stepMatches.length>0){
+        chainState = {currentPos:selected, candidates:stepMatches, progressPath:[], progressCaptured:[]};
+        selected=null;
+        onSquareClick(r,c); // process this first step immediately
+      }
+    }
+    return;
+  }
+
+  // no forced capture: simple move
+  const val = grid[r][c];
+  if(val && val.color==='player'){ selected=[r,c]; render(); return; }
+  if(selected && val===null){
+    const moves = simpleMoves('player', grid).filter(m=>m.from[0]===selected[0]&&m.from[1]===selected[1]);
+    const match = moves.find(m=>m.to[0]===r&&m.to[1]===c);
+    if(match){
+      grid[r][c] = grid[selected[0]][selected[1]];
+      grid[selected[0]][selected[1]] = null;
+      maybePromote(grid[r][c], r, 'player');
+      selected=null;
+      finishPlayerTurn();
+    }
+  }
+}
+
+function executeSingleCapture(from, to, capSq, color){
+  grid[to[0]][to[1]] = grid[from[0]][from[1]];
+  grid[from[0]][from[1]] = null;
+  grid[capSq[0]][capSq[1]] = null;
+}
+
+function finishPlayerTurn(){
+  chainState=null; selected=null;
+  render();
+  current='cpu';
+  if(checkWin()) return;
+  render(); setStatus();
+  setTimeout(cpuTurn, 1600);
+}
+
+function checkWin(){
+  const pCount = countPieces('player');
+  const cCount = countPieces('cpu');
+  if(pCount===0){ gameOver=true; render(); setStatus(); return true; }
+  if(cCount===0){ gameOver=true; render(); setStatus(); return true; }
+  // no-moves check
+  const turnColor = current;
+  const forced = getForcedInfo(turnColor);
+  if(forced.M===0){
+    const sm = simpleMoves(turnColor, grid);
+    if(sm.length===0){ gameOver=true; render(); setStatus(); return true; }
+  }
+  return false;
+}
+
+function cpuTurn(){
+  if(gameOver) return;
+  const forced = getForcedInfo('cpu');
+  if(forced.M>0){
+    let best = forced.seqs[Math.floor(Math.random()*forced.seqs.length)];
+    let bestScore=-Infinity;
+    for(const s of forced.seqs){
+      let score = Math.random()*aiNoise(1);
+      for(const [cr,cc] of s.captured){ if(grid[cr][cc].king) score+=3; }
+      if(score>bestScore){ bestScore=score; best=s; }
+    }
+    let pos = best.from;
+    for(let i=0;i<best.path.length;i++){
+      executeSingleCapture(pos, best.path[i], best.captured[i], 'cpu');
+      pos = best.path[i];
+    }
+    maybePromote(grid[pos[0]][pos[1]], pos[0], 'cpu');
+    render();
+    current='player';
+    if(checkWin()) return;
+    render(); setStatus();
+    return;
+  }
+  const moves = simpleMoves('cpu', grid);
+  if(moves.length===0){ gameOver=true; render(); setStatus(); return; }
+  let best=null, bestScore=-Infinity;
+  if(Math.random()<aiBlunderChance()){
+    best = moves[Math.floor(Math.random()*moves.length)];
+  } else {
+    for(const m of moves){
+      let score = Math.random()*aiNoise(2);
+      score += m.to[0]*0.3; // advance downward
+      if(m.to[0]===9) score += 5; // promotion
+      const centerDist = Math.abs(m.to[1]-4.5);
+      score -= centerDist*0.1;
+      if(score>bestScore){ bestScore=score; best=m; }
+    }
+  }
+  grid[best.to[0]][best.to[1]] = grid[best.from[0]][best.from[1]];
+  grid[best.from[0]][best.from[1]] = null;
+  maybePromote(grid[best.to[0]][best.to[1]], best.to[0], 'cpu');
+  render();
+  current='player';
+  if(checkWin()) return;
+  render(); setStatus();
+}
+
+function render(){
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML='';
+  const forced = current==='player' && !gameOver ? getForcedInfo('player') : {M:0, seqs:[]};
+
+  let legalSquares = [];
+  if(chainState){
+    const stepIdx = chainState.progressPath.length;
+    legalSquares = chainState.candidates.map(s=>s.path[stepIdx]).filter(Boolean);
+  } else if(selected){
+    if(forced.M>0){
+      legalSquares = forced.seqs.filter(s=>s.from[0]===selected[0]&&s.from[1]===selected[1]).map(s=>s.path[0]);
+    } else {
+      legalSquares = simpleMoves('player', grid).filter(m=>m.from[0]===selected[0]&&m.from[1]===selected[1]).map(m=>m.to);
+    }
+  }
+  const selectablePieces = current==='player' && !gameOver
+    ? (forced.M>0 ? forced.seqs.map(s=>s.from) : null)
+    : null;
+
+  for(let r=0;r<10;r++){
+    for(let c=0;c<10;c++){
+      const div = document.createElement('div');
+      const dark = isDark(r,c);
+      const isLegal = legalSquares.some(([lr,lc])=>lr===r&&lc===c);
+      div.className = 'sq ' + (dark?'dark':'light') + (isLegal?' legal':'');
+      const cell = grid[r][c];
+      if(cell){
+        const p = document.createElement('div');
+        let selectable=false;
+        if(current==='player' && !gameOver && cell.color==='player'){
+          if(chainState){ selectable = chainState.currentPos[0]===r && chainState.currentPos[1]===c; }
+          else if(forced.M>0){ selectable = forced.seqs.some(s=>s.from[0]===r&&s.from[1]===c); }
+          else { selectable = simpleMoves('player',grid).some(m=>m.from[0]===r&&m.from[1]===c); }
+        }
+        p.className = 'man ' + cell.color + (cell.king?' king':'') + (selectable?' selectable':'');
+        div.appendChild(p);
+      }
+      if(dark) div.addEventListener('click', ()=>onSquareClick(r,c));
+      boardEl.appendChild(div);
+    }
+  }
+  document.getElementById('pCount').textContent = countPieces('player');
+  document.getElementById('cCount').textContent = countPieces('cpu');
+  applyLangStatic();
+}
+
+function setStatus(){
+  const el = document.getElementById('status');
+  if(gameOver){
+    const pCount = countPieces('player');
+    const cCount = countPieces('cpu');
+    // `current` holds whichever side was found to be out of pieces or out of
+    // moves at the moment the game ended, so that side is the loser.
+    const playerWon = pCount>0 && (cCount===0 || current==='cpu');
+    const msg = playerWon
+      ? (lang==='ja' ? 'あなたの勝ち！' : 'You win!')
+      : (lang==='ja' ? 'CPUの勝ち' : 'CPU wins');
+    el.innerHTML = `<span class="winmsg">${msg}</span>`;
+    showEndModal(msg);
+    return;
+  }
+  if(current==='player'){
+    if(chainState) el.textContent = lang==='ja' ? '連続して取れます。次のマスを選んでください' : 'Keep capturing — choose the next square';
+    else {
+      const forced = getForcedInfo('player');
+      el.textContent = forced.M>0
+        ? (lang==='ja' ? `取れる駒があります（最大${forced.M}個）。駒を選んでください` : `A capture is available (up to ${forced.M}) — select a piece`)
+        : (lang==='ja' ? 'あなたの番：駒を選んで動かします' : 'Your turn: select a piece and move it');
+    }
+  } else {
+    el.textContent = lang==='ja' ? 'CPUの番です…' : "CPU's turn…";
+  }
+}
+
+function applyLangStatic(){
+  document.querySelectorAll('[data-ja]').forEach(el=>{
+    el.textContent = el.getAttribute(lang==='ja'?'data-ja':'data-en');
+  });
+}
+function applyLang(){
+  document.documentElement.lang = lang==='ja'?'ja':'en';
+  applyLangStatic();
+  document.getElementById('langBtn').textContent = lang==='ja' ? 'EN' : 'JA';
+  setStatus();
+}
+
+document.getElementById('langBtn').addEventListener('click', ()=>{ lang = lang==='ja'?'en':'ja'; applyLang(); });
+document.getElementById('resetBtn').addEventListener('click', initGame);
+
+
+let theme='dark';
+function applyTheme(){
+  document.body.classList.toggle('light', theme==='light');
+  const btn=document.getElementById('themeBtn'); if(btn) btn.textContent = theme==='light' ? '\u{1F319}' : '\u2600\uFE0F';
+}
+document.getElementById('themeBtn').addEventListener('click', ()=>{ theme = theme==='light'?'dark':'light'; applyTheme(); });
+
+let aiLevel = 3;
+function aiNoise(scale){ return [scale*3, scale*1.8, scale*1, scale*0.4, scale*0.05][aiLevel-1]; }
+function aiBlunderChance(){ return [0.45,0.22,0.06,0,0][aiLevel-1]; }
+function renderDifficulty(){
+  document.querySelectorAll('.diff-btn').forEach(b=>{
+    b.classList.toggle('active', Number(b.getAttribute('data-level'))===aiLevel);
+  });
+}
+document.querySelectorAll('.diff-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{ aiLevel = Number(b.getAttribute('data-level')); renderDifficulty(); });
+});
+renderDifficulty();
+
+function showEndModal(msg){
+  const m=document.getElementById('endModalMsg'); if(m) m.textContent = msg;
+  const o=document.getElementById('endModal'); if(o) o.classList.add('show');
+}
+function hideEndModal(){
+  const o=document.getElementById('endModal'); if(o) o.classList.remove('show');
+}
+document.getElementById('endModalBtn').addEventListener('click', ()=>{ hideEndModal(); initGame(); });
+
+initGame();
+applyLang();
+applyTheme();
+</script>
+</body>
+</html>
