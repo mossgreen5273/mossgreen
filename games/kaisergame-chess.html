@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>カイザーゲームチェス | Kaisergame Chess</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
+    --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6;
+    --square-light: #3f5445; --square-dark: #24382c;
+    --danger: #b25a4a; --text-dim: #9fae9f; --gold: #d9b26a;
+  }
+  body.light-mode{
+    --bg: #f2ead9; --bg-panel: #fbf6ea; --moss: #8fae82; --moss-light: #a3c294;
+    --brass: #a97f45; --brass-bright: #8a6530; --cream: #2c2417;
+    --square-light: #e4d7b6; --square-dark: #b99a66; --danger: #a8402f; --text-dim: #6b5f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(217,180,124,0.06), transparent 60%),
+      radial-gradient(1000px 700px at 110% 10%, rgba(79,111,86,0.18), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh; padding:32px 16px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; border-bottom:1px solid rgba(185,146,90,0.25); padding-bottom:20px; margin-bottom:28px;}
+  h1{font-family:'Fraunces', serif; font-weight:700; font-size:clamp(24px,4.2vw,38px); margin:0; letter-spacing:0.01em; color:var(--cream);}
+  h1 .en{display:block; font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:0.42em; color:var(--brass-bright); margin-top:4px;}
+  .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:14px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:all .2s;}
+  .langtoggle:hover{background:rgba(185,146,90,0.15);}
+  .layout{display:flex; gap:32px; flex-wrap:wrap; align-items:flex-start;}
+  .board-col{flex:0 0 auto;}
+  .side-col{flex:1 1 260px; min-width:260px;}
+  .panel{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:18px 20px; margin-bottom:18px;}
+  .panel h2{font-family:'Fraunces',serif; font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:0.08em; color:var(--brass-bright); margin:0 0 12px;}
+  label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px;}
+  select, button.action{width:100%; background:var(--moss); color:var(--cream); border:1px solid rgba(217,180,124,0.3); border-radius:6px; padding:9px 12px; font-family:'Noto Sans JP',sans-serif; font-size:14px; margin-bottom:14px; cursor:pointer;}
+  select:focus, button.action:focus{outline:2px solid var(--brass-bright); outline-offset:1px;}
+  button.action{background:linear-gradient(180deg, var(--brass) 0%, #a17f4c 100%); color:#1b2a22; font-weight:700; border:none; margin-bottom:0; transition:transform .1s;}
+  button.action:hover{transform:translateY(-1px);}
+  button.action:active{transform:translateY(0);}
+  #status{font-family:'Fraunces',serif; font-size:17px; font-weight:600; padding:12px 14px; border-radius:8px; background:rgba(79,111,86,0.25); border-left:3px solid var(--brass); min-height:24px;}
+  #status.check{border-left-color:var(--danger); color:#eab3a4;}
+  #status.over{border-left-color:var(--brass-bright); color:var(--brass-bright);}
+  .board{display:grid; grid-template-columns:repeat(8, min(11vw,58px)); grid-template-rows:repeat(8, min(11vw,58px)); border:3px solid var(--brass); border-radius:4px; box-shadow:0 12px 40px rgba(0,0,0,0.45);}
+  .sq{position:relative; display:flex; align-items:center; justify-content:center; font-size:min(7vw,36px); cursor:pointer; user-select:none;}
+  .sq.light{background:var(--square-light);} .sq.dark{background:var(--square-dark);}
+  .sq.selected{outline:3px solid var(--brass-bright); outline-offset:-3px; z-index:2;}
+  .sq .dot{position:absolute; width:30%; height:30%; border-radius:50%; background:var(--brass-bright); box-shadow:0 0 10px 3px rgba(217,180,124,0.7); animation:pulse-dot 1.1s ease-in-out infinite;}
+  .sq .ring{position:absolute; inset:5%; border-radius:50%; border:5px solid var(--brass-bright); box-shadow:0 0 10px 2px rgba(217,180,124,0.6); animation:pulse-ring 1.1s ease-in-out infinite;}
+  @keyframes pulse-dot{ 0%,100%{opacity:0.65; transform:scale(0.85);} 50%{opacity:1; transform:scale(1.15);} }
+  @keyframes pulse-ring{ 0%,100%{opacity:0.55;} 50%{opacity:1;} }
+  .sq.lastmove{box-shadow:inset 0 0 0 3px rgba(217,180,124,0.5);}
+  .piece-kingdom{color:#e8e2d4; text-shadow:0 0 3px rgba(0,0,0,0.6), 0 2px 2px rgba(0,0,0,0.5);}
+  .piece-empire{color:var(--gold); text-shadow:0 0 3px rgba(0,0,0,0.7), 0 2px 2px rgba(0,0,0,0.6);}
+  .coords{display:flex; justify-content:space-between; max-width:min(88vw,464px); margin-top:4px; font-size:11px; color:var(--text-dim);}
+  .captured{display:flex; flex-wrap:wrap; gap:2px; min-height:28px; font-size:18px;}
+  .movelog{max-height:220px; overflow-y:auto; font-size:13px; line-height:1.9; color:var(--text-dim);}
+  .movelog b{color:var(--cream);}
+  .rule-note{font-size:12.5px; color:var(--text-dim); line-height:1.7;}
+  .piece-table{width:100%; border-collapse:collapse; font-size:12px; margin-top:6px;}
+  .piece-table td, .piece-table th{padding:4px 6px; text-align:left; border-bottom:1px solid rgba(185,146,90,0.15); color:var(--text-dim);}
+  .piece-table th{color:var(--brass-bright); font-weight:600;}
+  .lang-en:not(body){display:none;}
+  body.lang-en .lang-ja{display:none;}
+  body.lang-en .lang-en{display:block;}
+  footer{margin-top:40px; font-size:12px; color:var(--text-dim); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>カイザーゲームチェス<span class="en">Kaisergame Chess</span></h1>
+    <div style="display:flex; gap:8px;">
+      <button class="langtoggle" id="langBtn">EN / 日本語</button>
+      <button class="langtoggle" id="themeBtn">☀️ / 🌙</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board-col">
+      <div class="board" id="board"></div>
+      <div class="coords" id="coords"></div>
+    </div>
+
+    <div class="side-col">
+      <div class="panel">
+        <h2><span class="lang-ja">対局設定</span><span class="lang-en">Game Setup</span></h2>
+        <label class="lang-ja">あなたの陣営</label>
+        <label class="lang-en">Your side</label>
+        <select id="sideSelect">
+          <option value="w">帝国（金） / Empire (Gold)</option>
+          <option value="b">王国 / Kingdom</option>
+        </select>
+        <label class="lang-ja">AIの強さ</label>
+        <label class="lang-en">AI strength</label>
+        <select id="diffSelect">
+          <option value="700,2">弱い / Weak</option>
+          <option value="1500,3" selected>普通 / Normal</option>
+          <option value="3000,4">強い / Strong</option>
+        </select>
+        <button class="action" id="newGameBtn"><span class="lang-ja">新規対局</span><span class="lang-en">New Game</span></button>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">状況</span><span class="lang-en">Status</span></h2>
+        <div id="status"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">失われた駒</span><span class="lang-en">Lost pieces</span></h2>
+        <div class="captured" id="capturedW"></div>
+        <div class="captured" id="capturedB"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">棋譜</span><span class="lang-en">Move Log</span></h2>
+        <div class="movelog" id="movelog"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="lang-ja">ルール</span><span class="lang-en">Rules</span></h2>
+        <p class="rule-note lang-ja">
+          非対称の2陣営が戦う現代の変則チェス。「王国」は通常のチェス一式（キャスリングあり）。「帝国」は皇帝（カイザー）を筆頭に、独自の5種の駒を持つ——公爵・攻城塔・鷲・枢機卿・兵士。皇帝以外の帝国駒はすべて「動きはクイーンと同じだが、捕獲だけは元の駒に対応する動き（例：攻城塔はルークのように、鷲はナイトのように捕獲）」という共通の設計を持つ。兵士は前方・左右の1マスのみ動き、捕獲する。帝国が先手。王国のキングと帝国のカイザーは、間に何も挟まずに同じ列・同じ段で向き合うことができない。相手陣の最終列へ無傷でキング（カイザー）を進めれば「キャンプメイト」として即座に勝利する。帝国のポーンは初期配置からすでに3段目にいるため初手2マス前進はできず、帝国側にキャスリングはない。ステイルメイトは動かせなくなった側の敗北となる。
+        </p>
+        <p class="rule-note lang-en">
+          A modern asymmetric variant. The "Kingdom" plays a standard chess army (castling included). The "Empire" fields a Kaiser plus five unique piece types — Duke, Siege Tower, Eagle, Cardinal, and Soldier. Every Imperial piece besides the Kaiser shares one design: it moves like a Queen, but can only capture in the pattern of its Royal counterpart (a Siege Tower captures like a Rook, an Eagle like a Knight, and so on). A Soldier moves and captures one square forward or to either side only. The Empire moves first. The Kingdom's King and the Empire's Kaiser may never face each other on an open rank or file. Marching your own King/Kaiser safely onto the opponent's back rank wins instantly as a "campmate." Imperial pawns already start on the third rank, so they have no two-square first move, and the Empire has no castling. Stalemate is a loss for the side with no legal move.
+        </p>
+        <table class="piece-table lang-ja">
+          <tr><th>帝国の駒</th><th>移動</th><th>捕獲</th></tr>
+          <tr><td>公爵</td><td>クイーン</td><td>キング型（1マス）</td></tr>
+          <tr><td>攻城塔</td><td>クイーン</td><td>ルーク型</td></tr>
+          <tr><td>鷲</td><td>クイーン</td><td>ナイト型</td></tr>
+          <tr><td>枢機卿</td><td>クイーン</td><td>ビショップ型</td></tr>
+          <tr><td>兵士</td><td colspan="2">前方・左右1マス（移動と捕獲は同じ）</td></tr>
+        </table>
+        <table class="piece-table lang-en">
+          <tr><th>Imperial piece</th><th>Moves</th><th>Captures</th></tr>
+          <tr><td>Duke</td><td>Queen</td><td>King-pattern (1 square)</td></tr>
+          <tr><td>Siege Tower</td><td>Queen</td><td>Rook-pattern</td></tr>
+          <tr><td>Eagle</td><td>Queen</td><td>Knight-pattern</td></tr>
+          <tr><td>Cardinal</td><td>Queen</td><td>Bishop-pattern</td></tr>
+          <tr><td>Soldier</td><td colspan="2">1 square forward or sideways (move = capture)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>Mossgreen — a solo-developed browser chess variant.</footer>
+</div>
+
+<script>
+'use strict';
+const FILES = 'abcdefgh';
+function algebraic(r,c){ return FILES[c] + (8-r); }
+function inBounds(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+const KNIGHT_DELTAS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KING_DELTAS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const BISHOP_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const ROOK_DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+const QUEEN_DIRS = [...BISHOP_DIRS,...ROOK_DIRS];
+
+function emptyBoard(){ return Array.from({length:8},()=>Array(8).fill(null)); }
+function cloneBoard(b){ return b.map(row=>row.map(p=>p?{...p}:null)); }
+// Kingdom (black) forward = +1 (toward row7); Empire (gold, 'w') forward = -1 (toward row0)
+function pawnDir(color){ return color==='b'?1:-1; }
+function promotionRow(color){ return color==='b'?7:0; }
+
+function initialBoard(){
+  const b = emptyBoard();
+  const backRow = ['R','N','B','Q','K','B','N','R']; // Kingdom
+  const empireBack = ['T','E','C','D','K','C','E','T']; // Empire
+  for(let c=0;c<8;c++){
+    b[0][c] = {color:'b', type:backRow[c], moved:false};
+    b[1][c] = {color:'b', type:'P', moved:false};
+  }
+  for(let c=0;c<8;c++){
+    b[7][c] = {color:'w', type:empireBack[c], moved:false};
+    const t = (c===3||c===4) ? 'S' : 'P';
+    b[5][c] = {color:'w', type:t, moved:true}; // Imperial pawns start "already advanced"; no double-step
+  }
+  return b;
+}
+
+class KaisergameGame {
+  constructor(){
+    this.board = initialBoard();
+    this.turn = 'w'; // Empire (gold) moves first
+    this.enPassant = null;
+    this.history = [];
+    this.gameOver = false;
+    this.result = null;
+    this.resultReason = null;
+    this._searchStack = [];
+  }
+
+  findRoyal(color, board){ // King (Kingdom) or Kaiser (Empire)
+    board = board || this.board;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color===color && p.type==='K') return {r,c};
+    }
+    return null;
+  }
+
+  kingKaiserFaceoff(board){
+    board = board || this.board;
+    const k1 = this.findRoyal('b', board), k2 = this.findRoyal('w', board);
+    if(!k1 || !k2) return false;
+    if(k1.r===k2.r){
+      const lo=Math.min(k1.c,k2.c), hi=Math.max(k1.c,k2.c);
+      for(let c=lo+1;c<hi;c++) if(board[k1.r][c]) return false;
+      return true;
+    }
+    if(k1.c===k2.c){
+      const lo=Math.min(k1.r,k2.r), hi=Math.max(k1.r,k2.r);
+      for(let r=lo+1;r<hi;r++) if(board[r][k1.c]) return false;
+      return true;
+    }
+    return false;
+  }
+
+  isSquareAttacked(r,c,byColor,board){
+    board = board || this.board;
+    const dir = pawnDir(byColor);
+    for(const dc of [-1,1]){
+      const pr=r-dir, pc=c-dc;
+      if(inBounds(pr,pc)){ const p=board[pr][pc]; if(p && p.color===byColor && p.type==='P') return true; }
+    }
+    // Soldier attacks: forward or sideways 1 square (from attacker's perspective)
+    if(inBounds(r,c)){
+      const sdir = pawnDir(byColor);
+      const candidates = [[r-sdir,c],[r,c-1],[r,c+1]]; // squares FROM which a soldier could hit (r,c)
+      // A soldier at (sr,sc) hits forward (sr+sdir,sc) and sideways (sr,sc±1).
+      // So check all squares adjacent (in those 3 relative directions) that could be a soldier of byColor.
+      for(const [sr,sc] of [[r-sdir,c],[r,c-1],[r,c+1]]){
+        if(inBounds(sr,sc)){ const p=board[sr][sc]; if(p && p.color===byColor && p.type==='S') return true; }
+      }
+    }
+    for(const [dr,dc] of KNIGHT_DELTAS){
+      const nr=r+dr, nc=c+dc;
+      if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color===byColor && (p.type==='N'||p.type==='E')) return true; }
+    }
+    for(const [dr,dc] of KING_DELTAS){
+      const nr=r+dr, nc=c+dc;
+      if(inBounds(nr,nc)){ const p=board[nr][nc]; if(p && p.color===byColor && (p.type==='K'||p.type==='D')) return true; }
+    }
+    for(const [dr,dc] of BISHOP_DIRS){
+      let nr=r+dr, nc=c+dc;
+      while(inBounds(nr,nc)){
+        const p=board[nr][nc];
+        if(p){ if(p.color===byColor && (p.type==='B'||p.type==='Q'||p.type==='C')) return true; break; }
+        nr+=dr; nc+=dc;
+      }
+    }
+    for(const [dr,dc] of ROOK_DIRS){
+      let nr=r+dr, nc=c+dc;
+      while(inBounds(nr,nc)){
+        const p=board[nr][nc];
+        if(p){ if(p.color===byColor && (p.type==='R'||p.type==='Q'||p.type==='T')) return true; break; }
+        nr+=dr; nc+=dc;
+      }
+    }
+    return false;
+  }
+
+  inCheck(color, board){
+    board = board || this.board;
+    const k = this.findRoyal(color, board);
+    if(!k) return false;
+    const opp = color==='w'?'b':'w';
+    return this.isSquareAttacked(k.r,k.c,opp,board);
+  }
+
+  pieceMoves(r,c,board){
+    board = board || this.board;
+    const p = board[r][c];
+    if(!p) return [];
+    const moves=[];
+    const push=(nr,nc,flags)=>{ if(inBounds(nr,nc)) moves.push({fr:r,fc:c,tr:nr,tc:nc,...flags}); };
+
+    if(p.type==='P'){
+      const dir=pawnDir(p.color);
+      const oneR=r+dir;
+      if(inBounds(oneR,c) && !board[oneR][c]){
+        push(oneR,c, oneR===promotionRow(p.color)?{promotion:true}:{});
+        if(!p.moved){
+          const twoR=r+2*dir;
+          if(inBounds(twoR,c) && !board[twoR][c]) push(twoR,c,{doubleStep:true});
+        }
+      }
+      for(const dc of [-1,1]){
+        const nr=r+dir, nc=c+dc;
+        if(inBounds(nr,nc)){
+          const target=board[nr][nc];
+          if(target && target.color!==p.color) push(nr,nc,{capture:true, promotion: nr===promotionRow(p.color)});
+          else if(!target && this.enPassant && this.enPassant.r===nr && this.enPassant.c===nc && this.enPassant.color!==p.color){
+            push(nr,nc,{capture:true, enPassantCapture:true, capR:this.enPassant.capR, capC:this.enPassant.capC});
+          }
+        }
+      }
+    } else if(p.type==='S'){
+      const dir=pawnDir(p.color);
+      for(const [dr,dc] of [[dir,0],[0,-1],[0,1]]){
+        const nr=r+dr, nc=c+dc;
+        if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!==p.color) push(nr,nc,{capture:!!target}); }
+      }
+    } else if(p.type==='N'){
+      for(const [dr,dc] of KNIGHT_DELTAS){
+        const nr=r+dr,nc=c+dc;
+        if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!==p.color) push(nr,nc,{capture:!!target}); }
+      }
+    } else if(p.type==='K'){
+      for(const [dr,dc] of KING_DELTAS){
+        const nr=r+dr,nc=c+dc;
+        if(inBounds(nr,nc)){ const target=board[nr][nc]; if(!target||target.color!==p.color) push(nr,nc,{capture:!!target}); }
+      }
+      // Kingdom-only castling
+      if(p.color==='b' && !p.moved){
+        const opp='w';
+        if(!this.isSquareAttacked(r,c,opp,board)){
+          const rookK = board[r][7];
+          if(rookK && rookK.type==='R' && rookK.color==='b' && !rookK.moved &&
+             !board[r][5] && !board[r][6] &&
+             !this.isSquareAttacked(r,5,opp,board) && !this.isSquareAttacked(r,6,opp,board)){
+            push(r,6,{castle:'K'});
+          }
+          const rookQ = board[r][0];
+          if(rookQ && rookQ.type==='R' && rookQ.color==='b' && !rookQ.moved &&
+             !board[r][1] && !board[r][2] && !board[r][3] &&
+             !this.isSquareAttacked(r,3,opp,board) && !this.isSquareAttacked(r,2,opp,board)){
+            push(r,2,{castle:'Q'});
+          }
+        }
+      }
+    } else if(p.type==='B' || p.type==='R' || p.type==='Q'){
+      const dirs = p.type==='B'?BISHOP_DIRS : p.type==='R'?ROOK_DIRS : QUEEN_DIRS;
+      for(const [dr,dc] of dirs){
+        let nr=r+dr, nc=c+dc;
+        while(inBounds(nr,nc)){
+          const target=board[nr][nc];
+          if(!target) push(nr,nc,{});
+          else { if(target.color!==p.color) push(nr,nc,{capture:true}); break; }
+          nr+=dr; nc+=dc;
+        }
+      }
+    } else if(p.type==='D' || p.type==='T' || p.type==='E' || p.type==='C'){
+      // Imperial pieces: move like Queen (non-capturing only), attack like their Royal counterpart.
+      for(const [dr,dc] of QUEEN_DIRS){
+        let nr=r+dr, nc=c+dc;
+        while(inBounds(nr,nc)){
+          const target=board[nr][nc];
+          if(!target) push(nr,nc,{});
+          else break; // queen-move phase cannot capture; blocked either way
+          nr+=dr; nc+=dc;
+        }
+      }
+      if(p.type==='D'){
+        for(const [dr,dc] of KING_DELTAS){
+          const nr=r+dr, nc=c+dc;
+          if(inBounds(nr,nc)){ const target=board[nr][nc]; if(target && target.color!==p.color) push(nr,nc,{capture:true}); }
+        }
+      } else if(p.type==='T'){
+        for(const [dr,dc] of ROOK_DIRS){
+          let nr=r+dr, nc=c+dc;
+          while(inBounds(nr,nc)){
+            const target=board[nr][nc];
+            if(!target){ nr+=dr; nc+=dc; continue; }
+            if(target.color!==p.color) push(nr,nc,{capture:true});
+            break;
+          }
+        }
+      } else if(p.type==='E'){
+        for(const [dr,dc] of KNIGHT_DELTAS){
+          const nr=r+dr, nc=c+dc;
+          if(inBounds(nr,nc)){ const target=board[nr][nc]; if(target && target.color!==p.color) push(nr,nc,{capture:true}); }
+        }
+      } else if(p.type==='C'){
+        for(const [dr,dc] of BISHOP_DIRS){
+          let nr=r+dr, nc=c+dc;
+          while(inBounds(nr,nc)){
+            const target=board[nr][nc];
+            if(!target){ nr+=dr; nc+=dc; continue; }
+            if(target.color!==p.color) push(nr,nc,{capture:true});
+            break;
+          }
+        }
+      }
+    }
+    return moves;
+  }
+
+  pseudoMovesFor(color, board){
+    board = board || this.board;
+    let all=[];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=board[r][c];
+      if(p && p.color===color) all=all.concat(this.pieceMoves(r,c,board));
+    }
+    return all;
+  }
+
+  applyMoveToBoard(board, m){
+    const p = board[m.fr][m.fc];
+    const captured = board[m.tr][m.tc];
+    let epCaptured=null;
+    if(m.enPassantCapture){ epCaptured = board[m.capR][m.capC]; board[m.capR][m.capC]=null; }
+    board[m.fr][m.fc] = null;
+    board[m.tr][m.tc] = {...p, moved:true};
+    if(m.promotion) board[m.tr][m.tc].type = (p.color==='b' ? 'Q' : 'D');
+    if(m.castle==='K'){ board[m.fr][7]=null; board[m.fr][5]={color:p.color,type:'R',moved:true}; }
+    else if(m.castle==='Q'){ board[m.fr][0]=null; board[m.fr][3]={color:p.color,type:'R',moved:true}; }
+    return {captured, epCaptured, moverPiece:p};
+  }
+
+  legalMovesFor(color){
+    const pseudo = this.pseudoMovesFor(color);
+    const legal=[];
+    for(const m of pseudo){
+      const b2 = cloneBoard(this.board);
+      this.applyMoveToBoard(b2,m);
+      if(this.inCheck(color,b2)) continue;
+      if(this.kingKaiserFaceoff(b2)) continue;
+      legal.push(m);
+    }
+    return legal;
+  }
+
+  makeMove(m){
+    const mover = this.board[m.fr][m.fc];
+    const prevEnPassant = this.enPassant;
+    const info = this.applyMoveToBoard(this.board, m);
+    this.enPassant=null;
+    if(m.doubleStep) this.enPassant={r:(m.fr+m.tr)/2,c:m.fc,capR:m.tr,capC:m.tc,color:mover.color};
+    this.history.push({m,captured:info.captured,epCaptured:info.epCaptured,prevEnPassant,color:mover.color});
+
+    // Campmate: royal piece reaches the opponent's back rank unharmed.
+    if(mover.type==='K'){
+      const oppBackRow = mover.color==='w' ? 0 : 7;
+      if(m.tr===oppBackRow){
+        this.gameOver=true; this.result = mover.color==='w'?'white_wins':'black_wins'; this.resultReason='campmate';
+        return info;
+      }
+    }
+
+    const opp = mover.color==='w'?'b':'w';
+    this.turn = opp;
+    const moves = this.legalMovesFor(this.turn);
+    if(moves.length===0){
+      if(this.inCheck(this.turn)){
+        this.gameOver=true; this.result = mover.color==='w'?'white_wins':'black_wins'; this.resultReason='checkmate';
+      } else {
+        this.gameOver=true; this.result = mover.color==='w'?'white_wins':'black_wins'; this.resultReason='stalemate';
+      }
+    }
+    return info;
+  }
+
+  evaluate(){
+    const VAL={P:100,S:200,N:320,B:330,R:500,Q:900,K:0,
+               D:1050,T:1375,E:1000,C:1225};
+    let score=0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const p=this.board[r][c];
+      if(!p) continue;
+      let v=VAL[p.type];
+      if(p.type==='P'){ const adv=p.color==='w'?(7-r):(r); v+=Math.max(0,adv)*3; }
+      score += p.color==='w'?v:-v;
+    }
+    if(this.inCheck('b')) score+=15;
+    if(this.inCheck('w')) score-=15;
+    return score;
+  }
+
+  orderMoves(moves){
+    return moves.slice().sort((a,b)=>{
+      const av=(a.capture?100:0)+(a.promotion?50:0);
+      const bv=(b.capture?100:0)+(b.promotion?50:0);
+      return bv-av;
+    });
+  }
+
+  makeMoveRaw(m){
+    const p = this.board[m.fr][m.fc];
+    const prevMoved = p.moved;
+    const rookSq = m.castle==='K' ? this.board[m.fr][7] : m.castle==='Q' ? this.board[m.fr][0] : null;
+    const prevRookMoved = rookSq ? rookSq.moved : null;
+    const prevEnPassant = this.enPassant;
+    const info = this.applyMoveToBoard(this.board, m);
+    this.enPassant=null;
+    if(m.doubleStep) this.enPassant={r:(m.fr+m.tr)/2,c:m.fc,capR:m.tr,capC:m.tc,color:p.color};
+    this._searchStack.push({m,info,prevEnPassant,prevMoved,prevRookMoved,promotedFrom:m.promotion?p.type:null});
+  }
+
+  unmakeMoveRaw(){
+    const entry=this._searchStack.pop();
+    const {m,info,prevEnPassant,prevMoved,prevRookMoved}=entry;
+    const moved=this.board[m.tr][m.tc];
+    let restored={...moved, moved:prevMoved};
+    if(m.promotion) restored.type=entry.promotedFrom;
+    if(m.castle==='K'){ this.board[m.fr][7]={color:moved.color,type:'R',moved:prevRookMoved}; this.board[m.fr][5]=null; }
+    else if(m.castle==='Q'){ this.board[m.fr][0]={color:moved.color,type:'R',moved:prevRookMoved}; this.board[m.fr][3]=null; }
+    this.board[m.fr][m.fc]=restored;
+    this.board[m.tr][m.tc]=info.captured || null;
+    if(m.enPassantCapture) this.board[m.capR][m.capC]=info.epCaptured;
+    this.enPassant=prevEnPassant;
+  }
+
+  negamax(depth,alpha,beta,color,deadline){
+    if(Date.now()>deadline) throw {timeout:true};
+    if(!this.findRoyal(color,this.board)) return -100000-depth;
+    const moves=this.legalMovesFor(color);
+    if(moves.length===0) return -90000-depth; // both checkmate and stalemate lose here
+    if(depth===0){ const s=this.evaluate(); return color==='w'?s:-s; }
+    const ordered=this.orderMoves(moves);
+    let best=-Infinity;
+    for(const m of ordered){
+      const mv = m.promotion ? {...m,promoteTo:true} : m;
+      this.makeMoveRaw(mv);
+      let val;
+      try{ val=-this.negamax(depth-1,-beta,-alpha,color==='w'?'b':'w',deadline); }
+      finally{ this.unmakeMoveRaw(); }
+      if(val>best) best=val;
+      if(best>alpha) alpha=best;
+      if(alpha>=beta) break;
+    }
+    return best;
+  }
+
+  bestMove(color, timeLimitMs, maxDepth){
+    const deadline=Date.now()+timeLimitMs;
+    let best=null,bestScore=-Infinity;
+    try{
+      for(let depth=1; depth<=maxDepth; depth++){
+        const moves=this.orderMoves(this.legalMovesFor(color));
+        if(moves.length===0) break;
+        let localBest=null,localBestScore=-Infinity,alpha=-Infinity,beta=Infinity;
+        for(const m of moves){
+          this.makeMoveRaw(m);
+          let val;
+          try{ val=-this.negamax(depth-1,-beta,-alpha,color==='w'?'b':'w',deadline); }
+          finally{ this.unmakeMoveRaw(); }
+          if(val>localBestScore){ localBestScore=val; localBest=m; }
+          if(val>alpha) alpha=val;
+        }
+        if(localBest){ best=localBest; bestScore=localBestScore; }
+      }
+    }catch(e){ if(!e||!e.timeout) throw e; }
+    if(!best){
+      const moves=this.legalMovesFor(color);
+      best = moves[Math.floor(Math.random()*moves.length)] || null;
+    }
+    return best;
+  }
+}
+
+
+if(typeof module!=='undefined') module.exports = {KaisergameGame, algebraic};
+
+/* ===== UI ===== */
+(function(){
+  const FILES='abcdefgh';
+  const KINGDOM_GLYPH={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'};
+  const EMPIRE_GLYPH={K:'♔',D:'♕',T:'♖',C:'♗',E:'♘',S:'⚔️',P:'♙'};
+
+  let game = new KaisergameGame();
+  let humanColor='w', aiColor='b';
+  let selected=null, legalForSelected=[], lastMove=null;
+  let aiThinkTime=1500, aiMaxDepth=3;
+  let removedWhite=[], removedBlack=[], moveNo=1;
+  let gameGen=0;
+
+  const boardEl=document.getElementById('board');
+  const statusEl=document.getElementById('status');
+  const coordsEl=document.getElementById('coords');
+  const movelogEl=document.getElementById('movelog');
+  const capturedWEl=document.getElementById('capturedW');
+  const capturedBEl=document.getElementById('capturedB');
+  const isEN=()=>document.body.classList.contains('lang-en');
+
+  function buildBoardDOM(){
+    boardEl.innerHTML='';
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const d=document.createElement('div');
+        d.className='sq '+(((r+c)%2===0)?'light':'dark');
+        d.dataset.r=r; d.dataset.c=c;
+        d.addEventListener('click',()=>onSquareClick(r,c));
+        boardEl.appendChild(d);
+      }
+    }
+    let s=''; for(let c=0;c<8;c++) s+='<span>'+FILES[c]+'</span>';
+    coordsEl.innerHTML=s;
+  }
+
+  function glyphFor(p){ return p.color==='w' ? EMPIRE_GLYPH[p.type] : KINGDOM_GLYPH[p.type]; }
+  function classFor(p){ return p.color==='w' ? 'piece-empire' : 'piece-kingdom'; }
+
+  function render(){
+    const cells=boardEl.children;
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const idx=r*8+c;
+        const cell=cells[idx];
+        cell.innerHTML='';
+        cell.classList.remove('selected','lastmove');
+        const p=game.board[r][c];
+        if(p){
+          const span=document.createElement('span');
+          span.className = classFor(p);
+          span.textContent = glyphFor(p);
+          cell.appendChild(span);
+        }
+        if(selected && selected.r===r && selected.c===c) cell.classList.add('selected');
+        if(lastMove && ((lastMove.tr===r&&lastMove.tc===c)||(lastMove.fr===r&&lastMove.fc===c))) cell.classList.add('lastmove');
+        const mv = legalForSelected.find(m=>m.tr===r && m.tc===c);
+        if(mv){
+          const marker=document.createElement('div');
+          marker.className = game.board[r][c] ? 'ring':'dot';
+          cell.appendChild(marker);
+        }
+      }
+    }
+    renderCaptured();
+    renderStatus();
+  }
+
+  function renderCaptured(){
+    capturedWEl.innerHTML=(isEN()?'Empire lost: ':'帝国が失った駒: ')+removedWhite.map(t=>EMPIRE_GLYPH[t]).join(' ');
+    capturedBEl.innerHTML=(isEN()?'Kingdom lost: ':'王国が失った駒: ')+removedBlack.map(t=>KINGDOM_GLYPH[t]).join(' ');
+  }
+
+  function sideLabel(color){
+    if(isEN()) return color==='w'?'Empire':'Kingdom';
+    return color==='w'?'帝国':'王国';
+  }
+
+  function renderStatus(){
+    statusEl.classList.remove('check','over');
+    if(game.gameOver){
+      statusEl.classList.add('over');
+      let msg;
+      const reasonJA={checkmate:'チェックメイト',stalemate:'ステイルメイト',campmate:'キャンプメイト'};
+      const reasonEN={checkmate:'checkmate',stalemate:'stalemate',campmate:'campmate'};
+      const winner = game.result==='white_wins'?'w':'b';
+      const reason = isEN()? reasonEN[game.resultReason] : reasonJA[game.resultReason];
+      msg = isEN()? sideLabel(winner)+' wins by '+reason+'!' : sideLabel(winner)+'の勝利（'+reason+'）！';
+      statusEl.textContent=msg; return;
+    }
+    let msg=(isEN()?"Turn: ":"手番: ")+sideLabel(game.turn);
+    if(game.inCheck(game.turn)){ statusEl.classList.add('check'); msg += isEN()?'  (Check!)':'（チェック！）'; }
+    if(game.turn===aiColor) msg += isEN()?'  — thinking…':'　— 思考中…';
+    statusEl.textContent=msg;
+  }
+
+  function logMove(color, m){
+    let txt;
+    if(m.castle==='K') txt='O-O';
+    else if(m.castle==='Q') txt='O-O-O';
+    else {
+      const from=algebraic(m.fr,m.fc), to=algebraic(m.tr,m.tc);
+      txt = from + (m.capture?'x':'-') + to + (m.promotion?'=':'');
+    }
+    const div=document.createElement('div');
+    if(color==='w'){ div.innerHTML='<b>'+moveNo+'.</b> '+txt; }
+    else { div.innerHTML='&nbsp;&nbsp;&nbsp;&nbsp;'+txt; moveNo++; }
+    movelogEl.appendChild(div);
+    movelogEl.scrollTop=movelogEl.scrollHeight;
+  }
+
+  function onSquareClick(r,c){
+    if(game.gameOver) return;
+    if(game.turn!==humanColor) return;
+    const p=game.board[r][c];
+    if(selected){
+      const mv=legalForSelected.find(m=>m.tr===r && m.tc===c);
+      if(mv){ commitMove(mv); selected=null; legalForSelected=[]; return; }
+      if(p && p.color===humanColor) selectSquare(r,c);
+      else { selected=null; legalForSelected=[]; render(); }
+      return;
+    }
+    if(p && p.color===humanColor) selectSquare(r,c);
+  }
+
+  function selectSquare(r,c){
+    selected={r,c};
+    const all=game.legalMovesFor(humanColor);
+    legalForSelected = all.filter(m=>m.fr===r && m.fc===c);
+    render();
+  }
+
+  function commitMove(mv){
+    const mover=game.board[mv.fr][mv.fc];
+    const info=game.makeMove(mv);
+    if(info.captured){ if(info.captured.color==='w') removedWhite.push(info.captured.type); else removedBlack.push(info.captured.type); }
+    if(info.epCaptured){ if(info.epCaptured.color==='w') removedWhite.push(info.epCaptured.type); else removedBlack.push(info.epCaptured.type); }
+    logMove(mover.color, mv);
+    lastMove=mv; selected=null; legalForSelected=[];
+    render();
+    if(!game.gameOver && game.turn===aiColor){
+      const myGen=gameGen;
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 400);
+    }
+  }
+
+  function aiMove(myGen){
+    if(myGen===undefined) myGen=gameGen;
+    if(myGen!==gameGen) return;
+    if(game.gameOver || game.turn!==aiColor) return;
+    render();
+    setTimeout(()=>{
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      const mv=game.bestMove(aiColor, aiThinkTime, aiMaxDepth);
+      if(myGen!==gameGen) return;
+      if(game.gameOver || game.turn!==aiColor) return;
+      if(!mv){ render(); return; }
+      commitMove(mv);
+    }, 30);
+  }
+
+  function newGame(){
+    gameGen++;
+    const myGen=gameGen;
+    game = new KaisergameGame();
+    humanColor = document.getElementById('sideSelect').value;
+    aiColor = humanColor==='w' ? 'b' : 'w';
+    const [t,d]=document.getElementById('diffSelect').value.split(',').map(Number);
+    aiThinkTime=t; aiMaxDepth=d;
+    selected=null; legalForSelected=[]; lastMove=null;
+    removedWhite=[]; removedBlack=[]; moveNo=1;
+    movelogEl.innerHTML='';
+    render();
+    if(game.turn===aiColor){
+      setTimeout(()=>{ if(myGen===gameGen) aiMove(myGen); }, 300);
+    }
+  }
+
+  document.getElementById('newGameBtn').addEventListener('click', ()=>newGame());
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('lang-en');
+    render();
+  });
+  document.getElementById('themeBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('light-mode');
+  });
+
+  buildBoardDOM();
+  newGame();
+})();
+</script>
+</body>
+</html>
