@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Mandelbrot & Julia Set Explorer (Zoomable)</title>
+  <style>
+    body { font-family: sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    canvas { background: #000; border-radius: 8px; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+    .controls { background: #1e1e1e; padding: 20px; border-radius: 8px; width: 280px; display: flex; flex-direction: column; gap: 15px; }
+    label { font-size: 0.9rem; display: flex; flex-direction: column; gap: 5px; }
+    input[type="range"] { width: 100%; }
+    select, button { padding: 8px; border-radius: 4px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; }
+    button:hover { background: #444; }
+  </style>
+</head>
+<body>
+  <h1>Mandelbrot & Julia Set Explorer</h1>
+  <div class="container">
+    <canvas id="fractalCanvas" width="500" height="500"></canvas>
+    <div class="controls">
+      <label>
+        表示モード:
+        <select id="mode">
+          <option value="mandelbrot">マンデルブロ集合</option>
+          <option value="julia">ジュリア集合</option>
+        </select>
+      </label>
+      <label>
+        最大繰り返し数 (精度): <span id="iterVal">100</span>
+        <input type="range" id="iterations" min="10" max="300" value="100">
+      </label>
+      <label>
+        ジュリア定数 C (実部): <span id="crVal">-0.7</span>
+        <input type="range" id="cr" min="-2" max="2" step="0.01" value="-0.7">
+      </label>
+      <label>
+        ジュリア定数 C (虚部): <span id="ciVal">0.27</span>
+        <input type="range" id="ci" min="-2" max="2" step="0.01" value="0.27">
+      </label>
+      <button id="resetBtn">ビューをリセット</button>
+      <div style="font-size: 0.8rem; color: #aaa; line-height: 1.4;">
+        【操作方法】<br>
+        ・ホイール / 左クリック: 拡大<br>
+        ・右クリック: 縮小<br>
+        ・ドラッグ: 表示位置移動
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('fractalCanvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const modeSelect = document.getElementById('mode');
+    const iterInput = document.getElementById('iterations');
+    const crInput = document.getElementById('cr');
+    const ciInput = document.getElementById('ci');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // 描画範囲の座標（表示領域の変数を追加）
+    let zoom = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    // ドラッグ管理用の変数
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    function resetView() {
+      zoom = 1;
+      offsetX = 0;
+      offsetY = 0;
+      draw();
+    }
+
+    function draw() {
+      const mode = modeSelect.value;
+      const maxIter = parseInt(iterInput.value);
+      const cr = parseFloat(crInput.value);
+      const ci = parseFloat(ciInput.value);
+
+      document.getElementById('iterVal').innerText = maxIter;
+      document.getElementById('crVal').innerText = cr;
+      document.getElementById('ciVal').innerText = ci;
+
+      const imgData = ctx.createImageData(width, height);
+      const data = imgData.data;
+
+      // 拡大率とオフセットを計算に反映
+      const scale = (width / 4) * zoom;
+
+      for (let px = 0; px < width; px++) {
+        for (let py = 0; py < height; py++) {
+          // キャンバス座標を複素数平面の座標に変換（ズーム・オフセット適用）
+          let x0 = (px - width / 2 - offsetX) / scale;
+          let y0 = (py - height / 2 - offsetY) / scale;
+
+          let x = mode === 'julia' ? x0 : 0;
+          let y = mode === 'julia' ? y0 : 0;
+          let cx = mode === 'julia' ? cr : x0;
+          let cy = mode === 'julia' ? ci : y0;
+
+          let iteration = 0;
+          while (x * x + y * y <= 4 && iteration < maxIter) {
+            let xtemp = x * x - y * y + cx;
+            y = 2 * x * y + cy;
+            x = xtemp;
+            iteration++;
+          }
+
+          const pixelIndex = (py * width + px) * 4;
+          if (iteration === maxIter) {
+            data[pixelIndex] = 0;
+            data[pixelIndex + 1] = 0;
+            data[pixelIndex + 2] = 0;
+          } else {
+            data[pixelIndex] = (iteration * 15) % 255;
+            data[pixelIndex + 1] = (iteration * 8) % 255;
+            data[pixelIndex + 2] = (iteration * 25) % 255;
+          }
+          data[pixelIndex + 3] = 255;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    // イベントリスナー設定
+    [modeSelect, iterInput, crInput, ciInput].forEach(el => el.addEventListener('input', draw));
+    resetBtn.addEventListener('click', resetView);
+
+    // マウスホイールによるズーム
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.2 : 0.8;
+      
+      // カーソル位置を中心にズーム調整
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left - width / 2;
+      const mouseY = e.clientY - rect.top - height / 2;
+
+      offsetX = mouseX - (mouseX - offsetX) * zoomFactor;
+      offsetY = mouseY - (mouseY - offsetY) * zoomFactor;
+      zoom *= zoomFactor;
+
+      draw();
+    });
+
+    // ドラッグ移動 & クリックズーム
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStartX = e.clientX - offsetX;
+      dragStartY = e.clientY - offsetY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      offsetX = e.clientX - dragStartX;
+      offsetY = e.clientY - dragStartY;
+      draw();
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // 右クリックメニューを無効化（右クリックズーム用）
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // クリックによる拡大/縮小（ドラッグと区別するため一定移動なしの場合のみ発動）
+    let clickStartX = 0;
+    let clickStartY = 0;
+    canvas.addEventListener('mousedown', (e) => {
+      clickStartX = e.clientX;
+      clickStartY = e.clientY;
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
+      if (dist < 5) { // ほとんど動いていない場合はクリックとみなす
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - width / 2;
+        const mouseY = e.clientY - rect.top - height / 2;
+        
+        const zoomFactor = e.button === 2 ? 0.67 : 1.5; // 右クリックで縮小、左クリックで拡大
+        
+        offsetX = mouseX - (mouseX - offsetX) * zoomFactor;
+        offsetY = mouseY - (mouseY - offsetY) * zoomFactor;
+        zoom *= zoomFactor;
+        draw();
+      }
+    });
+
+    draw();
+  </script>
+</body>
+</html>
