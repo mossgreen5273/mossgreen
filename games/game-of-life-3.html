@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Game of Life</title>
+  <style>
+    body { font-family: sans-serif; background: #0f0f13; color: #e0e0e0; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 1.5rem; color: #76ff03; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    canvas { background: #000; border-radius: 8px; cursor: pointer; }
+    .controls { background: #1a1a24; padding: 20px; border-radius: 8px; width: 280px; display: flex; flex-direction: column; gap: 12px; }
+    button, select { padding: 8px; border-radius: 4px; background: #2a2a38; color: #fff; border: 1px solid #3d3d52; cursor: pointer; }
+    .top-bar { display: flex; justify-content: flex-end; width: 100%; max-width: 700px; }
+    #langBtn { padding: 6px 14px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <div class="top-bar"><button id="langBtn">EN</button></div>
+  <h1 id="title">ライフゲーム（Conway's Game of Life）</h1>
+  <div class="container">
+    <canvas id="canvas" width="400" height="400"></canvas>
+    <div class="controls">
+      <button id="playBtn">再生 / 一時停止</button>
+      <button id="stepBtn">1コマ進める</button>
+      <button id="randBtn">ランダム配置</button>
+      <button id="clearBtn">クリア</button>
+      <label id="patternLabel" style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px;">初期パターン:
+        <select id="patternSelect">
+          <option value="glider">グライダー</option>
+          <option value="pulsar">パルサー</option>
+          <option value="gun">グライダー銃</option>
+        </select>
+      </label>
+      <div id="explain" style="font-size: 0.8rem; color: #888;">【操作】画面をクリックしてセルを生滅させられます（クリックすると自動的に一時停止）。1マスだけでは次の世代で消えます。2×2以上のかたまりを置いてみてください。</div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const cols = 40, rows = 40, size = canvas.width / cols;
+    let grid = Array(cols).fill(null).map(() => Array(rows).fill(0));
+    let isRunning = false;
+
+    function randomize() { grid = grid.map(col => col.map(() => Math.random() > 0.75 ? 1 : 0)); }
+    function clear() { grid = Array(cols).fill(null).map(() => Array(rows).fill(0)); }
+
+    const patterns = {
+      glider: [[0,1],[1,2],[2,0],[2,1],[2,2]],
+      pulsar: [
+        [2,0],[3,0],[4,0],[8,0],[9,0],[10,0],
+        [0,2],[5,2],[7,2],[12,2],
+        [0,3],[5,3],[7,3],[12,3],
+        [0,4],[5,4],[7,4],[12,4],
+        [2,5],[3,5],[4,5],[8,5],[9,5],[10,5],
+        [2,7],[3,7],[4,7],[8,7],[9,7],[10,7],
+        [0,8],[5,8],[7,8],[12,8],
+        [0,9],[5,9],[7,9],[12,9],
+        [0,10],[5,10],[7,10],[12,10],
+        [2,12],[3,12],[4,12],[8,12],[9,12],[10,12]
+      ],
+      gun: [
+        [24,0],
+        [22,1],[24,1],
+        [12,2],[13,2],[20,2],[21,2],[34,2],[35,2],
+        [11,3],[15,3],[20,3],[21,3],[34,3],[35,3],
+        [0,4],[1,4],[10,4],[16,4],[20,4],[21,4],
+        [0,5],[1,5],[10,5],[14,5],[16,5],[17,5],[22,5],[24,5],
+        [10,6],[16,6],[24,6],
+        [11,7],[15,7],
+        [12,8],[13,8]
+      ]
+    };
+
+    function placePattern(name) {
+      clear();
+      const cells = patterns[name];
+      let maxX = 0, maxY = 0;
+      cells.forEach(([x, y]) => { maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); });
+      const offX = Math.floor((cols - maxX) / 2);
+      const offY = Math.floor((rows - maxY) / 2);
+      cells.forEach(([x, y]) => {
+        const gx = x + offX, gy = y + offY;
+        if (gx >= 0 && gx < cols && gy >= 0 && gy < rows) grid[gx][gy] = 1;
+      });
+      draw();
+    }
+
+    function update() {
+      let next = grid.map(arr => [...arr]);
+      for (let x = 0; x < cols; x++) {
+        for (let y = 0; y < rows; y++) {
+          let n = 0;
+          for (let dx = -1; dx <= 1; dx++)
+            for (let dy = -1; dy <= 1; dy++)
+              if (dx || dy) n += grid[(x + dx + cols) % cols][(y + dy + rows) % rows];
+          if (grid[x][y] && (n < 2 || n > 3)) next[x][y] = 0;
+          else if (!grid[x][y] && n === 3) next[x][y] = 1;
+        }
+      }
+      grid = next;
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      for (let x = 0; x < cols; x++) {
+        for (let y = 0; y < rows; y++) {
+          if (grid[x][y]) {
+            ctx.fillStyle = '#76ff03';
+            ctx.fillRect(x * size, y * size, size - 1, size - 1);
+          }
+        }
+      }
+    }
+
+    function loop() {
+      if (isRunning) update();
+      draw();
+      setTimeout(() => requestAnimationFrame(loop), 100);
+    }
+
+    document.getElementById('playBtn').addEventListener('click', () => isRunning = !isRunning);
+    document.getElementById('stepBtn').addEventListener('click', () => { isRunning = false; update(); draw(); });
+    document.getElementById('randBtn').addEventListener('click', () => { randomize(); draw(); });
+    document.getElementById('clearBtn').addEventListener('click', () => { clear(); draw(); });
+    document.getElementById('patternSelect').addEventListener('change', e => placePattern(e.target.value));
+    canvas.addEventListener('click', e => {
+      isRunning = false; // pause so placed cells don't get evaluated away before you finish building
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / size);
+      const y = Math.floor((e.clientY - rect.top) / size);
+      grid[x][y] = grid[x][y] ? 0 : 1; draw();
+    });
+
+    const i18n = {
+      ja: {
+        title: "ライフゲーム（Conway's Game of Life）",
+        play: '再生 / 一時停止',
+        step: '1コマ進める',
+        rand: 'ランダム配置',
+        clear: 'クリア',
+        pattern: '初期パターン:',
+        glider: 'グライダー',
+        pulsar: 'パルサー',
+        gun: 'グライダー銃',
+        explain: '【操作】画面をクリックしてセルを生滅させられます（クリックすると自動的に一時停止）。1マスだけでは次の世代で消えます。2×2以上のかたまりを置いてみてください。',
+        btn: 'EN'
+      },
+      en: {
+        title: "Game of Life (Conway's Game of Life)",
+        play: 'Play / Pause',
+        step: 'Step Forward',
+        rand: 'Randomize',
+        clear: 'Clear',
+        pattern: 'Initial Pattern:',
+        glider: 'Glider',
+        pulsar: 'Pulsar',
+        gun: 'Glider Gun',
+        explain: '[How to play] Click cells to toggle them alive or dead (clicking auto-pauses). A single cell dies next generation on its own — try placing a 2×2 block or larger cluster.',
+        btn: '日本語'
+      }
+    };
+    let lang = 'ja';
+    function applyLang() {
+      const t = i18n[lang];
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('playBtn').textContent = t.play;
+      document.getElementById('stepBtn').textContent = t.step;
+      document.getElementById('randBtn').textContent = t.rand;
+      document.getElementById('clearBtn').textContent = t.clear;
+      document.getElementById('patternLabel').firstChild.textContent = t.pattern;
+      const sel = document.getElementById('patternSelect');
+      sel.options[0].textContent = t.glider;
+      sel.options[1].textContent = t.pulsar;
+      sel.options[2].textContent = t.gun;
+      document.getElementById('explain').textContent = t.explain;
+      document.getElementById('langBtn').textContent = t.btn;
+      document.documentElement.lang = lang;
+    }
+    document.getElementById('langBtn').addEventListener('click', () => {
+      lang = lang === 'ja' ? 'en' : 'ja';
+      applyLang();
+    });
+
+    applyLang();
+    placePattern('glider'); loop();
+  </script>
+</body>
+</html>
