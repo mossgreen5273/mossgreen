@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数占花樹 / Numerofract</title>
+<style>
+  :root{
+    --moss-deep:#1c2620;
+    --moss:#3b5d42;
+    --moss-light:#6b8f6f;
+    --brass:#b08d57;
+    --brass-light:#d9b978;
+    --paper:#e8e2d0;
+    --ink:#eef0e8;
+    --panel:#22302a;
+    --line: rgba(176,141,87,0.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(ellipse at 50% 20%, #26332c 0%, #141c17 70%, #0e1410 100%);
+    color:var(--ink);
+    font-family: "Hiragino Mincho ProN","Yu Mincho", "Georgia", serif;
+    overflow-x:hidden;
+  }
+  body.light{
+    background: radial-gradient(ellipse at 50% 20%, #f3efe1 0%, #e8e2d0 70%, #ddd6c1 100%);
+    color:#20261f;
+  }
+  .wrap{
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 18px 60px;
+  }
+  header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    gap: 10px;
+  }
+  .title-block h1{
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    margin: 0 0 4px;
+    color: var(--brass-light);
+  }
+  body.light .title-block h1{ color:#7a5c2e; }
+  .title-block .sub{
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    opacity: 0.65;
+    font-family: -apple-system, sans-serif;
+  }
+  .toggles{
+    display:flex; gap:8px; flex-shrink:0;
+  }
+  .toggles button{
+    background: transparent;
+    border: 1px solid var(--line);
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor:pointer;
+    opacity: 0.75;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+  .toggles button:hover{ opacity:1; border-color: var(--brass); }
+
+  .intro{
+    font-size: 0.85rem;
+    line-height: 1.8;
+    opacity: 0.75;
+    margin-bottom: 22px;
+    font-family: -apple-system, sans-serif;
+    max-width: 56ch;
+  }
+
+  .input-row{
+    display:flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  input[type="text"]{
+    flex:1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: "Georgia", serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.04em;
+    padding: 10px 14px;
+    border-radius: 4px;
+    outline:none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  body.light input[type="text"]{ background:#fbf9f2; color:#20261f; }
+  input[type="text"]:focus{
+    border-color: var(--brass);
+    box-shadow: 0 0 0 3px rgba(176,141,87,0.15);
+  }
+  .btn{
+    background: linear-gradient(180deg, var(--moss-light), var(--moss));
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #eef0e8;
+    font-family: -apple-system, sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    padding: 0 20px;
+    border-radius: 4px;
+    cursor:pointer;
+    transition: filter 0.2s, transform 0.1s;
+  }
+  .btn:hover{ filter: brightness(1.15); }
+  .btn:active{ transform: translateY(1px); }
+  .btn.ghost{
+    background: transparent;
+    border: 1px solid var(--line);
+    color: inherit;
+    opacity:0.8;
+  }
+  .row-secondary{
+    display:flex; gap:8px; margin-bottom: 22px;
+  }
+  .mode-btn.ghost{
+    background: transparent;
+    border: 1px solid var(--line);
+    color: inherit;
+    opacity:0.6;
+  }
+  .mode-btn.active{
+    opacity:1;
+  }
+
+  .stage{
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: radial-gradient(ellipse at 50% 30%, rgba(107,143,111,0.06), transparent 65%);
+    overflow:hidden;
+    margin-bottom: 18px;
+  }
+  canvas{
+    display:block;
+    width:100%;
+    height:auto;
+    opacity:0;
+    transition: opacity 1.1s ease;
+  }
+  canvas.shown{ opacity:1; }
+  canvas.breathing{
+    animation: breathe 5.5s ease-in-out infinite;
+  }
+  @keyframes breathe{
+    0%   { filter: brightness(1) drop-shadow(0 0 0px rgba(217,185,120,0)); }
+    50%  { filter: brightness(1.07) drop-shadow(0 0 14px rgba(217,185,120,0.28)); }
+    100% { filter: brightness(1) drop-shadow(0 0 0px rgba(217,185,120,0)); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    canvas.breathing{ animation: none; }
+    canvas{ transition: none; }
+  }
+
+  .reading{
+    font-family: -apple-system, sans-serif;
+    font-size: 0.82rem;
+    line-height: 1.9;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .reading .traits{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-bottom: 10px;
+  }
+  .tag{
+    display:inline-block;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--brass);
+    color: var(--brass-light);
+    background: rgba(176,141,87,0.08);
+  }
+  body.light .tag{ color:#7a5c2e; }
+  .reading .desc{ opacity:0.75; }
+  .reading .params{
+    margin-top: 10px;
+    font-size: 0.72rem;
+    opacity: 0.4;
+    letter-spacing: 0.02em;
+  }
+
+  .history{
+    margin-top: 26px;
+  }
+  .history h2{
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    opacity: 0.55;
+    font-weight: 500;
+    font-family: -apple-system, sans-serif;
+    margin: 0 0 10px;
+  }
+  .history-list{
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .history-item{
+    font-family: -apple-system, sans-serif;
+    font-size: 0.76rem;
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor:pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+  .history-item:hover{ opacity:1; border-color: var(--brass); }
+
+  .save-row{
+    margin-top: 14px;
+    display:flex; justify-content:flex-end;
+  }
+
+  [data-lang="en"]{ display:none; }
+  body.lang-en [data-lang="ja"]{ display:none; }
+  body.lang-en [data-lang="en"]{ display:inline; }
+  body.lang-en h1[data-lang="ja"], body.lang-en .intro[data-lang="ja"]{ display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <h1 data-lang="ja">数占花樹 &mdash; Numerofract</h1>
+      <h1 data-lang="en" style="display:none;">Numerofract</h1>
+      <div class="sub" data-lang="ja">数を植えれば、樹が咲く</div>
+      <div class="sub" data-lang="en" style="display:none;">Plant a number. Watch it branch.</div>
+    </div>
+    <div class="toggles">
+      <button id="langToggle">EN</button>
+      <button id="themeToggle" data-lang="ja">昼/夜</button>
+      <button id="themeToggle2" data-lang="en" style="display:none;">Day/Night</button>
+    </div>
+  </header>
+
+  <p class="intro" data-lang="ja">
+    好きな数を入力すると、その数の性質（桁の並び、合計、素数性、対称性）から一本の樹、
+    またはマンデルブロ集合の中の一点が育ちます。同じ数は、何度植えても同じ形になります。
+  </p>
+  <p class="intro" data-lang="en" style="display:none;">
+    Enter any number. Its digits, digit sum, and mathematical properties (primality, symmetry, squareness)
+    determine either a fractal tree or a point deep inside the Mandelbrot set. The same number always
+    grows the same shape.
+  </p>
+
+  <div class="input-row">
+    <input type="text" id="numInput" inputmode="numeric" placeholder="例: 1729 / e.g. 1729" maxlength="18">
+    <button class="btn" id="growBtn" data-lang="ja">植える</button>
+    <button class="btn" id="growBtnEn" data-lang="en" style="display:none;">Plant</button>
+  </div>
+  <div class="row-secondary">
+    <button class="btn ghost" id="randomBtn" data-lang="ja">気まぐれな数</button>
+    <button class="btn ghost" id="randomBtnEn" data-lang="en" style="display:none;">Random number</button>
+  </div>
+
+  <div class="row-secondary" id="modeRow">
+    <button class="btn mode-btn active" id="modeTree" data-lang="ja">樹</button>
+    <button class="btn mode-btn active" id="modeTreeEn" data-lang="en" style="display:none;">Tree</button>
+    <button class="btn mode-btn ghost" id="modeMandel" data-lang="ja">マンデルブロ</button>
+    <button class="btn mode-btn ghost" id="modeMandelEn" data-lang="en" style="display:none;">Mandelbrot</button>
+  </div>
+
+  <div class="stage">
+    <canvas id="canvas" width="1400" height="1000"></canvas>
+  </div>
+
+  <div class="reading" id="reading" style="display:none;">
+    <div class="traits" id="traits"></div>
+    <div class="desc" id="desc"></div>
+    <div class="params" id="params"></div>
+  </div>
+
+  <div class="save-row">
+    <button class="btn ghost" id="saveBtn" data-lang="ja">画像として保存</button>
+    <button class="btn ghost" id="saveBtnEn" data-lang="en" style="display:none;">Save as image</button>
+  </div>
+
+  <div class="history">
+    <h2 data-lang="ja">これまでに植えた数</h2>
+    <h2 data-lang="en" style="display:none;">Numbers planted so far</h2>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const body = document.body;
+  const canvas = $('canvas');
+  const ctx = canvas.getContext('2d');
+  const input = $('numInput');
+  const readingBox = $('reading');
+  const traitsBox = $('traits');
+  const descBox = $('desc');
+  const paramsBox = $('params');
+  const historyList = $('historyList');
+
+  let lang = 'ja';
+  let dark = true;
+  let mode = 'tree'; // 'tree' | 'mandel'
+  let history = [];
+  let lastState = null; // for redraw on theme/mode change
+
+  // ---------- language / theme / mode ----------
+  function setLang(l){
+    lang = l;
+    body.classList.toggle('lang-en', l === 'en');
+    $('langToggle').textContent = l === 'ja' ? 'EN' : 'JA';
+    if(lastState) describe(lastState);
+  }
+  $('langToggle').addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
+
+  function setTheme(d){
+    dark = d;
+    body.classList.toggle('light', !dark);
+    if(lastState) draw(lastState, false);
+  }
+  $('themeToggle').addEventListener('click', () => setTheme(!dark));
+  $('themeToggle2').addEventListener('click', () => setTheme(!dark));
+
+  function setMode(m){
+    mode = m;
+    [$('modeTree'), $('modeTreeEn')].forEach(b => b.classList.toggle('ghost', m !== 'tree'));
+    [$('modeTree'), $('modeTreeEn')].forEach(b => b.classList.toggle('active', m === 'tree'));
+    [$('modeMandel'), $('modeMandelEn')].forEach(b => b.classList.toggle('ghost', m !== 'mandel'));
+    [$('modeMandel'), $('modeMandelEn')].forEach(b => b.classList.toggle('active', m === 'mandel'));
+    if(lastState){ draw(lastState, true); describe(lastState); }
+  }
+  $('modeTree').addEventListener('click', () => setMode('tree'));
+  $('modeTreeEn').addEventListener('click', () => setMode('tree'));
+  $('modeMandel').addEventListener('click', () => setMode('mandel'));
+  $('modeMandelEn').addEventListener('click', () => setMode('mandel'));
+
+  // ---------- number theory helpers ----------
+  function isPrime(n){
+    if(n < 2) return false;
+    if(n % 2 === 0) return n === 2;
+    if(n > 1e12) return false; // cap for performance
+    for(let i=3; i*i<=n; i+=2){ if(n % i === 0) return false; }
+    return true;
+  }
+  function isPerfectSquare(n){
+    if(n < 0) return false;
+    const r = Math.round(Math.sqrt(n));
+    return r*r === n;
+  }
+  function isPalindrome(str){
+    return str === str.split('').reverse().join('');
+  }
+  function isFibonacci(n){
+    function isPerfectSq(x){ const s=Math.sqrt(x); return Number.isInteger(s); }
+    return isPerfectSq(5*n*n+4) || isPerfectSq(5*n*n-4);
+  }
+
+  // simple deterministic hash from a string -> [0,1)
+  function hashFrac(str, salt){
+    let h = 2166136261 ^ salt;
+    for(let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    h = h >>> 0;
+    return (h % 100000) / 100000;
+  }
+
+  // ---------- derive fractal (tree) parameters from number ----------
+  function deriveState(numStr){
+    const digits = numStr.split('').map(Number);
+    const n = parseInt(numStr, 10);
+    const digitSum = digits.reduce((a,b)=>a+b,0);
+    const last = digits[digits.length-1];
+    const first = digits[0];
+    const len = digits.length;
+
+    const prime = isPrime(n);
+    const square = isPerfectSquare(n);
+    const palindrome = isPalindrome(numStr) && len > 1;
+    const fib = isFibonacci(n) && n > 2;
+
+    const angle = 12 + (digitSum % 50) + hashFrac(numStr,1)*8; // 12-70 deg
+    const branches = 2 + (len % 3); // 2-4
+    // cap depth so branches^depth stays bounded (avoids runaway recursion for wide trees)
+    const maxDepthForBranches = branches === 2 ? 13 : (branches === 3 ? 10 : 8);
+    const depth = Math.min(maxDepthForBranches, 7 + (digitSum % 5)); // 7-13 depending on width
+    const lengthRatio = 0.62 + (last/10)*0.22; // 0.62-0.84
+    const asymmetry = (hashFrac(numStr,2) - 0.5) * 0.6; // -0.3..0.3
+    const hue = (digitSum * 41 + first * 17) % 360;
+    const spread = 0.5 + hashFrac(numStr,3)*0.5;
+
+    let symmetry = 'none';
+    if(palindrome) symmetry = 'radial';
+    else if(square) symmetry = 'mirror';
+
+    return {
+      numStr, n, digits, digitSum, len,
+      prime, square, palindrome, fib,
+      angle, branches, depth, lengthRatio, asymmetry, hue, spread, symmetry
+    };
+  }
+
+  // ---------- Mandelbrot: derive a zoom target + palette from the number ----------
+  const MANDEL_REGIONS = [
+    {cx:-0.745430, cy: 0.112680, zoom:  400},   // Seahorse Valley
+    {cx:-0.160710, cy: 1.037500, zoom:  350},   // Elephant Valley
+    {cx:-1.250660, cy: 0.020120, zoom:  900},   // spiral near period bulbs
+    {cx: 0.281717, cy: 0.577129, zoom: 1800},   // mini-Mandelbrot
+    {cx:-0.743643, cy: 0.131825, zoom: 5000},   // deep seahorse
+    {cx:-0.101096, cy: 0.956286, zoom:  700},
+    {cx:-0.500000, cy: 0.000000, zoom:    1},   // full overview
+    {cx:-1.768778, cy: 0.001740, zoom: 1200},   // period-3 bulb
+  ];
+  function deriveMandelParams(state){
+    const numStr = state.numStr;
+    const regionIdx = Math.floor(hashFrac(numStr, 11) * MANDEL_REGIONS.length) % MANDEL_REGIONS.length;
+    const region = MANDEL_REGIONS[regionIdx];
+    const zoomMul = 1 + (state.digitSum % 40) / 5 + state.len * 0.4;
+    const zoom = Math.min(2e6, region.zoom * zoomMul);
+
+    // Jitter must stay small relative to the view width at this zoom, or we
+    // land far outside the curated interesting coordinate entirely (the
+    // earlier bug: a fixed 2/sqrt(zoom) jitter grew *larger* than the view
+    // width as zoom increased, so nearly every render fell into blank,
+    // featureless territory and looked like "nothing generated").
+    const viewW = 3.2 / zoom;
+    const jitter = viewW * 0.55;
+    const cx0 = region.cx + (hashFrac(numStr, 12) - 0.5) * jitter;
+    const cy0 = region.cy + (hashFrac(numStr, 13) - 0.5) * jitter;
+    const maxIter = Math.min(320, Math.max(70, 60 + state.digitSum * 3 + state.len * 6 + Math.floor(Math.log2(zoom)) * 8));
+
+    let palette = 'moss';
+    if(state.prime) palette = 'brass';
+    else if(state.square) palette = 'teal';
+    else if(state.palindrome) palette = 'violet';
+    else if(state.fib) palette = 'green';
+
+    return { cx0, cy0, zoom, maxIter, palette, regionIdx };
+  }
+
+  function hslToRgb(h, s, l){
+    h = ((h % 360) + 360) % 360; s/=100; l/=100;
+    const c = (1 - Math.abs(2*l-1)) * s;
+    const x = c * (1 - Math.abs((h/60) % 2 - 1));
+    const m = l - c/2;
+    let r=0,g=0,b=0;
+    if(h<60){r=c;g=x;b=0;} else if(h<120){r=x;g=c;b=0;}
+    else if(h<180){r=0;g=c;b=x;} else if(h<240){r=0;g=x;b=c;}
+    else if(h<300){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+    return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
+  }
+
+  function paletteColor(palette, t){
+    // t: 0 (fast escape) .. 1 (near boundary)
+    let hueBase, hueSpread;
+    switch(palette){
+      case 'brass':  hueBase = 34;  hueSpread = 20;  break; // gold
+      case 'teal':   hueBase = 178; hueSpread = 30;  break; // cyan/teal
+      case 'violet': hueBase = 285; hueSpread = 35;  break; // violet/magenta
+      case 'green':  hueBase = 100; hueSpread = 35;  break; // fibonacci green
+      default:       hueBase = 95;  hueSpread = 55;  break; // moss/brass default
+    }
+    const hue = hueBase + t * hueSpread;
+    const sat = 45 + t * 30;
+    const light = (dark ? 14 : 22) + t * 46;
+    return hslToRgb(hue, sat, light);
+  }
+
+  function mandelIter(x0, y0, maxIter){
+    let x=0, y=0, x2=0, y2=0, iter=0;
+    while(x2 + y2 <= 4 && iter < maxIter){
+      y = 2*x*y + y0;
+      x = x2 - y2 + x0;
+      x2 = x*x; y2 = y*y;
+      iter++;
+    }
+    if(iter < maxIter){
+      const logZn = Math.log(x2+y2) / 2;
+      const nu = Math.log(logZn / Math.LN2) / Math.LN2;
+      iter = iter + 1 - nu;
+    }
+    return iter;
+  }
+
+  function drawMandelbrot(state){
+    const dispW = canvas.width, dispH = canvas.height;
+    const compW = 460;
+    const compH = Math.round(compW * dispH / dispW);
+    const off = document.createElement('canvas');
+    off.width = compW; off.height = compH;
+    const octx = off.getContext('2d');
+    const img = octx.createImageData(compW, compH);
+    const { cx0, cy0, zoom, maxIter, palette } = state.mandel;
+    const viewW = 3.2 / zoom;
+    const viewH = viewW * (compH / compW);
+
+    for(let py=0; py<compH; py++){
+      const y0 = cy0 + (py/compH - 0.5) * viewH;
+      for(let px=0; px<compW; px++){
+        const x0 = cx0 + (px/compW - 0.5) * viewW;
+        const iter = mandelIter(x0, y0, maxIter);
+        const idx = (py*compW + px) * 4;
+        let rgb;
+        if(iter >= maxIter){
+          rgb = dark ? [9, 12, 10] : [24, 28, 22];
+        } else {
+          rgb = paletteColor(palette, iter / maxIter);
+        }
+        img.data[idx] = rgb[0]; img.data[idx+1] = rgb[1]; img.data[idx+2] = rgb[2]; img.data[idx+3] = 255;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    ctx.clearRect(0, 0, dispW, dispH);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, 0, 0, compW, compH, 0, 0, dispW, dispH);
+  }
+
+  // ---------- tree drawing ----------
+  function branchColor(state, depthLeft, maxDepth){
+    const t = 1 - depthLeft/maxDepth; // 0 at trunk, 1 at tips
+    let hue = state.hue;
+    let sat, light;
+    if(state.prime){
+      // brass / gold shimmer
+      hue = 38 + t*6;
+      sat = 55 - t*10;
+      light = (dark ? 42 : 40) + t*22;
+    } else {
+      sat = 30 + t*25;
+      light = (dark ? 30 : 32) + t*28;
+    }
+    return `hsl(${hue}, ${sat}%, ${light}%)`;
+  }
+
+  function drawTree(cx, x, y, len, angleDeg, depthLeft, state, maxDepth, glow){
+    if(depthLeft === 0 || len < 2) return;
+    const rad = angleDeg * Math.PI/180;
+    const x2 = x + Math.sin(rad) * len;
+    const y2 = y - Math.cos(rad) * len;
+
+    cx.strokeStyle = branchColor(state, depthLeft, maxDepth);
+    cx.lineWidth = Math.max(0.6, depthLeft * 0.55);
+    if(glow){
+      cx.shadowBlur = state.prime ? 14 : 6;
+      cx.shadowColor = state.prime ? 'rgba(217,185,120,0.5)' : 'rgba(107,143,111,0.35)';
+    } else {
+      cx.shadowBlur = 0;
+    }
+    cx.beginPath();
+    cx.moveTo(x, y);
+    cx.lineTo(x2, y2);
+    cx.stroke();
+
+    const nextLen = len * state.lengthRatio;
+    const spreadAngle = state.angle * state.spread;
+    const nBranches = state.branches;
+
+    for(let i=0;i<nBranches;i++){
+      let frac;
+      if(nBranches === 1) frac = 0;
+      else frac = (i/(nBranches-1)) * 2 - 1; // -1..1
+      let a = angleDeg + frac * spreadAngle + state.asymmetry * 20;
+      drawTree(cx, x2, y2, nextLen, a, depthLeft-1, state, maxDepth, glow);
+    }
+  }
+
+  function drawOnce(cx, w, h, state, glow){
+    cx.clearRect(0,0,w,h);
+    const baseLen = h * 0.24;
+    const startY = h * 0.94;
+
+    function drawFrom(centerX, angleOffset){
+      cx.save();
+      drawTree(cx, centerX, startY, baseLen, angleOffset, state.depth, state, state.depth, glow);
+      cx.restore();
+    }
+
+    if(state.symmetry === 'radial'){
+      const copies = Math.min(8, Math.max(3, state.len));
+      const cx0 = w/2, cy0 = startY;
+      for(let i=0;i<copies;i++){
+        const rot = (360/copies) * i;
+        cx.save();
+        cx.translate(cx0, cy0);
+        cx.rotate(rot * Math.PI/180);
+        cx.translate(-cx0, -cy0);
+        drawTree(cx, cx0, cy0, baseLen*0.75, 0, state.depth, state, state.depth, glow);
+        cx.restore();
+      }
+    } else if(state.symmetry === 'mirror'){
+      drawFrom(w*0.5, -14);
+      cx.save();
+      cx.translate(w, 0);
+      cx.scale(-1, 1);
+      drawTree(cx, w*0.5, startY, baseLen, -14, state.depth, state, state.depth, glow);
+      cx.restore();
+    } else {
+      drawFrom(w/2, 0);
+    }
+  }
+
+  // ---------- shared draw dispatcher ----------
+  function draw(state, animate){
+    lastState = state;
+    const w = canvas.width, h = canvas.height;
+    if(mode === 'mandel'){
+      if(!state.mandel) state.mandel = deriveMandelParams(state);
+      drawMandelbrot(state);
+    } else {
+      drawOnce(ctx, w, h, state, true);
+    }
+    canvas.classList.remove('shown', 'breathing');
+    // trigger reflow so the animation restarts cleanly for each new tree
+    void canvas.offsetWidth;
+    requestAnimationFrame(()=>{
+      canvas.classList.add('shown');
+      canvas.classList.add('breathing');
+    });
+  }
+
+  // ---------- reading / traits ----------
+  function traitLabel(key){
+    const map = {
+      prime:    {ja:'素数', en:'Prime'},
+      square:   {ja:'平方数', en:'Perfect square'},
+      palindrome:{ja:'回文数', en:'Palindrome'},
+      fib:      {ja:'フィボナッチ近傍', en:'Near-Fibonacci'},
+    };
+    return map[key][lang];
+  }
+
+  function describe(state){
+    traitsBox.innerHTML = '';
+    const keys = ['prime','square','palindrome','fib'].filter(k => state[k]);
+    if(keys.length === 0){
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.textContent = lang === 'ja' ? '無属性の数' : 'Unmarked number';
+      traitsBox.appendChild(span);
+    } else {
+      keys.forEach(k=>{
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.textContent = traitLabel(k);
+        traitsBox.appendChild(span);
+      });
+    }
+
+    let lines_ja = [];
+    let lines_en = [];
+    if(state.prime){
+      lines_ja.push('素数は分解されない — 枝は真鍮色に輝き、単独の光を放つ。');
+      lines_en.push('A prime resists division — its branches shimmer brass, burning alone.');
+    }
+    if(state.square){
+      lines_ja.push('平方数は自らを映す — 樹は鏡合わせに育つ。');
+      lines_en.push('A square number mirrors itself — the tree grows in reflection.');
+    }
+    if(state.palindrome){
+      lines_ja.push('回文数は前からも後ろからも同じ — 樹は円環状に増殖する。');
+      lines_en.push('A palindrome reads the same both ways — the tree multiplies in a ring.');
+    }
+    if(state.fib){
+      lines_ja.push('黄金螺旋に近い数 — 枝分かれに静かな均衡がある。');
+      lines_en.push('Close to a Fibonacci number — its branching finds a quiet balance.');
+    }
+    if(lines_ja.length === 0){
+      lines_ja.push('特別な性質は持たないが、それでも唯一の樹である。');
+      lines_en.push('It carries no special property — and grows a tree unlike any other, still.');
+    }
+    descBox.textContent = lang === 'ja' ? lines_ja.join(' ') : lines_en.join(' ');
+
+    paramsBox.textContent = mode === 'mandel'
+      ? (lang === 'ja'
+          ? `中心 (${state.mandel.cx0.toFixed(6)}, ${state.mandel.cy0.toFixed(6)}) ・ 倍率 ×${Math.round(state.mandel.zoom).toLocaleString()} ・ 反復 ${state.mandel.maxIter}`
+          : `center (${state.mandel.cx0.toFixed(6)}, ${state.mandel.cy0.toFixed(6)}) · zoom ×${Math.round(state.mandel.zoom).toLocaleString()} · iterations ${state.mandel.maxIter}`)
+      : (lang === 'ja'
+          ? `角度 ${state.angle.toFixed(1)}° ・ 分岐 ${state.branches} ・ 深さ ${state.depth} ・ 縮小率 ${state.lengthRatio.toFixed(2)}`
+          : `angle ${state.angle.toFixed(1)}° · branches ${state.branches} · depth ${state.depth} · ratio ${state.lengthRatio.toFixed(2)}`);
+
+    readingBox.style.display = 'block';
+  }
+
+  // ---------- history ----------
+  function addHistory(numStr){
+    if(history.includes(numStr)) return;
+    history.unshift(numStr);
+    if(history.length > 24) history.pop();
+    renderHistory();
+  }
+  function renderHistory(){
+    historyList.innerHTML = '';
+    history.forEach(numStr=>{
+      const el = document.createElement('div');
+      el.className = 'history-item';
+      el.textContent = numStr;
+      el.addEventListener('click', ()=> plant(numStr));
+      historyList.appendChild(el);
+    });
+  }
+
+  // ---------- plant flow ----------
+  function plant(rawValue){
+    let cleaned = String(rawValue).replace(/[^0-9]/g,'');
+    if(cleaned.length === 0) return;
+    if(cleaned.length > 15) cleaned = cleaned.slice(0,15);
+    // strip leading zeros for parsing but keep display string meaningful
+    const displayStr = cleaned.replace(/^0+(?=\d)/, '') || '0';
+    input.value = displayStr;
+    const state = deriveState(displayStr);
+    draw(state, true);
+    describe(state);
+    addHistory(displayStr);
+  }
+
+  $('growBtn').addEventListener('click', ()=> plant(input.value));
+  $('growBtnEn').addEventListener('click', ()=> plant(input.value));
+  input.addEventListener('keydown', e=>{ if(e.key === 'Enter') plant(input.value); });
+
+  function randomNumber(){
+    const len = 2 + Math.floor(Math.random()*5);
+    let s = String(1 + Math.floor(Math.random()*9));
+    for(let i=1;i<len;i++) s += String(Math.floor(Math.random()*10));
+    return s;
+  }
+  $('randomBtn').addEventListener('click', ()=> plant(randomNumber()));
+  $('randomBtnEn').addEventListener('click', ()=> plant(randomNumber()));
+
+  $('saveBtn').addEventListener('click', saveImage);
+  $('saveBtnEn').addEventListener('click', saveImage);
+  function saveImage(){
+    const link = document.createElement('a');
+    link.download = `numerofract-${lastState ? lastState.numStr : 'tree'}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  // initial plant
+  plant('1729'); // Ramanujan's taxicab number, a nod to number-lovers
+})();
+</script>
+</body>
+</html>
