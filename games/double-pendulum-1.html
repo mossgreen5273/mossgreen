@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Double Pendulum Chaos Simulator</title>
+  <style>
+    body { font-family: sans-serif; background: #0f0f13; color: #e0e0e0; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 1.5rem; color: #ff5252; margin-top: 0; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    canvas { background: #050508; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+    .controls { background: #1a1a24; padding: 20px; border-radius: 8px; width: 280px; display: flex; flex-direction: column; gap: 12px; }
+    label { font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; color: #bbb; }
+    input[type="range"] { width: 100%; accent-color: #ff5252; }
+    button { padding: 9px; border-radius: 6px; background: #2a2a38; color: #fff; border: 1px solid #3d3d52; cursor: pointer; font-weight: bold; }
+    button:hover { background: #3a3a4c; }
+    .val { color: #ff5252; float: right; font-weight: normal; }
+
+    .t-en{ display:none; }
+    body.en-mode .t-ja{ display:none; }
+    body.en-mode .t-en{ display:inline; }
+
+    .topbar{ width:100%; max-width:800px; display:flex; justify-content:flex-end; margin-bottom:4px; }
+    .lang-toggle{
+      font-size:12.5px; font-weight:600; letter-spacing:.04em;
+      border:1px solid #3d3d52; background:#1a1a24; color:#ff9a8a;
+      border-radius:20px; padding:7px 16px; cursor:pointer; font-family:inherit;
+      transition:background .15s, border-color .15s;
+    }
+    .lang-toggle:hover{ background:#2a2a38; border-color:#ff5252; }
+
+    #playBtn .lbl-play{ display:none; }
+    #playBtn.paused .lbl-pause{ display:none; }
+    #playBtn.paused .lbl-play{ display:inline; }
+  </style>
+</head>
+<body>
+  <div class="topbar"><button class="lang-toggle" id="langBtn" type="button">EN</button></div>
+  <h1>
+    <span class="t-ja">二重振り子（カオス運動シミュレーター）</span>
+    <span class="t-en">Double Pendulum (Chaos Motion Simulator)</span>
+  </h1>
+  <div class="container">
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div class="controls">
+      <button id="playBtn">
+        <span class="lbl-pause"><span class="t-ja">一時停止</span><span class="t-en">Pause</span></span>
+        <span class="lbl-play"><span class="t-ja">再生</span><span class="t-en">Play</span></span>
+      </button>
+      <button id="clearBtn">
+        <span class="t-ja">軌跡をクリア</span><span class="t-en">Clear Trail</span>
+      </button>
+      <button id="resetBtn">
+        <span class="t-ja">初期位置に戻す</span><span class="t-en">Reset Position</span>
+      </button>
+      <label>
+        <span class="t-ja">重力 (g):</span><span class="t-en">Gravity (g):</span>
+        <span class="val" id="gVal">0.98</span>
+        <input type="range" id="gInput" min="0" max="2" step="0.05" value="0.98">
+      </label>
+      <label>
+        <span class="t-ja">振り子1の長さ (r1):</span><span class="t-en">Pendulum 1 Length (r1):</span>
+        <span class="val" id="r1Val">120</span>
+        <input type="range" id="r1Input" min="50" max="180" value="120">
+      </label>
+      <label>
+        <span class="t-ja">振り子2の長さ (r2):</span><span class="t-en">Pendulum 2 Length (r2):</span>
+        <span class="val" id="r2Val">120</span>
+        <input type="range" id="r2Input" min="50" max="180" value="120">
+      </label>
+      <div style="font-size: 0.8rem; color: #888; line-height: 1.4; border-top: 1px solid #333; padding-top: 10px;">
+        <span class="t-ja">
+          【カオス理論】<br>
+          2本の振り子をつなぐだけで軌道が完全に予測不可能になります。先端が描く幾何学的な色付きのライン（軌跡）を楽しめます。
+        </span>
+        <span class="t-en">
+          [Chaos Theory]<br>
+          Simply linking two pendulums makes the motion completely unpredictable. Watch the colorful geometric trail traced by the tip.
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const cx = canvas.width / 2;
+    const cy = 200;
+
+    let r1 = 120, r2 = 120;
+    let m1 = 10, m2 = 10;
+    let a1 = Math.PI / 2, a2 = Math.PI / 2;
+    let a1_v = 0, a2_v = 0;
+    let g = 0.98;
+
+    let isRunning = true;
+    let path = [];
+    const maxPath = 1000;
+
+    // オフスクリーンキャンバス（軌跡の保持用）
+    const trailCanvas = document.createElement('canvas');
+    trailCanvas.width = canvas.width;
+    trailCanvas.height = canvas.height;
+    const trailCtx = trailCanvas.getContext('2d');
+
+    function reset() {
+      a1 = Math.PI / 2 + (Math.random() - 0.5) * 0.1;
+      a2 = Math.PI / 2 + (Math.random() - 0.5) * 0.1;
+      a1_v = 0; a2_v = 0;
+      clearTrail();
+    }
+
+    function clearTrail() {
+      trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+      path = [];
+    }
+
+    function update() {
+      // 物理演算（オイラー法による二重振り子の運動方程式）
+      let num1 = -g * (2 * m1 + m2) * Math.sin(a1);
+      let num2 = -m2 * g * Math.sin(a1 - 2 * a2);
+      let num3 = -2 * Math.sin(a1 - a2) * m2;
+      let num4 = a2_v * a2_v * r2 + a1_v * a1_v * r1 * Math.cos(a1 - a2);
+      let den = r1 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
+      let a1_a = (num1 + num2 + num3 * num4) / den;
+
+      num1 = 2 * Math.sin(a1 - a2);
+      num2 = (a1_v * a1_v * r1 * (m1 + m2));
+      num3 = g * (m1 + m2) * Math.cos(a1);
+      num4 = a2_v * a2_v * r2 * m2 * Math.cos(a1 - a2);
+      den = r2 * (2 * m1 + m2 - m2 * Math.cos(2 * a1 - 2 * a2));
+      let a2_a = (num1 * (num2 + num3 + num4)) / den;
+
+      a1_v += a1_a;
+      a2_v += a2_a;
+      a1 += a1_v;
+      a2 += a2_v;
+
+      // 空気抵抗（ほんの少しだけ減衰）
+      a1_v *= 0.999;
+      a2_v *= 0.999;
+    }
+
+    let hue = 0;
+    function draw() {
+      if (isRunning) {
+        for (let i = 0; i < 2; i++) update(); // 精度向上のため小刻みに更新
+      }
+
+      let x1 = cx + r1 * Math.sin(a1);
+      let y1 = cy + r1 * Math.cos(a1);
+      let x2 = x1 + r2 * Math.sin(a2);
+      let y2 = y1 + r2 * Math.cos(a2);
+
+      // 軌跡の描画
+      if (isRunning) {
+        path.push({ x: x2, y: y2, hue: hue });
+        hue = (hue + 0.5) % 360;
+        if (path.length > 2) {
+          let p1 = path[path.length - 2];
+          let p2 = path[path.length - 1];
+          trailCtx.beginPath();
+          trailCtx.moveTo(p1.x, p1.y);
+          trailCtx.lineTo(p2.x, p2.y);
+          trailCtx.strokeStyle = `hsl(${p2.hue}, 100%, 60%)`;
+          trailCtx.lineWidth = 1.5;
+          trailCtx.stroke();
+        }
+      }
+
+      // 画面クリアと再描画
+      ctx.fillStyle = '#050508';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 軌跡レイヤーを重ねる
+      ctx.drawImage(trailCanvas, 0, 0);
+
+      // アームとジョイントの描画
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 固定軸
+      ctx.fillStyle = '#aaa';
+      ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
+
+      // おもり1
+      ctx.fillStyle = '#ff5252';
+      ctx.beginPath(); ctx.arc(x1, y1, 8, 0, Math.PI * 2); ctx.fill();
+
+      // おもり2
+      ctx.fillStyle = '#ffab40';
+      ctx.beginPath(); ctx.arc(x2, y2, 8, 0, Math.PI * 2); ctx.fill();
+
+      requestAnimationFrame(draw);
+    }
+
+    // UI設定
+    const playBtn = document.getElementById('playBtn');
+    playBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      playBtn.classList.toggle('paused', !isRunning);
+    });
+
+    // 日英表示切替
+    const langBtn = document.getElementById('langBtn');
+    langBtn.addEventListener('click', () => {
+      const en = document.body.classList.toggle('en-mode');
+      langBtn.textContent = en ? 'JA' : 'EN';
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', clearTrail);
+    document.getElementById('resetBtn').addEventListener('click', reset);
+
+    document.getElementById('gInput').addEventListener('input', (e) => {
+      g = parseFloat(e.target.value);
+      document.getElementById('gVal').innerText = g;
+    });
+
+    document.getElementById('r1Input').addEventListener('input', (e) => {
+      r1 = parseFloat(e.target.value);
+      document.getElementById('r1Val').innerText = r1;
+      clearTrail();
+    });
+
+    document.getElementById('r2Input').addEventListener('input', (e) => {
+      r2 = parseFloat(e.target.value);
+      document.getElementById('r2Val').innerText = r2;
+      clearTrail();
+    });
+
+    reset();
+    draw();
+  </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Turing Pattern Simulator</title>
+  <style>
+    body { font-family: sans-serif; background: #0f0f13; color: #e0e0e0; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 1.5rem; color: #50e3c2; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    canvas { background: #000; border-radius: 8px; cursor: crosshair; touch-action: none; }
+    .controls { background: #1a1a24; padding: 20px; border-radius: 8px; width: 280px; display: flex; flex-direction: column; gap: 12px; }
+    label { font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+    input[type="range"] { width: 100%; }
+    select, button { padding: 8px; border-radius: 4px; background: #2a2a38; color: #fff; border: 1px solid #3d3d52; cursor: pointer; }
+
+    .t-en{ display:none; }
+    body.en-mode .t-ja{ display:none; }
+    body.en-mode .t-en{ display:inline; }
+
+    .topbar{ width:100%; max-width:620px; display:flex; justify-content:flex-end; margin-bottom:4px; }
+    .lang-toggle{
+      font-size:12.5px; font-weight:600; letter-spacing:.04em;
+      border:1px solid #3d3d52; background:#1a1a24; color:#50e3c2;
+      border-radius:20px; padding:7px 16px; cursor:pointer; font-family:inherit;
+      transition:background .15s, border-color .15s;
+    }
+    .lang-toggle:hover{ background:#2a2a38; border-color:#50e3c2; }
+  </style>
+</head>
+<body>
+  <div class="topbar"><button class="lang-toggle" id="langBtn" type="button">EN</button></div>
+  <h1>
+    <span class="t-ja">チューリング・パターン（反応拡散系）</span>
+    <span class="t-en">Turing Patterns (Reaction-Diffusion)</span>
+  </h1>
+  <div class="container">
+    <canvas id="canvas" width="200" height="200" style="width: 400px; height: 400px; image-rendering: pixelated;"></canvas>
+    <div class="controls">
+      <label>
+        <span class="t-ja">プリセット:</span><span class="t-en">Preset:</span>
+        <select id="presetSelect">
+          <option value="spots" data-ja="斑点模様 (Spots)" data-en="Spots">斑点模様 (Spots)</option>
+          <option value="stripes" data-ja="ストライプ (Stripes)" data-en="Stripes">ストライプ (Stripes)</option>
+          <option value="spirals" data-ja="波紋・螺旋 (Spirals)" data-en="Spirals">波紋・螺旋 (Spirals)</option>
+        </select>
+      </label>
+      <label>Feed Rate (F): <input type="range" id="feed" min="0.01" max="0.1" step="0.001" value="0.035"></label>
+      <label>Kill Rate (K): <input type="range" id="kill" min="0.04" max="0.07" step="0.001" value="0.065"></label>
+      <button id="resetBtn">
+        <span class="t-ja">リセット</span><span class="t-en">Reset</span>
+      </button>
+      <div style="font-size: 0.8rem; color: #888;">
+        <span class="t-ja">【操作】ドラッグで化学物質を注入できます。</span>
+        <span class="t-en">[Controls] Drag on the canvas to inject chemical.</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    let grid = [], next = [];
+
+    // プリセットごとの F(Feed Rate) / K(Kill Rate)
+    // Gray-Scottモデルでよく知られるパラメータ帯（Pearsonの分類に基づく）
+    const PRESETS = {
+      spots:   { F: 0.035, K: 0.065 },
+      stripes: { F: 0.058, K: 0.063 },
+      spirals: { F: 0.018, K: 0.051 }
+    };
+    let F = PRESETS.spots.F, K = PRESETS.spots.K;
+    // 標準的なGray-Scottモデルの拡散係数（5点ステンシル・非正規化ラプラシアン用）
+    const Du = 0.16, Dv = 0.08;
+
+    function init() {
+      grid = []; next = [];
+      for (let x = 0; x < w; x++) {
+        grid[x] = []; next[x] = [];
+        for (let y = 0; y < h; y++) {
+          grid[x][y] = { a: 1, b: 0 };
+          next[x][y] = { a: 1, b: 0 };
+        }
+      }
+      for (let x = w/2 - 10; x < w/2 + 10; x++)
+        for (let y = h/2 - 10; y < h/2 + 10; y++) grid[x][y].b = 1;
+    }
+
+    function update() {
+      for (let x = 1; x < w - 1; x++) {
+        for (let y = 1; y < h - 1; y++) {
+          let a = grid[x][y].a, b = grid[x][y].b;
+          // 標準的な5点離散ラプラシアン: 近傍の和 - 4×中心
+          // (均一な場では常にゼロになるので、模様が育つ前に全体が一様に減衰することがない)
+          let lapA = (grid[x-1][y].a + grid[x+1][y].a + grid[x][y-1].a + grid[x][y+1].a) - 4 * a;
+          let lapB = (grid[x-1][y].b + grid[x+1][y].b + grid[x][y-1].b + grid[x][y+1].b) - 4 * b;
+          let abb = a * b * b;
+          next[x][y].a = Math.min(Math.max(a + (Du * lapA - abb + F * (1 - a)), 0), 1);
+          next[x][y].b = Math.min(Math.max(b + (Dv * lapB + abb - (K + F) * b), 0), 1);
+        }
+      }
+      let temp = grid; grid = next; next = temp;
+    }
+
+    function draw() {
+      const imgData = ctx.createImageData(w, h);
+      for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+          let idx = (y * w + x) * 4;
+          let val = Math.floor((grid[x][y].a - grid[x][y].b) * 255);
+          imgData.data[idx] = 80 - val * 0.2;
+          imgData.data[idx+1] = 220 - val * 0.6;
+          imgData.data[idx+2] = 200 + val * 0.2;
+          imgData.data[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function loop() {
+      for (let i = 0; i < 8; i++) update();
+      draw(); requestAnimationFrame(loop);
+    }
+
+    // --- ドラッグで化学物質(b)を注入 ---
+    let injecting = false;
+    function injectAt(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const gx = Math.floor((clientX - rect.left) / rect.width * w);
+      const gy = Math.floor((clientY - rect.top) / rect.height * h);
+      const r = 4;
+      for (let x = gx - r; x <= gx + r; x++) {
+        for (let y = gy - r; y <= gy + r; y++) {
+          if (x > 0 && x < w - 1 && y > 0 && y < h - 1) {
+            if ((x - gx) ** 2 + (y - gy) ** 2 <= r * r) grid[x][y].b = 1;
+          }
+        }
+      }
+    }
+    canvas.addEventListener('mousedown', e => { injecting = true; injectAt(e.clientX, e.clientY); });
+    canvas.addEventListener('mousemove', e => { if (injecting) injectAt(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', () => { injecting = false; });
+    canvas.addEventListener('touchstart', e => { injecting = true; injectAt(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchmove', e => { if (injecting) injectAt(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchend', () => { injecting = false; });
+
+    // --- プリセット選択 ---
+    document.getElementById('presetSelect').addEventListener('change', e => {
+      const p = PRESETS[e.target.value];
+      F = p.F; K = p.K;
+      document.getElementById('feed').value = F;
+      document.getElementById('kill').value = K;
+      init();
+    });
+
+    document.getElementById('feed').addEventListener('input', e => F = parseFloat(e.target.value));
+    document.getElementById('kill').addEventListener('input', e => K = parseFloat(e.target.value));
+    document.getElementById('resetBtn').addEventListener('click', init);
+
+    // --- 日英表示切替 ---
+    const langBtn = document.getElementById('langBtn');
+    const presetSelect = document.getElementById('presetSelect');
+    function applyOptionLabels(en) {
+      for (const opt of presetSelect.options) {
+        opt.textContent = en ? opt.dataset.en : opt.dataset.ja;
+      }
+    }
+    langBtn.addEventListener('click', () => {
+      const en = document.body.classList.toggle('en-mode');
+      langBtn.textContent = en ? 'JA' : 'EN';
+      applyOptionLabels(en);
+    });
+
+    init(); loop();
+  </script>
+</body>
+</html>
