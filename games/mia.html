@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ミア｜Mia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#182922; --brass:#c9a06e; --brass-light:#eccb9c; --brass-dim:#a8875c;
+    --text:#f5f0e3; --text-dim:#c3cdc0; --good:#86ab6f; --danger:#c15b50;
+  }
+  body.light{
+    --bg:#f2e9d8; --text:#2a2016; --text-dim:#6b5f4e;
+    --brass:#8a6d3f; --brass-light:#6b5230; --brass-dim:#a9865a;
+    --good:#3f7a3a; --danger:#a5453d;
+  }
+  body.light{
+    background:
+      radial-gradient(ellipse at 20% 0%, #efe4c8 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #e9dcbb 0%, transparent 55%), var(--bg);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(ellipse at 20% 0%, #2e4939 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #223a2c 0%, transparent 55%), var(--bg);
+    color:var(--text); font-family:'Instrument Sans',sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(26px,5vw,42px); color:var(--brass-light); margin:8px 0 2px; text-align:center;}
+  .subtitle{ color:var(--text-dim); font-size:14px; margin-bottom:16px; text-align:center;}
+  .topbar{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; justify-content:center;}
+  button.lang, button.reset{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    padding:7px 16px; border-radius:20px; font-family:'Instrument Sans'; font-size:13px; cursor:pointer; transition:all .2s;
+  }
+  button.lang:hover, button.reset:hover{ background:var(--brass); color:#14201b; border-color:var(--brass);}
+  .icon-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light);
+    width:32px; height:32px; border-radius:50%; font-size:14px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; padding:0; line-height:1;
+  }
+  .icon-btn:hover{ background:var(--brass); color:#14201b; border-color:var(--brass); }
+  .difficulty-row{ display:flex; gap:8px; align-items:center; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+  .difficulty-row .dlabel{ font-size:12px; color:var(--text-dim); margin-right:2px; }
+  .diff-btn{
+    background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light); width:28px; height:28px;
+    border-radius:50%; font-family:'Instrument Sans'; font-size:12px; cursor:pointer; padding:0;
+  }
+  .diff-btn.active{ background:var(--brass); color:#14201b; font-weight:700; border-color:var(--brass); }
+  .status{ font-family:'Fraunces',serif; font-size:17px; color:var(--brass-light); min-height:24px; margin-bottom:6px; text-align:center;}
+  .sublog{ font-size:12.5px; color:var(--text-dim); min-height:18px; margin-bottom:16px; text-align:center; max-width:360px;}
+  .table{
+    background:linear-gradient(160deg,#3c5747,#22362b); border-radius:20px; padding:26px;
+    box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 2px 6px rgba(255,255,255,.05); border:1px solid #3c5445;
+    display:flex; flex-direction:column; align-items:center; gap:18px; width:min(92vw,400px);
+  }
+  .lives-row{ display:flex; justify-content:space-between; width:100%; }
+  .lives-block{ text-align:center; }
+  .lives-name{ font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;}
+  .lives-dots{ display:flex; gap:4px; justify-content:center; }
+  .life-dot{ width:12px; height:12px; border-radius:50%; background:var(--brass-dim); }
+  .life-dot.lost{ background:transparent; border:1px solid var(--brass-dim); }
+  .cup-area{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .cup{
+    width:90px; height:70px; border-radius:14px 14px 30px 30px;
+    background:linear-gradient(160deg,#5e4933,#3a2a18); box-shadow:0 8px 18px rgba(0,0,0,.5), inset 0 -6px 10px rgba(0,0,0,.3);
+    display:flex; align-items:center; justify-content:center; position:relative; transition:transform .2s;
+  }
+  .cup.shaking{ animation:shake .5s ease-in-out infinite; }
+  @keyframes shake{ 0%,100%{transform:rotate(0deg);} 25%{transform:rotate(-4deg);} 75%{transform:rotate(4deg);} }
+  .dice-row{ display:flex; gap:10px; }
+  .die{
+    width:38px; height:38px; border-radius:8px; background:linear-gradient(160deg,#fff,#d8cbb0);
+    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:#3a2c1f;
+    box-shadow:0 3px 6px rgba(0,0,0,.4);
+  }
+  .die.hidden{ background:linear-gradient(160deg,#5e4933,#3a2a18); color:transparent; }
+  .announce-box{ text-align:center; }
+  .announce-label{ font-size:11px; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;}
+  .announce-value{ font-family:'Fraunces',serif; font-size:32px; color:var(--brass-light); font-weight:700; }
+  .action-row{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .actionBtn{
+    background:var(--brass); color:#14201b; border:none; padding:10px 20px; border-radius:20px;
+    font-family:'Instrument Sans'; font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .actionBtn.secondary{ background:transparent; border:1px solid var(--brass-dim); color:var(--brass-light); }
+  .actionBtn:disabled{ opacity:.35; cursor:default; }
+  .pick-panel{ width:100%; max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; }
+  .pick-item{
+    display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-radius:10px;
+    border:1px solid rgba(201,160,95,.25); cursor:pointer; font-size:14px;
+  }
+  .pick-item:hover{ background:rgba(201,160,95,.12); border-color:var(--brass-bright,var(--brass)); }
+  .pick-item .val{ font-family:'Fraunces',serif; font-weight:700; color:var(--brass-light); }
+  .pick-item .tag{ font-size:10.5px; color:var(--good); }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(8,12,10,.72); display:flex; align-items:center; justify-content:center;
+    z-index:999; opacity:0; pointer-events:none; transition:opacity .25s; padding:20px;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-box{
+    background:linear-gradient(160deg,#2a3f34,#182720); border:1px solid var(--brass-dim); border-radius:20px;
+    padding:34px 38px; text-align:center; box-shadow:0 30px 70px rgba(0,0,0,.6); max-width:86vw;
+    transform:translateY(10px); transition:transform .25s;
+  }
+  body.light .modal-box{ background:linear-gradient(160deg,#fbf3df,#efe0bd); }
+  .modal-overlay.show .modal-box{ transform:translateY(0); }
+  .modal-box .modal-msg{ font-family:'Fraunces',serif; font-weight:700; font-size:clamp(22px,6vw,32px); color:var(--brass-light); margin-bottom:22px; }
+  .modal-box button{
+    background:var(--brass); color:#14201b; border:none; padding:10px 28px; border-radius:22px;
+    font-family:'Instrument Sans'; font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .rules{ max-width:580px; margin-top:28px; background:#1e2e26; border:1px solid #2c3c31; border-radius:16px; padding:20px 22px; font-size:13.5px; line-height:1.8; color:var(--text-dim);}
+  body.light .rules{ background:#fbf3df; border-color:#e6d9b8; }
+  .rules h2{ font-family:'Fraunces',serif; color:var(--brass-light); font-size:17px; margin:0 0 8px;}
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="endModal">
+  <div class="modal-box">
+    <div class="modal-msg" id="endModalMsg"></div>
+    <button id="endModalBtn" data-ja="もう一度" data-en="Play again">もう一度</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <button class="lang" id="langBtn">EN</button>
+  <button class="reset" id="resetBtn" data-ja="はじめから" data-en="Restart">はじめから</button>
+  <button class="icon-btn" id="themeBtn" title="theme">☀️</button>
+</div>
+
+<div class="difficulty-row">
+  <span class="dlabel" data-ja="AIの強さ" data-en="AI strength">AIの強さ</span>
+  <button class="diff-btn" data-level="1">1</button>
+  <button class="diff-btn" data-level="2">2</button>
+  <button class="diff-btn active" data-level="3">3</button>
+  <button class="diff-btn" data-level="4">4</button>
+  <button class="diff-btn" data-level="5">5</button>
+</div>
+
+<h1 data-ja="ミア" data-en="Mia">ミア</h1>
+<div class="subtitle" data-ja="ヴァイキング起源のはったりダイスゲーム" data-en="An ancient Viking-era bluffing dice game">ヴァイキング起源のはったりダイスゲーム</div>
+
+<div class="status" id="status"></div>
+<div class="sublog" id="sublog"></div>
+
+<div class="table">
+  <div class="lives-row">
+    <div class="lives-block">
+      <div class="lives-name" data-ja="あなた" data-en="You">あなた</div>
+      <div class="lives-dots" id="playerLives"></div>
+    </div>
+    <div class="lives-block">
+      <div class="lives-name" data-ja="CPU" data-en="CPU">CPU</div>
+      <div class="lives-dots" id="cpuLives"></div>
+    </div>
+  </div>
+
+  <div class="cup-area">
+    <div class="cup" id="cup"></div>
+    <div class="dice-row" id="diceRow"></div>
+  </div>
+
+  <div class="announce-box">
+    <div class="announce-label" data-ja="今の宣言" data-en="Current call">今の宣言</div>
+    <div class="announce-value" id="announceValue">—</div>
+  </div>
+
+  <div class="action-row" id="actionRow"></div>
+  <div class="pick-panel" id="pickPanel"></div>
+</div>
+
+<div class="rules">
+  <h2 data-ja="遊び方" data-en="How to play">遊び方</h2>
+  <p data-ja="サイコロ2個をカップの中で振り、自分だけ見て「いくつ出た」と宣言します。本当のことを言ってもいいし、はったり（嘘）をついてもかまいません。
+① 出目の呼び方は特殊で、大きい方の数字を先に読みます（3と5なら「53」）。ゾロ目は特別に強く、中でも2と1（「ミア」）が最強です。強さの順：ミア(21) ＞ 11 ＞ 22 ＞ 33 ＞ 44 ＞ 55 ＞ 66 ＞ 65 ＞ 64 …（以下、大きい方の数字が高いほど強い）＞ 31（最弱）。
+② 相手の宣言を「信じて続ける」と、あなたがサイコロを振り、前の宣言より強い値を宣言しなければなりません（本当でも、はったりでも構いません）。
+③ 「疑う」を選ぶと中身を公開します。宣言が嘘（実際の出目より高い値を言っていた）なら宣言した側がライフを1失い、本当（宣言以下の価値が出ていた）なら疑った側がライフを1失います。
+④ ライフが0になった方の負けです。"
+  data-en="Roll two dice under the cup, look at them privately, and announce a value — true or bluffed.
+① Rolls are named oddly: the higher die is read first (a 3 and a 5 becomes '53'). Doubles rank specially high, and 2-1 ('Mia') is the strongest roll of all. Order of strength: Mia(21) > 11 > 22 > 33 > 44 > 55 > 66 > 65 > 64 … (descending by the tens digit) > 31 (weakest).
+② If you believe the other player's call and continue, you roll and must announce something stronger than their call — true or bluffed.
+③ If you challenge, the dice are revealed. If the call was a lie (actual roll weaker than announced), the announcer loses a life. If it was true or better, the challenger loses a life.
+④ First to lose all their lives loses the game.">
+  サイコロ2個をカップの中で振り、自分だけ見て「いくつ出た」と宣言します。本当のことを言ってもいいし、はったり（嘘）をついてもかまいません。<br>
+  ① 出目の呼び方は特殊で、大きい方の数字を先に読みます（3と5なら「53」）。ゾロ目は特別に強く、中でも2と1（「ミア」）が最強です。強さの順：ミア(21) ＞ 11 ＞ 22 ＞ 33 ＞ 44 ＞ 55 ＞ 66 ＞ 65 ＞ 64 …（以下、大きい方の数字が高いほど強い）＞ 31（最弱）。<br>
+  ② 相手の宣言を「信じて続ける」と、あなたがサイコロを振り、前の宣言より強い値を宣言しなければなりません（本当でも、はったりでも構いません）。<br>
+  ③ 「疑う」を選ぶと中身を公開します。宣言が嘘（実際の出目より高い値を言っていた）なら宣言した側がライフを1失い、本当（宣言以下の価値が出ていた）なら疑った側がライフを1失います。<br>
+  ④ ライフが0になった方の負けです。
+  </p>
+</div>
+
+<script>
+let lang='ja';
+
+const RANKS = ['21','11','22','33','44','55','66','65','64','63','62','61','54','53','52','51','43','42','41','32','31'];
+// index 0 = strongest (Mia), index 20 = weakest (31)
+
+function rollDice(){ return [1+Math.floor(Math.random()*6), 1+Math.floor(Math.random()*6)]; }
+function labelOf(d1,d2){
+  const hi = Math.max(d1,d2), lo = Math.min(d1,d2);
+  return `${hi}${lo}`;
+}
+function rankIndexOf(label){ return RANKS.indexOf(label); }
+function displayLabel(idx){ return idx===0 ? 'ミア' : RANKS[idx]; }
+function displayLabelEn(idx){ return idx===0 ? 'Mia' : RANKS[idx]; }
+
+let playerLives, cpuLives, gameOver;
+let phase; // 'awaiting_announcement' | 'awaiting_reaction'
+let announcer; // 'player' | 'cpu'
+let mustBeatIdx; // null or index that must be beaten (stronger index required)
+let currentAnnouncedIdx; // idx of the live announcement
+let currentActualIdx; // idx of the actual dice behind the live announcement (kept secret unless revealed)
+let lastDice; // [d1,d2] of the most recent roll (for reveal)
+let gameGen=0;
+
+function initGame(){
+  gameGen++;
+  playerLives = 6; cpuLives = 6;
+  gameOver = false;
+  mustBeatIdx = null;
+  currentAnnouncedIdx = null;
+  currentActualIdx = null;
+  lastDice = null;
+  startRound('player');
+}
+
+function startRound(starter){
+  mustBeatIdx = null;
+  announcer = starter;
+  phase = 'awaiting_announcement';
+  render(); setStatus();
+  if(announcer==='cpu') scheduleCpu(1600, cpuAnnounce);
+}
+
+function scheduleCpu(delay, fn){
+  const myGen = gameGen;
+  setTimeout(()=>{ if(gameGen===myGen && !gameOver) fn(); }, delay);
+}
+
+// ---- Player actions ----
+function playerRollClick(){
+  if(gameOver || phase!=='awaiting_announcement' || announcer!=='player') return;
+  const cup = document.getElementById('cup');
+  cup.classList.add('shaking');
+  setTimeout(()=>{
+    cup.classList.remove('shaking');
+    lastDice = rollDice();
+    currentActualIdx = rankIndexOf(labelOf(lastDice[0], lastDice[1]));
+    renderPicker();
+    render();
+  }, 700);
+}
+
+function renderPicker(){
+  const panel = document.getElementById('pickPanel');
+  panel.innerHTML='';
+  if(phase!=='awaiting_announcement' || announcer!=='player' || lastDice===null) return;
+  // build list of choices: if mustBeatIdx is set, only indices < mustBeatIdx are legal; else all 21
+  const options = [];
+  const limit = mustBeatIdx===null ? RANKS.length : mustBeatIdx;
+  for(let i=0;i<limit;i++) options.push(i);
+  if(options.length===0){
+    const div=document.createElement('div');
+    div.style.textAlign='center'; div.style.color='var(--danger)'; div.style.fontSize='13px';
+    div.textContent = lang==='ja' ? 'ミアより強い値はありません。疑うしかありません。' : 'Nothing beats Mia — you must challenge instead.';
+    panel.appendChild(div);
+    return;
+  }
+  for(const idx of options){
+    const div = document.createElement('div');
+    div.className='pick-item';
+    const isTrue = idx===currentActualIdx;
+    div.innerHTML = `<span class="val">${lang==='ja'?displayLabel(idx):displayLabelEn(idx)}</span>` +
+      (isTrue ? `<span class="tag">${lang==='ja'?'本当の出目':'this is what you rolled'}</span>` : '');
+    div.addEventListener('click', ()=>playerAnnounce(idx));
+    panel.appendChild(div);
+  }
+}
+
+function playerAnnounce(idx){
+  if(gameOver || phase!=='awaiting_announcement' || announcer!=='player') return;
+  currentAnnouncedIdx = idx;
+  document.getElementById('pickPanel').innerHTML='';
+  logSub(lang==='ja' ? `あなたは「${displayLabel(idx)}」と宣言した` : `You announced "${displayLabelEn(idx)}"`);
+  phase = 'awaiting_reaction';
+  announcer = 'cpu'; // cpu is the one reacting now (relative "reactor")
+  render(); setStatus();
+  scheduleCpu(1700, cpuReact);
+}
+
+function playerBelieve(){
+  if(gameOver || phase!=='awaiting_reaction') return;
+  mustBeatIdx = currentAnnouncedIdx;
+  lastDice = null; currentActualIdx = null; currentAnnouncedIdx = null;
+  phase = 'awaiting_announcement';
+  announcer = 'player';
+  logSub(lang==='ja' ? 'あなたは信じて続けます' : 'You believed and will continue');
+  render(); setStatus();
+}
+
+function playerChallenge(){
+  if(gameOver || phase!=='awaiting_reaction') return;
+  resolveChallenge('player');
+}
+
+// ---- Resolution ----
+function resolveChallenge(challenger){
+  const announcerSide = challenger==='player' ? 'cpu' : 'player';
+  const wasLie = currentActualIdx > currentAnnouncedIdx; // higher index = weaker roll than claimed
+  render(); // ensure dice visible before showing result text
+  const diceStr = lastDice ? `${lastDice[0]}, ${lastDice[1]}` : '?';
+  if(wasLie){
+    if(announcerSide==='player') playerLives--; else cpuLives--;
+    logSub(lang==='ja'
+      ? `${announcerSide==='player'?'あなた':'CPU'}の宣言は嘘でした（実際は${diceStr}）。${announcerSide==='player'?'あなた':'CPU'}がライフを1失う`
+      : `${announcerSide==='player'?'Your':"CPU's"} call was a lie (actual roll: ${diceStr}). ${announcerSide==='player'?'You lose':'CPU loses'} a life.`);
+  } else {
+    if(challenger==='player') playerLives--; else cpuLives--;
+    logSub(lang==='ja'
+      ? `${announcerSide==='player'?'あなた':'CPU'}の宣言は本当でした（実際は${diceStr}）。${challenger==='player'?'あなた':'CPU'}がライフを1失う`
+      : `${announcerSide==='player'?"Your":"CPU's"} call held up (actual roll: ${diceStr}). ${challenger==='player'?'You lose':'CPU loses'} a life.`);
+  }
+  render();
+  if(playerLives<=0 || cpuLives<=0){
+    gameOver = true;
+    render(); setStatus();
+    return;
+  }
+  // next round starter: if it was a lie, the challenger starts next round; if true, the announcer starts next round
+  const nextStarter = wasLie ? challenger : announcerSide;
+  setTimeout(()=>{ startRound(nextStarter); }, 1800);
+  phase = 'resolved';
+  render(); setStatus();
+}
+
+// ---- CPU logic ----
+function cpuAnnounce(){
+  if(gameOver) return;
+  const cup = document.getElementById('cup');
+  cup.classList.add('shaking');
+  setTimeout(()=>{
+    cup.classList.remove('shaking');
+    const dice = rollDice();
+    lastDice = dice;
+    const actualIdx = rankIndexOf(labelOf(dice[0], dice[1]));
+    currentActualIdx = actualIdx;
+
+    let targetIdx;
+    if(mustBeatIdx===null){
+      if(actualIdx>14 && Math.random()<bluffChance()){
+        targetIdx = Math.max(0, actualIdx - (3+Math.floor(Math.random()*8)));
+      } else {
+        targetIdx = actualIdx;
+      }
+    } else {
+      if(mustBeatIdx===0){
+        // nothing beats Mia; CPU is forced into an impossible spot, bluff minimally (claim Mia too, a desperate lie)
+        targetIdx = 0;
+      } else if(actualIdx < mustBeatIdx){
+        if(Math.random()<bluffChance()*0.4){
+          targetIdx = Math.max(0, actualIdx - Math.floor(Math.random()*3));
+        } else {
+          targetIdx = actualIdx;
+        }
+      } else {
+        const margin = bluffMargin();
+        targetIdx = Math.max(0, mustBeatIdx - margin);
+      }
+    }
+    currentAnnouncedIdx = targetIdx;
+    logSub(lang==='ja' ? `CPUは「${displayLabel(targetIdx)}」と宣言した` : `CPU announced "${displayLabelEn(targetIdx)}"`);
+    phase = 'awaiting_reaction';
+    announcer = 'player'; // player is the reactor now
+    render(); setStatus();
+  }, 900);
+}
+
+function bluffChance(){ return [0.3,0.4,0.5,0.55,0.6][aiLevel-1]; }
+function bluffMargin(){
+  const opts = [ [3,7], [2,5], [1,3], [1,2], [0,1] ][aiLevel-1];
+  return opts[0] + Math.floor(Math.random()*(opts[1]-opts[0]+1));
+}
+
+function cpuReact(){
+  if(gameOver) return;
+  const announcedIdx = currentAnnouncedIdx;
+  const strengthPercentile = 1 - announcedIdx/20;
+  const base = 0.08 + strengthPercentile*0.7;
+  const noiseAmt = [0.3,0.2,0.12,0.06,0.02][aiLevel-1];
+  const prob = Math.min(0.95, Math.max(0.03, base + (Math.random()*2-1)*noiseAmt));
+  const willChallenge = Math.random() < prob;
+  if(willChallenge){
+    resolveChallenge('cpu');
+  } else {
+    mustBeatIdx = announcedIdx;
+    lastDice = null; currentActualIdx = null; currentAnnouncedIdx = null;
+    phase = 'awaiting_announcement';
+    announcer = 'cpu';
+    logSub(lang==='ja' ? 'CPUは信じて続けます' : 'CPU believed and will continue');
+    render(); setStatus();
+    scheduleCpu(1600, cpuAnnounce);
+  }
+}
+
+// ---- Rendering ----
+function render(){
+  // lives
+  const pEl = document.getElementById('playerLives');
+  const cEl = document.getElementById('cpuLives');
+  pEl.innerHTML=''; cEl.innerHTML='';
+  for(let i=0;i<6;i++){ const d=document.createElement('div'); d.className='life-dot'+(i>=playerLives?' lost':''); pEl.appendChild(d); }
+  for(let i=0;i<6;i++){ const d=document.createElement('div'); d.className='life-dot'+(i>=cpuLives?' lost':''); cEl.appendChild(d); }
+
+  // dice
+  const diceRow = document.getElementById('diceRow');
+  diceRow.innerHTML='';
+  const showDice = lastDice!==null && (
+    (phase==='awaiting_announcement' && announcer==='player') ||
+    phase==='resolved' || gameOver ||
+    (phase==='awaiting_reaction' && false) // never show during reaction (secrecy)
+  );
+  for(let i=0;i<2;i++){
+    const d=document.createElement('div');
+    d.className = 'die' + (showDice?'':' hidden');
+    d.textContent = showDice && lastDice ? lastDice[i] : '?';
+    diceRow.appendChild(d);
+  }
+
+  // announcement
+  const av = document.getElementById('announceValue');
+  av.textContent = currentAnnouncedIdx!==null ? (lang==='ja'?displayLabel(currentAnnouncedIdx):displayLabelEn(currentAnnouncedIdx)) : '—';
+
+  // actions
+  const actionRow = document.getElementById('actionRow');
+  actionRow.innerHTML='';
+  if(gameOver){ /* handled by modal */ }
+  else if(phase==='awaiting_announcement' && announcer==='player'){
+    if(lastDice===null){
+      const btn=document.createElement('button');
+      btn.className='actionBtn';
+      btn.textContent = lang==='ja' ? 'サイコロを振る' : 'Roll the dice';
+      btn.addEventListener('click', playerRollClick);
+      actionRow.appendChild(btn);
+    }
+    renderPicker();
+  } else if(phase==='awaiting_reaction' && announcer==='cpu'){
+    // announcer==='cpu' here means it's the REACTOR field holding 'cpu'... wait convention: we set announcer to the reactor. Confusing naming avoided by using explicit checks below instead.
+  }
+
+  if(phase==='awaiting_reaction'){
+    // determine who is reacting: announcer variable currently holds the REACTOR (see playerAnnounce/cpuAnnounce logic)
+    const reactor = announcer;
+    if(reactor==='player'){
+      const believeBtn=document.createElement('button');
+      believeBtn.className='actionBtn';
+      believeBtn.textContent = lang==='ja' ? '信じて続ける' : 'Believe & continue';
+      believeBtn.disabled = currentAnnouncedIdx===0;
+      believeBtn.addEventListener('click', playerBelieve);
+      const challengeBtn=document.createElement('button');
+      challengeBtn.className='actionBtn secondary';
+      challengeBtn.textContent = lang==='ja' ? '疑う（公開）' : 'Challenge';
+      challengeBtn.addEventListener('click', playerChallenge);
+      actionRow.appendChild(believeBtn);
+      actionRow.appendChild(challengeBtn);
+    }
+  }
+  applyLangStatic();
+}
+
+function logSub(msg){
+  document.getElementById('sublog').textContent = msg;
+}
+
+function setStatus(){
+  const el = document.getElementById('status');
+  if(gameOver){
+    const won = playerLives>0;
+    const msg = won ? (lang==='ja'?'あなたの勝ち！':'You win!') : (lang==='ja'?'CPUの勝ち':'CPU wins');
+    el.textContent = msg;
+    showEndModal(msg);
+    return;
+  }
+  if(phase==='awaiting_announcement'){
+    if(announcer==='player'){
+      el.textContent = document.getElementById('cup') && document.querySelector('.pick-item')
+        ? (lang==='ja' ? '出目を見て、宣言を選んでください' : 'Choose what to announce')
+        : (lang==='ja' ? 'あなたの番：サイコロを振ってください' : 'Your turn: roll the dice');
+    } else {
+      el.textContent = lang==='ja' ? 'CPUがサイコロを振っています…' : 'CPU is rolling…';
+    }
+  } else if(phase==='awaiting_reaction'){
+    const reactor = announcer;
+    el.textContent = reactor==='player'
+      ? (lang==='ja' ? '信じて続けるか、疑って公開しますか？' : 'Believe and continue, or challenge?')
+      : (lang==='ja' ? 'CPUが考えています…' : 'CPU is thinking…');
+  } else {
+    el.textContent = '';
+  }
+}
+
+function applyLangStatic(){
+  document.querySelectorAll('[data-ja]').forEach(el=>{
+    el.textContent = el.getAttribute(lang==='ja'?'data-ja':'data-en');
+  });
+}
+function applyLang(){
+  document.documentElement.lang = lang==='ja'?'ja':'en';
+  applyLangStatic();
+  document.getElementById('langBtn').textContent = lang==='ja' ? 'EN' : 'JA';
+  render(); setStatus();
+}
+
+document.getElementById('langBtn').addEventListener('click', ()=>{ lang = lang==='ja'?'en':'ja'; applyLang(); });
+document.getElementById('resetBtn').addEventListener('click', initGame);
+
+let theme='dark';
+function applyTheme(){
+  document.body.classList.toggle('light', theme==='light');
+  const btn=document.getElementById('themeBtn'); if(btn) btn.textContent = theme==='light' ? '\u{1F319}' : '\u2600\uFE0F';
+}
+document.getElementById('themeBtn').addEventListener('click', ()=>{ theme = theme==='light'?'dark':'light'; applyTheme(); });
+
+let aiLevel = 3;
+function renderDifficulty(){
+  document.querySelectorAll('.diff-btn').forEach(b=>{
+    b.classList.toggle('active', Number(b.getAttribute('data-level'))===aiLevel);
+  });
+}
+document.querySelectorAll('.diff-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{ aiLevel = Number(b.getAttribute('data-level')); renderDifficulty(); });
+});
+renderDifficulty();
+
+function showEndModal(msg){
+  const m=document.getElementById('endModalMsg'); if(m) m.textContent = msg;
+  const o=document.getElementById('endModal'); if(o) o.classList.add('show');
+}
+function hideEndModal(){
+  const o=document.getElementById('endModal'); if(o) o.classList.remove('show');
+}
+document.getElementById('endModalBtn').addEventListener('click', ()=>{ hideEndModal(); initGame(); });
+
+initGame();
+applyLang();
+applyTheme();
+</script>
+</body>
+</html>
