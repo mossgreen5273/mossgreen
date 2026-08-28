@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Langton's Ant Simulator</title>
+  <style>
+    body { font-family: sans-serif; background: #0f0f13; color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 1.5rem; color: #76ff03; margin-top: 0; }
+    .top-bar { display: flex; justify-content: flex-end; width: 100%; max-width: 700px; }
+    #langBtn { padding: 6px 14px; font-size: 0.8rem; border-radius: 4px; background: #1a2a10; color: #fff; border: 1px solid #3d5a2a; cursor: pointer; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    canvas { background: #000; border-radius: 8px; image-rendering: pixelated; }
+    .controls { background: #171a13; padding: 20px; border-radius: 8px; width: 260px; display: flex; flex-direction: column; gap: 12px; }
+    button { padding: 8px; border-radius: 4px; background: #1a2a10; color: #fff; border: 1px solid #3d5a2a; cursor: pointer; }
+    label { font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+    input[type="range"] { width: 100%; }
+    .info { font-size: 0.8rem; color: #aaa; }
+  </style>
+</head>
+<body>
+  <div class="top-bar"><button id="langBtn">EN</button></div>
+  <h1 id="title">ラングトンのアリ（Langton's Ant）</h1>
+  <div class="container">
+    <canvas id="canvas" width="200" height="200" style="width: 380px; height: 380px;"></canvas>
+    <div class="controls">
+      <button id="playBtn">一時停止</button>
+      <button id="stepBtn">1コマ進める</button>
+      <button id="resetBtn">リセット</button>
+      <label id="speedLabel">速度: <input type="range" id="speedInput" min="1" max="60" value="20"></label>
+      <div class="info"><span id="stepsLabel">ステップ数:</span> <span id="steps">0</span></div>
+      <div class="info" id="hint">約10,000ステップを超えると綺麗な対角線状のパターンを作り始めます。</div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    let grid, ant, steps, isRunning, stepsPerFrame;
+
+    function reset() {
+      grid = new Uint8Array(w * h);
+      ant = { x: Math.floor(w/2), y: Math.floor(h/2), dir: 0 };
+      steps = 0;
+      document.getElementById('steps').innerText = steps;
+      renderOnce();
+    }
+
+    function advance() {
+      for (let i = 0; i < stepsPerFrame; i++) {
+        let idx = ant.y * w + ant.x;
+        if (grid[idx] === 0) { ant.dir = (ant.dir + 1) % 4; grid[idx] = 1; }
+        else { ant.dir = (ant.dir + 3) % 4; grid[idx] = 0; }
+        if (ant.dir === 0) ant.y--;
+        else if (ant.dir === 1) ant.x++;
+        else if (ant.dir === 2) ant.y++;
+        else if (ant.dir === 3) ant.x--;
+        ant.x = (ant.x + w) % w;
+        ant.y = (ant.y + h) % h;
+        steps++;
+      }
+      document.getElementById('steps').innerText = steps;
+    }
+
+    function render() {
+      const imgData = ctx.createImageData(w, h);
+      for (let i = 0; i < grid.length; i++) {
+        let idx = i * 4;
+        let alive = grid[i] === 1;
+        imgData.data[idx] = alive ? 118 : 20;
+        imgData.data[idx+1] = alive ? 255 : 20;
+        imgData.data[idx+2] = alive ? 3 : 30;
+        imgData.data[idx+3] = 255;
+      }
+      let aIdx = (ant.y * w + ant.x) * 4;
+      imgData.data[aIdx] = 255; imgData.data[aIdx+1] = 0; imgData.data[aIdx+2] = 0; imgData.data[aIdx+3] = 255;
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function renderOnce() { render(); }
+
+    function loop() {
+      if (isRunning) { advance(); render(); }
+      requestAnimationFrame(loop);
+    }
+
+    stepsPerFrame = 20;
+    isRunning = true;
+    reset();
+    loop();
+
+    document.getElementById('playBtn').addEventListener('click', () => {
+      isRunning = !isRunning;
+      document.getElementById('playBtn').textContent = isRunning ? i18n[lang].pause : i18n[lang].play;
+    });
+    document.getElementById('stepBtn').addEventListener('click', () => {
+      isRunning = false;
+      document.getElementById('playBtn').textContent = i18n[lang].play;
+      advance(); render();
+    });
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      isRunning = true;
+      document.getElementById('playBtn').textContent = i18n[lang].pause;
+      reset();
+    });
+    document.getElementById('speedInput').addEventListener('input', e => stepsPerFrame = parseInt(e.target.value));
+
+    const i18n = {
+      ja: {
+        title: "ラングトンのアリ（Langton's Ant）",
+        play: '再生', pause: '一時停止',
+        step: '1コマ進める',
+        reset: 'リセット',
+        speed: '速度: ',
+        steps: 'ステップ数:',
+        hint: '約10,000ステップを超えると綺麗な対角線状のパターンを作り始めます。',
+        btn: 'EN'
+      },
+      en: {
+        title: "Langton's Ant",
+        play: 'Play', pause: 'Pause',
+        step: 'Step Forward',
+        reset: 'Reset',
+        speed: 'Speed: ',
+        steps: 'Steps:',
+        hint: 'Past roughly 10,000 steps, it starts building a clean diagonal "highway" pattern.',
+        btn: '日本語'
+      }
+    };
+    let lang = 'ja';
+    function applyLang() {
+      const t = i18n[lang];
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('playBtn').textContent = isRunning ? t.pause : t.play;
+      document.getElementById('stepBtn').textContent = t.step;
+      document.getElementById('resetBtn').textContent = t.reset;
+      document.getElementById('speedLabel').firstChild.textContent = t.speed;
+      document.getElementById('stepsLabel').textContent = t.steps;
+      document.getElementById('hint').textContent = t.hint;
+      document.getElementById('langBtn').textContent = t.btn;
+      document.documentElement.lang = lang;
+    }
+    document.getElementById('langBtn').addEventListener('click', () => { lang = lang === 'ja' ? 'en' : 'ja'; applyLang(); });
+    applyLang();
+  </script>
+</body>
+</html>
