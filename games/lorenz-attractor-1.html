@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Lorenz Attractor 3D</title>
+  <style>
+    body { font-family: sans-serif; background: #050508; color: #e0e0e0; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 1.5rem; color: #ff4081; margin-top: 0; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    canvas { background: #000; border-radius: 8px; cursor: grab; }
+    .controls { background: #12121a; padding: 20px; border-radius: 8px; width: 260px; display: flex; flex-direction: column; gap: 12px; }
+    button { padding: 9px; border-radius: 6px; background: #ff4081; color: #fff; border: none; font-weight: bold; cursor: pointer; }
+
+    .t-en{ display:none; }
+    body.en-mode .t-ja{ display:none; }
+    body.en-mode .t-en{ display:inline; }
+
+    .topbar{ width:100%; max-width:800px; display:flex; justify-content:flex-end; margin-bottom:4px; }
+    .lang-toggle{
+      font-size:12.5px; font-weight:600; letter-spacing:.04em;
+      border:1px solid #2a2a38; background:#12121a; color:#ff9ac4;
+      border-radius:20px; padding:7px 16px; cursor:pointer; font-family:inherit;
+      transition:background .15s, border-color .15s;
+    }
+    .lang-toggle:hover{ background:#1c1c28; border-color:#ff4081; }
+  </style>
+</head>
+<body>
+  <div class="topbar"><button class="lang-toggle" id="langBtn" type="button">EN</button></div>
+  <h1>
+    <span class="t-ja">ローレンツ・アトラクタ（カオス運動の3D投影）</span>
+    <span class="t-en">Lorenz Attractor (3D Chaos Projection)</span>
+  </h1>
+  <div class="container">
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div class="controls">
+      <button id="resetBtn">
+        <span class="t-ja">軌跡をリセット</span><span class="t-en">Reset Trail</span>
+      </button>
+      <div style="font-size: 0.8rem; color: #888; line-height: 1.4;">
+        <span class="t-ja">
+          【操作方法】<br>
+          ドラッグ操作で視点を360度回転できます。同じ軌道を二度と通らないグラデーションの立体を描きます。
+        </span>
+        <span class="t-en">
+          [Controls]<br>
+          Drag to rotate the view 360 degrees. The gradient trail traces a path that never repeats itself.
+        </span>
+      </div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let x = 0.1, y = 0, z = 0;
+    const sigma = 10, rho = 28, beta = 8/3, dt = 0.008;
+    let points = [];
+    let rotX = 0, rotY = 0;
+    let isDragging = false, lastMouse = { x: 0, y: 0 };
+
+    function reset() { x = 0.1; y = 0; z = 0; points = []; }
+
+    function update() {
+      for (let i = 0; i < 5; i++) {
+        let dx = (sigma * (y - x)) * dt;
+        let dy = (x * (rho - z) - y) * dt;
+        let dz = (x * y - beta * z) * dt;
+        x += dx; y += dy; z += dz;
+        points.push({ x, y, z });
+        if (points.length > 2500) points.shift();
+      }
+    }
+
+    function project(p) {
+      // 3D回転行列処理
+      let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+      let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+
+      let y1 = p.y * cosX - p.z * sinX;
+      let z1 = p.y * sinX + p.z * cosX;
+      let x2 = p.x * cosY + z1 * sinY;
+
+      return {
+        px: canvas.width / 2 + x2 * 7,
+        py: canvas.height / 2 + y1 * 7
+      };
+    }
+
+    function draw() {
+      update();
+      ctx.fillStyle = '#050508'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (points.length > 1) {
+        for (let i = 1; i < points.length; i++) {
+          let p1 = project(points[i-1]);
+          let p2 = project(points[i]);
+          ctx.beginPath();
+          ctx.moveTo(p1.px, p1.py);
+          ctx.lineTo(p2.px, p2.py);
+          ctx.strokeStyle = `hsl(${(i / 8) % 360}, 100%, 60%)`;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+
+    function startDrag(cx, cy) { isDragging = true; lastMouse = { x: cx, y: cy }; }
+    function moveDrag(cx, cy) {
+      if (!isDragging) return;
+      rotY += (cx - lastMouse.x) * 0.01;
+      rotX += (cy - lastMouse.y) * 0.01;
+      lastMouse = { x: cx, y: cy };
+    }
+    canvas.addEventListener('mousedown', e => startDrag(e.clientX, e.clientY));
+    window.addEventListener('mouseup', () => isDragging = false);
+    canvas.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+
+    // タッチ操作（スマホ・タブレット）にも対応
+    canvas.style.touchAction = 'none';
+    canvas.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      startDrag(t.clientX, t.clientY);
+      e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      moveDrag(t.clientX, t.clientY);
+      e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchend', () => { isDragging = false; });
+
+    document.getElementById('resetBtn').addEventListener('click', reset);
+
+    // 日英表示切替
+    document.getElementById('langBtn').addEventListener('click', () => {
+      const en = document.body.classList.toggle('en-mode');
+      document.getElementById('langBtn').textContent = en ? 'JA' : 'EN';
+    });
+
+    draw();
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Boids Flocking Simulator</title>
+  <style>
+    body { font-family: sans-serif; background: #0b0c10; color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    h1 { font-size: 1.5rem; color: #66fcf1; margin-top: 0; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    canvas { background: #1f2833; border-radius: 8px; cursor: crosshair; }
+    .controls { background: #141c24; padding: 20px; border-radius: 8px; width: 260px; display: flex; flex-direction: column; gap: 12px; }
+    label { font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; color: #c5c6c7; }
+    input[type="range"] { width: 100%; accent-color: #66fcf1; }
+    button { padding: 8px; border-radius: 4px; background: #45a29e; color: #0b0c10; border: none; font-weight: bold; cursor: pointer; }
+
+    .t-en{ display:none; }
+    body.en-mode .t-ja{ display:none; }
+    body.en-mode .t-en{ display:inline; }
+
+    .topbar{ width:100%; max-width:800px; display:flex; justify-content:flex-end; margin-bottom:4px; }
+    .lang-toggle{
+      font-size:12.5px; font-weight:600; letter-spacing:.04em;
+      border:1px solid #2a2a38; background:#141c24; color:#66fcf1;
+      border-radius:20px; padding:7px 16px; cursor:pointer; font-family:inherit;
+      transition:background .15s, border-color .15s;
+    }
+    .lang-toggle:hover{ background:#1f2833; border-color:#66fcf1; }
+  </style>
+</head>
+<body>
+  <div class="topbar"><button class="lang-toggle" id="langBtn" type="button">EN</button></div>
+  <h1>
+    <span class="t-ja">Boids（鳥の群れアルゴリズム）</span>
+    <span class="t-en">Boids (Flocking Algorithm)</span>
+  </h1>
+  <div class="container">
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div class="controls">
+      <label>
+        <span class="t-ja">分離 (Separation):</span><span class="t-en">Separation:</span>
+        <input type="range" id="sep" min="0" max="3" step="0.1" value="1.5">
+      </label>
+      <label>
+        <span class="t-ja">整列 (Alignment):</span><span class="t-en">Alignment:</span>
+        <input type="range" id="ali" min="0" max="3" step="0.1" value="1.0">
+      </label>
+      <label>
+        <span class="t-ja">結合 (Cohesion):</span><span class="t-en">Cohesion:</span>
+        <input type="range" id="coh" min="0" max="3" step="0.1" value="1.0">
+      </label>
+      <button id="resetBtn">
+        <span class="t-ja">群れをリセット</span><span class="t-en">Reset Flock</span>
+      </button>
+      <div style="font-size: 0.8rem; color: #888; line-height: 1.4;">
+        <span class="t-ja">【操作】マウスカーソルを近づけると捕食者として群れが逃げ回ります。</span>
+        <span class="t-en">[Controls] Move your cursor near the flock — it acts as a predator they'll scatter from.</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let boids = [];
+    let mouse = { x: -1000, y: -1000 };
+
+    class Boid {
+      constructor(x, y) {
+        this.pos = { x, y };
+        this.vel = { x: (Math.random()-0.5)*4, y: (Math.random()-0.5)*4 };
+        this.acc = { x: 0, y: 0 };
+        this.maxSpeed = 3.5;
+        this.maxForce = 0.08;
+      }
+      update() {
+        this.vel.x += this.acc.x; this.vel.y += this.acc.y;
+        const speed = Math.hypot(this.vel.x, this.vel.y);
+        if (speed > this.maxSpeed) { this.vel.x = (this.vel.x/speed)*this.maxSpeed; this.vel.y = (this.vel.y/speed)*this.maxSpeed; }
+        this.pos.x += this.vel.x; this.pos.y += this.vel.y;
+        this.acc = { x: 0, y: 0 };
+        if (this.pos.x < 0) this.pos.x = canvas.width; if (this.pos.x > canvas.width) this.pos.x = 0;
+        if (this.pos.y < 0) this.pos.y = canvas.height; if (this.pos.y > canvas.height) this.pos.y = 0;
+      }
+      applyForce(force) { this.acc.x += force.x; this.acc.y += force.y; }
+      flock(boids, wSep, wAli, wCoh) {
+        let sep = {x:0, y:0}, ali = {x:0, y:0}, coh = {x:0, y:0}, cPos = {x:0, y:0};
+        let nSep = 0, nOther = 0;
+        for (let b of boids) {
+          let d = Math.hypot(this.pos.x - b.pos.x, this.pos.y - b.pos.y);
+          if (b !== this && d < 25) { sep.x += (this.pos.x - b.pos.x)/d; sep.y += (this.pos.y - b.pos.y)/d; nSep++; }
+          if (b !== this && d < 50) { ali.x += b.vel.x; ali.y += b.vel.y; cPos.x += b.pos.x; cPos.y += b.pos.y; nOther++; }
+        }
+        if (nSep > 0) { sep.x /= nSep; sep.y /= nSep; }
+        if (nOther > 0) {
+          ali.x /= nOther; ali.y /= nOther;
+          coh.x = (cPos.x/nOther) - this.pos.x; coh.y = (cPos.y/nOther) - this.pos.y;
+        }
+        // マウス回避
+        let mDist = Math.hypot(this.pos.x - mouse.x, this.pos.y - mouse.y);
+        if (mDist < 80) {
+          let f = { x: (this.pos.x - mouse.x)/mDist * 0.5, y: (this.pos.y - mouse.y)/mDist * 0.5 };
+          this.applyForce(f);
+        }
+        this.applyForce({ x: sep.x * wSep * 0.1, y: sep.y * wSep * 0.1 });
+        this.applyForce({ x: ali.x * wAli * 0.02, y: ali.y * wAli * 0.02 });
+        this.applyForce({ x: coh.x * wCoh * 0.001, y: coh.y * wCoh * 0.001 });
+      }
+      draw() {
+        let angle = Math.atan2(this.vel.y, this.vel.x);
+        ctx.save(); ctx.translate(this.pos.x, this.pos.y); ctx.rotate(angle);
+        ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -4); ctx.lineTo(-6, 4); ctx.closePath();
+        ctx.fillStyle = '#66fcf1'; ctx.fill(); ctx.restore();
+      }
+    }
+
+    function init() {
+      boids = [];
+      for (let i = 0; i < 150; i++) boids.push(new Boid(Math.random()*canvas.width, Math.random()*canvas.height));
+    }
+
+    function loop() {
+      ctx.fillStyle = '#1f2833'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const wSep = parseFloat(document.getElementById('sep').value);
+      const wAli = parseFloat(document.getElementById('ali').value);
+      const wCoh = parseFloat(document.getElementById('coh').value);
+
+      for (let b of boids) { b.flock(boids, wSep, wAli, wCoh); b.update(); b.draw(); }
+      requestAnimationFrame(loop);
+    }
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left; mouse.y = e.clientY - rect.top;
+    });
+    canvas.addEventListener('mouseleave', () => mouse = { x: -1000, y: -1000 });
+    document.getElementById('resetBtn').addEventListener('click', init);
+
+    // 日英表示切替
+    document.getElementById('langBtn').addEventListener('click', () => {
+      const en = document.body.classList.toggle('en-mode');
+      document.getElementById('langBtn').textContent = en ? 'JA' : 'EN';
+    });
+
+    init(); loop();
+  </script>
+</body>
+</html>
