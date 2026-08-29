@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チェスバリアント | Chess Variants — Mossgreen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14201a; --bg-panel: #1b2a22; --moss: #3a5240; --moss-light: #4f6f56;
+    --brass: #b9925a; --brass-bright: #d9b47c; --cream: #ece5d6; --text-dim: #9fae9f;
+  }
+  body.light-mode{
+    --bg: #f2ead9; --bg-panel: #fbf6ea; --moss: #8fae82; --moss-light: #a3c294;
+    --brass: #a97f45; --brass-bright: #8a6530; --cream: #2c2417; --text-dim: #6b5f4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1400px 700px at 20% -10%, rgba(217,180,124,0.07), transparent 60%),
+      radial-gradient(1100px 800px at 100% 15%, rgba(79,111,86,0.16), transparent 60%),
+      var(--bg);
+    color:var(--cream); font-family:'Noto Sans JP', sans-serif; min-height:100vh;
+  }
+  a{color:inherit;}
+  .nav{display:flex; justify-content:space-between; align-items:center; padding:18px 32px; border-bottom:1px solid rgba(185,146,90,0.2); flex-wrap:wrap; gap:12px;}
+  .nav-brand{font-family:'Fraunces',serif; font-weight:700; font-size:18px; letter-spacing:0.02em;}
+  .nav-links{display:flex; gap:6px; flex-wrap:wrap;}
+  .nav-links a{font-size:13px; padding:7px 14px; border-radius:999px; border:1px solid rgba(185,146,90,0.3); text-decoration:none; color:var(--text-dim); transition:all .15s;}
+  .nav-links a:hover{border-color:var(--brass); color:var(--brass-bright);}
+  .nav-links a.current{background:var(--brass); color:#1b2a22; border-color:var(--brass); font-weight:600;}
+  .langtoggle{background:transparent; border:1px solid var(--brass); color:var(--brass-bright); font-family:'Fraunces',serif; font-size:13px; padding:7px 14px; border-radius:999px; cursor:pointer;}
+
+  .hero{max-width:900px; margin:0 auto; padding:64px 32px 28px; text-align:center;}
+  .hero .eyebrow{font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:var(--brass-bright); margin-bottom:14px;}
+  .hero h1{font-family:'Fraunces',serif; font-weight:700; font-size:clamp(34px,6vw,56px); margin:0 0 16px; line-height:1.1;}
+  .hero h1 .en{display:block; font-style:italic; font-weight:500; font-size:0.4em; color:var(--brass-bright); margin-top:10px;}
+  .hero p{font-size:15px; line-height:1.8; color:var(--text-dim); max-width:640px; margin:0 auto;}
+
+  .stats{display:flex; justify-content:center; gap:36px; padding:8px 32px 44px; flex-wrap:wrap;}
+  .stat{text-align:center;}
+  .stat .n{font-family:'Fraunces',serif; font-weight:700; font-size:30px; color:var(--brass-bright);}
+  .stat .l{font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-top:2px;}
+
+  main{max-width:1080px; margin:0 auto; padding:0 32px 100px;}
+  .cat{margin-bottom:52px;}
+  .cat-head{display:flex; align-items:baseline; gap:14px; margin-bottom:6px; border-bottom:1px solid rgba(185,146,90,0.22); padding-bottom:12px;}
+  .cat-num{font-family:'Fraunces',serif; font-style:italic; font-size:15px; color:var(--brass); flex-shrink:0;}
+  .cat-head h2{font-family:'Fraunces',serif; font-weight:600; font-size:20px; margin:0;}
+  .cat-note{font-size:12.5px; color:var(--text-dim); margin:10px 0 20px; line-height:1.7; max-width:640px;}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
+  .card{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.18); border-radius:10px; padding:20px 22px 18px; text-decoration:none; display:block; transition:transform .15s, border-color .15s;}
+  .card:hover{transform:translateY(-3px); border-color:var(--brass);}
+  .card h3{font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:0 0 3px; color:var(--cream);}
+  .card .en-name{font-size:12px; font-style:italic; color:var(--brass-bright); margin-bottom:10px;}
+  .card p{font-size:12.5px; line-height:1.75; color:var(--text-dim); margin:0;}
+
+  footer{text-align:center; padding:40px 32px 60px; font-size:12px; color:var(--text-dim); border-top:1px solid rgba(185,146,90,0.15);}
+  .other-games{max-width:1080px; margin:0 auto; padding:0 32px 20px;}
+  .other-games-box{background:var(--bg-panel); border:1px solid rgba(185,146,90,0.25); border-radius:12px; padding:32px; text-align:center;}
+  .other-games-box h3{font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin:0 0 8px; color:var(--cream);}
+  .other-games-box p{font-size:13px; color:var(--text-dim); margin:0 0 20px; line-height:1.7;}
+  .other-games-links{display:flex; justify-content:center; gap:10px; flex-wrap:wrap;}
+  .other-games-links a{font-size:13px; padding:9px 18px; border-radius:999px; border:1px solid var(--brass); text-decoration:none; color:var(--brass-bright); transition:all .15s;}
+  .other-games-links a:hover{background:var(--brass); color:#1b2a22;}
+  .other-games-links a.home{background:var(--brass); color:#1b2a22; font-weight:600;}
+  .other-games-links a.home:hover{background:var(--brass-bright);}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Mossgreen</div>
+  <div class="nav-links">
+    <a href="index.html">ホーム / Home</a>
+    <a href="chess-variants.html" class="current">チェスバリアント / Chess Variants</a>
+    <a href="shogi-variants.html">変則将棋 / Shogi Variants</a>
+    <a href="world-games.html">世界のゲーム / World Games</a>
+  </div>
+  <button class="langtoggle" id="langBtn">EN / 日本語</button>
+</nav>
+
+<div class="hero">
+  <div class="eyebrow lang-ja">同じ駒、まったく違うルール</div>
+  <div class="eyebrow lang-en">The same pieces, entirely different rules</div>
+  <h1>チェスバリアント<span class="en">Chess Variants</span></h1>
+  <p class="lang-ja">標準のチェスから一歩踏み出した、歴史上・空想上のバリアントを一つずつ再現しています。盤の形も、駒の動きも、勝敗の決め方も、作品ごとに違う発想で作られています。</p>
+  <p class="lang-en">Historical and imaginative departures from standard chess, rebuilt one at a time. Board shape, piece movement, and win conditions each spring from a different idea.</p>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="n">46</div><div class="l lang-ja">バリアント</div><div class="l lang-en">Variants</div></div>
+  <div class="stat"><div class="n">6</div><div class="l lang-ja">カテゴリ</div><div class="l lang-en">Categories</div></div>
+  <div class="stat"><div class="n">2</div><div class="l lang-ja">言語対応</div><div class="l lang-en">Languages</div></div>
+</div>
+
+<main>
+
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">I</span>
+      <h2><span class="lang-ja">異常な物理法則</span><span class="lang-en">Anomalous Physics</span></h2>
+    </div>
+    <p class="cat-note lang-ja">盤の上で普通のチェスの因果律そのものが変わる — 爆発、平行世界、視界不良、円筒状の空間。</p>
+    <p class="cat-note lang-en">Where the very physics of chess bends — explosions, parallel boards, fog of war, a cylindrical universe.</p>
+    <div class="cards">
+      <a class="card" href="games/atomic-chess.html">
+        <h3>アトミックチェス</h3><div class="en-name">Atomic Chess</div>
+        <p class="lang-ja">駒を捕獲すると、その捕獲マスを中心に隣接する8マスが爆発する。爆風の範囲にいる駒（ポーンを除く）は自軍・敵軍を問わずすべて盤上から消え去り、王同士が至近距離で睨み合う膠着状態も生まれる。爆発で自分の王を消してしまう手は指せないが、爆風で相手の王を吹き飛ばせば、チェックの最中であっても即座に勝利となる。</p>
+        <p class="lang-en">Every capture triggers an explosion across the eight squares surrounding it, vaporising every piece (pawns aside) caught in the blast, friend or foe. You may never blow up your own king, but detonating the enemy king wins on the spot — even mid-check.</p>
+      </a>
+      <a class="card" href="games/circe-chess.html">
+        <h3>サーキーチェス</h3><div class="en-name">Circe Chess</div>
+        <p class="lang-ja">捕獲された駒は盤から消えるのではなく、その駒種の初期配置マスに「復活」する（そのマスが埋まっている場合のみ消滅）。捕獲したはずの敵が次の瞬間には別の場所で息を吹き返すため、駒得という概念そのものが揺らぐ独特の緊張感が生まれる。</p>
+        <p class="lang-en">A captured piece isn't removed — it's reborn on its own starting square (and only actually vanishes if that square is occupied). Material advantage becomes a slippery concept when the piece you just took can spring back to life elsewhere on the very next move.</p>
+      </a>
+      <a class="card" href="games/duck-chess.html">
+        <h3>ダックチェス</h3><div class="en-name">Duck Chess</div>
+        <p class="lang-ja">白でも黒でもない「アヒル🦆」が盤上に1羽いる。毎手、駒を1つ動かした後に必ずこのアヒルを盤上の好きな空きマスへ移動させてから手番を終える（滑る駒はアヒルのマスを飛び越えられず、跳ねる駒も着地できない）。このゲームにはチェックという概念が存在せず、相手の王を実際に捕獲した瞬間に勝利する。</p>
+        <p class="lang-en">A single colourless Duck occupies the board. After every normal move, you must relocate the Duck to any empty square before your turn ends — sliding pieces can't pass through it, leapers can't land on it. There's no such thing as check; the only way to win is to actually capture the enemy king.</p>
+      </a>
+      <a class="card" href="games/fog-of-war-chess.html">
+        <h3>戦場の霧</h3><div class="en-name">Fog of War Chess</div>
+        <p class="lang-ja">見えているのは、自分の駒が実際に利いている（動ける・捕獲できる）マスだけ。相手の駒がどこにあるかは、ぶつかってみるまで分からない。読み合いよりも索敵と奇襲が勝敗を分ける、情報戦としてのチェス。</p>
+        <p class="lang-en">You can only see the squares your own pieces actually attack — everything else is hidden until you bump into it. This turns chess into a game of reconnaissance and ambush rather than pure calculation.</p>
+      </a>
+      <a class="card" href="games/alice-chess.html">
+        <h3>アリスチェス</h3><div class="en-name">Alice Chess</div>
+        <p class="lang-ja">盤が2面あり、駒を動かすたびにもう一方の盤の同じマスへ「瞬間移動」する（移動先の盤で行き場がふさがっていれば、その手は指せない）。次の手番では移動先の盤で駒を動かし、また別の盤へ跳ぶ。常に両方の盤面を同時に把握する必要がある、鏡の国のようなチェス。</p>
+        <p class="lang-en">There are two boards. Every move teleports the moved piece to the same square on the other board (the move is illegal if that square is occupied there). Named for Lewis Carroll's looking-glass world, it demands you track both boards simultaneously.</p>
+      </a>
+      <a class="card" href="games/cylinder-chess.html">
+        <h3>シリンダーチェス</h3><div class="en-name">Cylinder Chess</div>
+        <p class="lang-ja">盤の左端と右端が繋がった円筒状の空間。ルークやビショップは盤端まで到達すると反対側から抜けてくるため、通常のチェスには存在しない「回り込む」ラインが生まれ、駒の利きが直感に反する形で広がる。</p>
+        <p class="lang-en">The board's left and right edges wrap around into one continuous cylinder. Rooks and bishops that reach one edge re-emerge from the other, opening lines of attack that don't exist in ordinary chess.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">II</span>
+      <h2><span class="lang-ja">歴史の再現</span><span class="lang-en">Historical Reconstructions</span></h2>
+    </div>
+    <p class="cat-note lang-ja">ビザンチン帝国からモンゴル帝国、インド亜大陸、そして18世紀のイギリスや冷戦下の研究所まで — 各時代・各地域に実在した（あるいは伝わる）チェスの祖先たち。</p>
+    <p class="cat-note lang-en">From the Byzantine Empire to the Mongol steppe to the Indian subcontinent, 18th-century England, and a Cold War-era laboratory — chess's real (or reputed) ancestors from across history and geography.</p>
+    <div class="cards">
+      <a class="card" href="games/byzantine-chess.html">
+        <h3>ビザンチンチェス</h3><div class="en-name">Byzantine Chess</div>
+        <p class="lang-ja">10世紀ビザンチン帝国で遊ばれたとされる「シャトランジ・アル=ムッダワラ（円形シャトランジ）」を再現。盤は中心から4つの同心円リングに分かれた円形で、各リングは16マスの輪になっている。駒は放射状・同心円状に進み、クイーンはフェルス（斜め1マス）、ビショップはアルフィル（斜め2マス跳躍）として動く。</p>
+        <p class="lang-en">A reconstruction of "Shatranj al-Mudawwara," the circular shatranj said to have been played in the 10th-century Byzantine Empire. The board is drawn as four concentric rings of 16 squares each; pieces move radially and circumferentially, with the Queen as a Fers (one diagonal step) and the Bishop as an Alfil (a two-square diagonal leap).</p>
+      </a>
+      <a class="card" href="games/grande-acedrex.html">
+        <h3>グランデ・アセドレス</h3><div class="en-name">Grande Acedrex</div>
+        <p class="lang-ja">13世紀カスティーリャ王アルフォンソ10世の写本『遊戯の書』に記された12x12の大型チェス。ライオン・キリン・サイ・鷲といった動物モチーフの巨大駒が加わり、跳躍と広域移動の組み合わせが、通常のチェスにはない立体的な脅威を生み出す。</p>
+        <p class="lang-en">A grand 12×12 chess recorded in the 13th-century Castilian "Libro de los juegos" of Alfonso X. Towering animal-themed pieces — Lion, Giraffe, Rhinoceros, Eagle — combine leaping and long-range movement into threats standard chess never produces.</p>
+      </a>
+      <a class="card" href="games/hindustani-chess.html">
+        <h3>ヒンドゥスターニーチェス</h3><div class="en-name">Hindustani Chess</div>
+        <p class="lang-ja">19世紀北インドで遊ばれた地方バリアント（H.J.R.マレー『チェスの歴史』に記録）。エレファント（ルーク）・ホース（ナイト）・キャメル（ビショップ）・ミニスター（クイーン）という名の駒を持ち、キングは一度だけナイトのように跳べる特殊能力を持つ。昇格は筋ごとに条件が異なる複雑なルール。</p>
+        <p class="lang-en">A regional variant played in 19th-century northern India, recorded in H.J.R. Murray's "History of Chess." Pieces carry local names — Elephant, Horse, Camel, Minister — and the King may leap like a knight exactly once per game. Promotion follows an intricate file-by-file rule.</p>
+      </a>
+      <a class="card" href="games/hyderabad-chess.html">
+        <h3>ハイデラバードチェス</h3><div class="en-name">Hyderabad Chess</div>
+        <p class="lang-ja">18世紀末インドの写本に記録された10x10の大型チェス。アマゾン（クイーン+ナイト）、マーシャル（ルーク+ナイト）2体、枢機卿（ビショップ+ナイト）という複合駒を持つ。ポーンは、初期配置でその筋にあった駒（すでに1体失っている場合に限る）にのみ昇格できる。</p>
+        <p class="lang-en">A large 10×10 chess from a late-18th-century Indian manuscript, fielding compound pieces: an Amazon (Queen+Knight), two Marshals (Rook+Knight), and a Cardinal (Bishop+Knight). A pawn may only promote to the piece that started on its file — and only once one has already been lost.</p>
+      </a>
+      <a class="card" href="games/hiashatar.html">
+        <h3>ヒアシャタル</h3><div class="en-name">Hiashatar</div>
+        <p class="lang-ja">モンゴルの伝統チェス「シャタル」を拡張した10x10盤。「ボディガード」という駒は、自軍・敵軍を問わず隣接するすべての滑り駒（クイーン・ルーク・ビショップ）を1マス移動に制限する独特の「影響圏」を持ち、盤上の力学そのものを歪める。</p>
+        <p class="lang-en">A 10×10 expansion of traditional Mongolian Shatar. A "Bodyguard" piece projects a zone of influence that restricts every adjacent sliding piece — friend or foe — to a single square of movement, quietly warping the board's usual mechanics.</p>
+      </a>
+      <a class="card" href="games/spartan-chess.html">
+        <h3>スパルタンチェス</h3><div class="en-name">Spartan Chess</div>
+        <p class="lang-ja">白は通常のチェス駒とルールをそのまま使う「ペルシア軍」。黒はキングを2体持つ非対称の「スパルタ軍」で、将軍・将帥・隊長・中尉・重装歩兵という独自の5種の駒で構成される。スパルタ側に単一の「チェック」は存在せず、2体のキングのうち少なくとも1体が無事であれば手を指せる — 片方を犠牲にする戦術さえ合法となる。</p>
+        <p class="lang-en">White plays the Persians, a standard chess army. Black plays the Spartans, an asymmetric force with two Kings and five entirely new piece types. There's no single notion of check for the Spartans — a move is legal as long as at least one King remains safe, making it legitimate to sacrifice one King's safety outright.</p>
+      </a>
+      <a class="card" href="games/gustav3-chess.html">
+        <h3>グスタフ3世チェス</h3><div class="en-name">Gustav III Chess</div>
+        <p class="lang-ja">スウェーデン王グスタフ3世（1746–1792）が愛好したと伝わるバリアント。盤の四隅の外側斜め方向にのみ、1マスずつの特別な「出丸」が存在し、そこにクイーンとナイトを合わせ持つ最強の駒「アマゾン」を配置する。単独でも敵キングを詰ませられるほどの威力を持つ。</p>
+        <p class="lang-en">A variant said to have been favoured by King Gustav III of Sweden (1746–1792). Each of the board's four corners has one extra square attached only diagonally, holding an "Amazon" — Queen and Knight combined, strong enough to checkmate a bare king unassisted.</p>
+      </a>
+      <a class="card" href="games/maharajah-and-the-sepoys.html">
+        <h3>マハラジャとセポイ</h3><div class="en-name">Maharajah and the Sepoys</div>
+        <p class="lang-ja">19世紀インドで遊ばれたとされる非対称チェス。一方はクイーンとナイトの動きを併せ持つ「マハラジャ」1体のみで戦い、捕獲されたら即敗北。もう一方は通常のチェス駒フルセット（セポイ軍）を持ち、マハラジャをチェックメイトすれば勝利する。伝統に倣いマハラジャ側が先手を取る。</p>
+        <p class="lang-en">An asymmetric chess said to have been played in 19th-century India. One side fights alone with a single "Maharajah" combining the queen's and knight's moves — capture it and that side loses instantly. The other commands a full ordinary army (the Sepoys) and wins by checkmating the Maharajah.</p>
+      </a>
+      <a class="card" href="games/courier-chess.html">
+        <h3>クーリエチェス</h3><div class="en-name">Courier Chess</div>
+        <p class="lang-ja">現存が確認されている中で最古級のチェス変種の一つで、13世紀のドイツには既に言及がある。12×8の細長い盤に、通常の駒に加えて、王のように動くが王ではない「マン」、斜め1マスだけの弱い「クイーン」、直交1マスだけの「シュライヒ」、現代のビショップに相当する「クーリエ」、2マス先へジャンプする「ビショップ」という独自の駒が並ぶ。</p>
+        <p class="lang-en">One of the oldest documented chess variants, referenced in Germany as early as the 13th century. A long 12×8 board carries the usual army plus a Man (moves like a king but isn't royal), a weak Queen (one diagonal step only), a Schleich (one orthogonal step only), a Courier (equivalent to the modern bishop), and a Bishop that leaps exactly two squares.</p>
+      </a>
+      <a class="card" href="games/duke-of-rutlands-chess.html">
+        <h3>ラトランド公爵のチェス</h3><div class="en-name">Duke of Rutland's Chess</div>
+        <p class="lang-ja">1747年、第3代ラトランド公爵ジョン・マナーズが考案した大型チェス。14×10の盤に、通常の駒一式に加えて「クラウンドルーク」（ルーク+斜め1マス）と「コンキュバイン」（ルーク+ナイト）という複合駒、さらに追加のナイト・ビショップが加わる。ポーンは初手だけ1〜3マスの好きな距離を選んで前進できる。</p>
+        <p class="lang-en">A large-scale chess invented in 1747 by John Manners, third Duke of Rutland. A 14×10 board carries the usual army plus two composite pieces — the Crowned Rook (rook + one diagonal step) and the Concubine (rook + knight) — along with an extra knight and two extra bishops. On their first move only, pawns may advance 1, 2, or 3 squares.</p>
+      </a>
+      <a class="card" href="games/los-alamos-chess.html">
+        <h3>ロスアラモスチェス</h3><div class="en-name">Los Alamos Chess</div>
+        <p class="lang-ja">1956年、ロスアラモス国立研究所のMANIAC Iコンピュータのために作られた、史上初めてコンピュータが指したチェス。処理能力の制約から盤を6×6に縮小し、ビショップを削っている。ポーンの2歩前進・アンパッサン・キャスリングはすべて禁止。</p>
+        <p class="lang-en">Built in 1956 for the MANIAC I computer at Los Alamos National Laboratory — the first chess-like game ever played by a computer. The board was shrunk to 6×6 and the bishops removed to fit the era's processing power; the pawn's double-step, en passant, and castling are all disallowed.</p>
+      </a>
+      <a class="card" href="games/peasants-revolt.html">
+        <h3>農民の反乱</h3><div class="en-name">Peasants' Revolt</div>
+        <p class="lang-ja">1947年、R.L.フレイが考案した非対称バリアント。白は王とポーン8つ（農民）のみ、黒は王・ポーン1つ・ナイト4体（貴族、拮抗させたい場合は3体）という戦力差のある対局。定説では黒がやや有利とされる。</p>
+        <p class="lang-en">An asymmetric variant by R.L. Frey (1947). White has only a king and 8 pawns (the peasants); Black has a king, one pawn, and 4 knights (the nobles, or 3 for a closer contest). Black is traditionally considered somewhat favored.</p>
+      </a>
+      <a class="card" href="games/shatranj.html">
+        <h3>シャトランジ</h3><div class="en-name">Shatranj</div>
+        <p class="lang-ja">現代チェスの直接の祖先にあたる、6〜7世紀ごろペルシアで確立した古典的ゲーム。フェルス（斜め1マス）・フィル（斜め2マスジャンプ）といった弱い駒編成が特徴で、兵は最終列に到達しても弱いフェルスにしか昇格できない。</p>
+        <p class="lang-en">The direct ancestor of modern chess, codified in Persia around the 6th–7th century. Its weak Ferz (one diagonal step) and Fil (a two-square diagonal leap) give it a very different rhythm, and pawns may only promote to a Ferz.</p>
+      </a>
+      <a class="card" href="games/oblong-chess.html">
+        <h3>オブロングチェス</h3><div class="en-name">Oblong Chess</div>
+        <p class="lang-ja">1998年にハンス・ボードレンダーが紹介した歴史的バリアント。駒編成はシャトランジそのままに、盤だけが4列×16段という極端な縦長になる。象の斜め2マスジャンプが、この細い盤では要となる。</p>
+        <p class="lang-en">A historical variant documented by Hans Bodlaender in 1998. The Shatranj army is unchanged, but the board is stretched into an extreme 4×16 rectangle where the Elephant's leap becomes a key maneuvering piece.</p>
+      </a>
+      <a class="card" href="games/great-chess-ii.html">
+        <h3>グレートチェスII</h3><div class="en-name">Great Chess II</div>
+        <p class="lang-ja">中東・中央アジアで遊ばれた「シャトランジ・アル=カビール（大チェス）」の系譜。10×11の盤に、通常のシャトランジ軍へ攻城機（ダッバーバ、直交2マス跳躍）と駱駝（(3,1)跳躍）が加わる。</p>
+        <p class="lang-en">Part of the "Shatranj al-Kabir" (Great Chess) family played across the medieval Middle East and Central Asia. On a 10×11 board, the ordinary Shatranj army gains two Dabbabas (2-square orthogonal leap) and two Camels (a (3,1) leap).</p>
+      </a>
+      <a class="card" href="games/tamerlane-chess.html">
+        <h3>ティムールのチェス</h3><div class="en-name">Tamerlane Chess</div>
+        <p class="lang-ja">14世紀、ティムールの治世に遊ばれたとされる、シャトランジの巨大版。10×11の盤に宰相・将軍・麒麟（複合駒）・哨兵・象・駱駝・攻城機という多彩な駒が並ぶ、この収録作中でも屈指の駒種の多さを誇るバリアント。</p>
+        <p class="lang-en">A grand-scale Shatranj said to have been played during the reign of Timur in the 14th century. Its 10×11 board fields a Vizir, General, Giraffe (a compound leaper-slider), Picket, Elephant, Camel, and War Engine — among the most piece-diverse entries in this collection.</p>
+      </a>
+      <a class="card" href="games/parsi-chess.html">
+        <h3>パールシーチェス</h3><div class="en-name">Parsi Chess</div>
+        <p class="lang-ja">H.J.R.マレー『チェスの歴史』に記録された、19世紀南インドの地方チェス。ルークが存在せず、王と宰相を中央に、両脇を駱駝・馬・象で固める独特の編成を持つ。</p>
+        <p class="lang-en">A regional chess played in 19th-century southern India, recorded in H.J.R. Murray's "A History of Chess." There is no rook; instead the King and Vizier sit at the center, flanked by a Camel, a Horse, and an Elephant on each side.</p>
+      </a>
+      <a class="card" href="games/petteia-latrunculi.html">
+        <h3>ペッテイア &amp; ラトルンクリ</h3><div class="en-name">Petteia &amp; Latrunculi</div>
+        <p class="lang-ja">古代ギリシャのペッテイアと、それを受け継いだローマのラトルンクリ（「小さな兵隊のゲーム」）を1本にまとめ、モード切り替えで両方遊べる。全ての駒がルークのように滑り、敵を自分の駒2つで直線に挟んだ瞬間に捕獲する「挟撃」だけが唯一の捕獲方式。</p>
+        <p class="lang-en">Greek Petteia and its Roman descendant Latrunculi ("the game of little soldiers"), combined with a mode toggle. Every piece slides like a rook, and the only way to capture is by sandwiching an enemy between two of your own pieces in a line.</p>
+      </a>
+      <a class="card" href="games/siege-chess.html">
+        <h3>攻城戦のチェス</h3><div class="en-name">Siege Chess</div>
+        <p class="lang-ja">史料が断片的な歴史バリアントを、2人対戦向けに再構成。盤の中央（4段目と5段目の間）にナイトの跳躍さえ通さない壁を築き、中央列1マスだけを両軍共通の「門」として開けている。</p>
+        <p class="lang-en">A fragmentarily-documented historical variant, reimagined for two players: a wall runs across the middle of the board, blocking every piece — even a knight's jump — except through a single shared gate on the center file.</p>
+      </a>
+      <a class="card" href="games/romanchenkos-chess.html">
+        <h3>ロマンチェンコのチェス</h3><div class="en-name">Romanchenko's Chess</div>
+        <p class="lang-ja">ロシアの少年チェス指導者V.ロマンチェンコが、生徒に定跡の丸暗記でなく自分の頭で考えさせるために考案したとされるバリアント。盤は1段進むごとに1マスずつ右へずれる平行四辺形で、端にいた駒は徐々に動ける方向が狭まっていく。</p>
+        <p class="lang-en">Said to have been devised by Russian youth chess trainer V. Romanchenko to force students to think rather than memorize theory. The board is a parallelogram that shifts one square with every rank, gradually narrowing the options of pieces caught near the edge.</p>
+      </a>
+      <a class="card" href="games/semedo.html">
+        <h3>セメド</h3><div class="en-name">Semedo</div>
+        <p class="lang-ja">1694年イギリスの文献に記された「中国のチェス」で、そもそも実在したかを疑う研究者もいるほど史料が乏しい。伝わる数少ない特徴（王は攻撃できない、シャンチーの砲を思わせる「ロケット」）を頼りに、推測で再構成した一本。</p>
+        <p class="lang-en">A "Chinese chess" recorded in a 1694 English publication, so sparsely documented that some historians doubt it existed as described. Reconstructed from the few surviving details — a king that cannot attack, and a "Rocket" reminiscent of Xiangqi's cannon.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">III</span>
+      <h2><span class="lang-ja">大型・多人数</span><span class="lang-en">Large-Board &amp; Multiplayer</span></h2>
+    </div>
+    <p class="cat-note lang-ja">2人対戦の枠を超えた盤。4人が同時に競い合う。</p>
+    <p class="cat-note lang-en">Beyond the two-player format — boards built for four players at once.</p>
+    <div class="cards">
+      <a class="card" href="games/verney-chess.html">
+        <h3>ヴァーニー四人制チェス</h3><div class="en-name">Verney's Four-Handed Chess</div>
+        <p class="lang-ja">19世紀イギリスの陸軍大尉ジョージ・ホープ・ヴァーニーが考案。8x8の中央に四辺それぞれへ腕が伸びる十字型の盤を使い、北・東・南・西の4人がそれぞれフルセットの駒を持って時計回りに手を進める。向かい合う2人がチームを組み、敵チームの2人とも詰ませたチームの勝利。</p>
+        <p class="lang-en">Devised by British Army Captain George Hope Verney in the 19th century. A cross-shaped board holds four full armies at North, East, South, and West, turns proceeding clockwise. Players sitting opposite each other are partners, and a team wins once both opponents are checkmated.</p>
+      </a>
+      <a class="card" href="games/fortress-chess.html">
+        <h3>ロシアン・フォートレス・チェス</h3><div class="en-name">Russian Fortress Chess</div>
+        <p class="lang-ja">18世紀ロシア発祥とされる4人制チェス。192マスの盤には、中央の広い戦場に加え、四隅にそれぞれ「要塞」と呼ばれる4x4の小部屋が「門」1マスだけで繋がっている。門以外の境界はすべて壁で、ナイトの跳躍even含めて一切通過できない。要塞内にはルーク・ビショップ・ナイトが1体ずつ追加で配置される。</p>
+        <p class="lang-en">A four-player variant said to originate in 18th-century Russia. The 192-square board pairs a broad central battlefield with four 4×4 fortress rooms in the corners, each linked to the field by a single gate — every other point along that wall blocks all movement, even a knight's jump. Each fortress garrisons an extra Rook, Bishop, and Knight.</p>
+      </a>
+      <a class="card" href="games/vierschach.html">
+        <h3>フィアシャッハ</h3><div class="en-name">Vierschach</div>
+        <p class="lang-ja">19世紀ドイツの4人制チェス。多くの4人制バリアントが対角の相手とチームを組むのに対し、フィアシャッハでは隣り合う（直角に配置された）プレイヤー同士がチームを組む点が異なる。手番はSouth→West→North→Eastの時計回りで進む。</p>
+        <p class="lang-en">A 19th-century German four-player chess. Unlike most such variants, where diagonal opponents are partners, Vierschach pairs adjacent players at right angles as teammates. Turns proceed clockwise: South → West → North → East.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">IV</span>
+      <h2><span class="lang-ja">幻想・変則</span><span class="lang-en">Fantastical &amp; Irregular</span></h2>
+    </div>
+    <p class="cat-note lang-ja">現実の歴史にはとらわれない、独自の発想で作られたバリアント。</p>
+    <p class="cat-note lang-en">Variants unbound by history — built from pure invention.</p>
+    <div class="cards">
+      <a class="card" href="games/monster-chess.html">
+        <h3>モンスターチェス</h3><div class="en-name">Monster Chess</div>
+        <p class="lang-ja">片方はキングとポーン4体のみという極端に少ない駒数、もう片方は通常のチェス一式という非対称な戦い。駒数で大きく劣る側には、その代わり1手番で2回動けるという特権が与えられる。</p>
+        <p class="lang-en">One side has only a King and four pawns; the other, a full standard army. To offset the crushing material gap, the weaker side gets to make two moves per turn instead of one.</p>
+      </a>
+      <a class="card" href="games/dunsany-chess.html">
+        <h3>ダンセイニチェス</h3><div class="en-name">Dunsany's Chess</div>
+        <p class="lang-ja">アイルランドの作家ロード・ダンセイニが考案したとされる非対称バリアント。片方は32体のポーンの大軍、もう片方は通常のチェス一式を持ち、寡兵の側は圧倒的な物量で盤を埋め尽くしにかかる。</p>
+        <p class="lang-en">An asymmetric variant attributed to the Irish writer Lord Dunsany. One side commands an army of 32 pawns; the other, a standard set — the pawn horde aiming to simply overwhelm the board by sheer numbers.</p>
+      </a>
+      <a class="card" href="games/four-seasons-chess.html">
+        <h3>フォーシーズンズチェス</h3><div class="en-name">Four Seasons Chess</div>
+        <p class="lang-ja">対局の進行とともに季節が春夏秋冬と移ろい、それぞれの季節ごとに盤面のルールが少しずつ変化していくオリジナルバリアント。</p>
+        <p class="lang-en">An original variant in which the seasons turn as the game progresses — spring, summer, autumn, winter — each bringing its own small shift to the board's rules.</p>
+      </a>
+      <a class="card" href="games/fischer-chess.html">
+        <h3>フィッシャーランダムチェス</h3><div class="en-name">Fischer Random Chess (Chess960)</div>
+        <p class="lang-ja">世界チャンピオンだったボビー・フィッシャーが考案。後列の駒配置が対局開始時にランダムに決定され（960通りの組み合わせ）、序盤の定跡暗記が通用しない、純粋な思考力が試される。</p>
+        <p class="lang-en">Devised by former World Champion Bobby Fischer. The back rank is shuffled randomly at the start of each game — 960 possible arrangements — so memorised opening theory gives way to pure over-the-board thinking.</p>
+      </a>
+      <a class="card" href="games/game-of-the-amazons.html">
+        <h3>アマゾンのゲーム</h3><div class="en-name">Game of the Amazons</div>
+        <p class="lang-ja">10×10盤に4体ずつのアマゾンを配置。動きはクイーンと同じだが、移動後に矢を放って着地マスを焼失させる。焼けたマスと駒は誰も通れなくなり、盤面がじわじわ塞がっていく。自分のアマゾンが1体も動けなくなった時点で敗北という、純粋な封鎖・陣取りのゲーム。</p>
+        <p class="lang-en">Four amazons per side move like queens on a 10×10 board, but after each move they shoot an arrow that burns the landing square. Burned squares block everyone, and the board slowly seals itself shut. Whichever side can no longer move any amazon loses — a pure game of blockade and territory.</p>
+      </a>
+      <a class="card" href="games/dice-chess.html">
+        <h3>ダイスチェス</h3><div class="en-name">Dice Chess</div>
+        <p class="lang-ja">2つのサイコロを振り、出た目に対応する駒種（1=ポーン〜6=キング）のどちらか一方だけを動かせる。ゾロ目が出れば好きな種類を選んでよい。動かせる駒が一つもなければ番を飛ばす。読みだけでなく運も絡む、テンポの速いバリアント。</p>
+        <p class="lang-en">Roll two dice and move one piece of either type shown (1=pawn through 6=king); doubles let you move any type. If nothing of the allowed types can move, your turn is skipped. A fast-paced variant where reading the position matters as much as the roll.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">V</span>
+      <h2><span class="lang-ja">盤の形が違う</span><span class="lang-en">Unconventional Boards</span></h2>
+    </div>
+    <p class="cat-note lang-ja">正方形の8×8そのものを作り直す — 同心円、果てのない空間、六角形の格子。</p>
+    <p class="cat-note lang-en">Rebuilding the very shape of the 8×8 grid — concentric rings, boundless space, a hexagonal lattice.</p>
+    <div class="cards">
+      <a class="card" href="games/circular-chess.html">
+        <h3>円環の盤</h3><div class="en-name">Circular Chess</div>
+        <p class="lang-ja">盤を4本の同心円リングと16のセクターに分けた円形チェス。駒はリング方向（内から外へ）とセクター方向（円周沿い、端を越えてつながる）に動く。ルークとクイーンは円周を1周ぐるりと回り込めるため、盤の裏側から回り込む奇襲が成立する。</p>
+        <p class="lang-en">A round chessboard split into 4 concentric rings and 16 sectors. Pieces move radially (inward/outward) and angularly (around the circumference, wrapping past the edge). A rook or queen can circle all the way around, opening the door to ambushes from the far side of the board.</p>
+      </a>
+      <a class="card" href="games/infinite-chess.html">
+        <h3>果てなき盤</h3><div class="en-name">Infinite Chess</div>
+        <p class="lang-ja">数学者が超限順序数がらみの詰み構造を論じる題材にも使う、端のないチェス。駒の動き自体は通常のチェスと同じだが、盤の境界に阻まれることがないため、ルークやクイーンは理論上どこまでも走り続けられる。パン操作で見たい範囲を移動させながら対局を進める。</p>
+        <p class="lang-en">A chess with no edges, sometimes used by mathematicians to discuss mate structures involving transfinite ordinals. Pieces move exactly as in ordinary chess, but with no boundary to stop them, a rook or queen can in principle run forever. Pan the view to follow the action wherever it goes.</p>
+      </a>
+      <a class="card" href="games/hexagonal-chess.html">
+        <h3>六角形のチェス</h3><div class="en-name">Hexagonal Chess</div>
+        <p class="lang-ja">1936年、ポーランドのヴワディスワフ・グリンスキー考案。91個の六角マスの盤で、ルークは6方向の直線、ビショップは6方向の頂点越えの斜め線を移動する。駒はビショップとポーンが通常より1つずつ多い。</p>
+        <p class="lang-en">Invented in 1936 by Władysław Gliński of Poland. On a 91-cell hex board, the rook slides along 6 straight directions and the bishop along 6 vertex-crossing diagonals. One extra bishop and one extra pawn per side.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat">
+    <div class="cat-head">
+      <span class="cat-num">VI</span>
+      <h2><span class="lang-ja">駒の掟が違う</span><span class="lang-en">Different Piece Rules</span></h2>
+    </div>
+    <p class="cat-note lang-ja">盤も駒数も普通のチェスのまま、「動き方」や「取り方」だけが根本から変わる。</p>
+    <p class="cat-note lang-en">Same board, same army — only the way pieces move or capture is rewritten from the ground up.</p>
+    <div class="cards">
+      <a class="card" href="games/baroque-chess-ultima.html">
+        <h3>バロックチェス（アルティマ）</h3><div class="en-name">Baroque Chess (Ultima)</div>
+        <p class="lang-ja">1962年にロバート・アボットが考案。駒ごとに捕獲の方式がまるで違う — 兵は挟み撃ち、跳躍者はチェッカーのように連続で飛び越え、封じ手師は自分では捕獲できない代わりに隣接する敵を凍結させ、座標師は自玉との交点で捕り、後退者は隣接する敵から離れることで捕り、模倣者はその場に応じて他の駒の捕獲方式を真似る。</p>
+        <p class="lang-en">Devised by Robert Abbott in 1962. Every piece captures differently: the Pincer by sandwiching, the Long Leaper by chaining checkers-style jumps, the Immobilizer can't capture at all but freezes adjacent enemies, the Coordinator strikes at the intersection with its own king, the Withdrawer captures by retreating, and the Chameleon mimics whichever method the moment calls for.</p>
+      </a>
+      <a class="card" href="games/hostage-chess.html">
+        <h3>捕虜交換の将棋盤</h3><div class="en-name">Hostage Chess</div>
+        <p class="lang-ja">将棋のように、捕獲された駒は盤外に消えず「捕虜」として残る。手番には通常の移動の代わりに、自分の待機駒を空きマスへドロップしたり、自分の捕虜を相手に譲る見返りに同価値以下の自分の捕虜を救出して即座に打つ「人質交換」ができる。駒が盤上と収容所を絶えず行き来する。</p>
+        <p class="lang-en">As in shogi, a captured piece never leaves the game — it becomes a "hostage." On your turn you can drop a piece from your own airfield onto an empty square, or make a hostage exchange: give up a hostage to the opponent's airfield in return for rescuing one of your own pieces and dropping it immediately.</p>
+      </a>
+      <a class="card" href="games/billiards-chess.html">
+        <h3>跳ね返る盤</h3><div class="en-name">Billiards Chess</div>
+        <p class="lang-ja">ビショップとクイーンの斜め移動が、盤の4辺すべてでビリヤードのように反射しながら進み続ける。ぶつかった駒（味方・敵とも）で止まり、敵駒なら捕獲。ルーク・ナイト・キング・ポーンは通常通り動く。</p>
+        <p class="lang-en">A bishop's or queen's diagonal move reflects off all four edges of the board like a billiard ball, stopping the moment it reaches any piece — blocked by a friend, or capturing and stopping on an enemy. Rooks, knights, kings, and pawns move exactly as in ordinary chess.</p>
+      </a>
+      <a class="card" href="games/n-relay-chess.html">
+        <h3>ナイトのリレー</h3><div class="en-name">N-Relay Chess</div>
+        <p class="lang-ja">1972年、マニス・カロシュ考案。味方のナイトに守られている駒（キングとナイト自身を除く）は、本来の動きに加えてナイトの跳躍でも移動・捕獲できる。ナイト自身は捕獲することも、されることもない。</p>
+        <p class="lang-en">Invented by Mannis Charosh in 1972. Any piece guarded by a friendly knight (other than the king or a knight) can also move or capture like a knight, on top of its usual move. Knights themselves can never capture or be captured.</p>
+      </a>
+      <a class="card" href="games/berolina-chess.html">
+        <h3>反転ポーン</h3><div class="en-name">Berolina Chess</div>
+        <p class="lang-ja">1926年、エドムント・ネーバーマン考案のベロリナ・ポーンを全ポーンに採用。前進は斜め1マス（初手のみ2マス）、捕獲は正面まっすぐ1マスという、通常のポーンをちょうど裏返した動きをする。</p>
+        <p class="lang-en">Built around the "Berolina pawn," invented by Edmund Nebermann in 1926. It advances diagonally (two squares on its first move) and captures one square straight ahead — the mirror image of an ordinary pawn.</p>
+      </a>
+      <a class="card" href="games/self-eliminator-chess.html">
+        <h3>仲間割れチェス</h3><div class="en-name">Self Eliminator Chess</div>
+        <p class="lang-ja">1997年、ジョン・ガリカーノとスティーブ・マン考案。どの駒も、味方の駒がいるマスへ「捕獲」の形で進み、その味方駒を盤から取り除ける（自分の王だけは例外）。邪魔な自駒の処分や身軽な捨て駒など、思いがけない使い道が生まれる。</p>
+        <p class="lang-en">Invented by John Gallicano and Steve Mann in 1997. Any piece may "capture" onto a square occupied by one of your own pieces, removing it from the board (your own king is the one exception).</p>
+      </a>
+      <a class="card" href="games/pandemonium.html">
+        <h3>パンデモニウム</h3><div class="en-name">Pandemonium</div>
+        <p class="lang-ja">カパブランカチェス（10×8、ビショップ+ナイトの「大司教」とルーク+ナイトの「宰相」が加わる）に、クレイジーハウスの持ち駒制度を組み合わせたバリアント。相手の駒を捕獲すると色を変えて自分の持ち駒になり、手番にはいつでも空きマスへ打てる。</p>
+        <p class="lang-en">Capablanca Chess (10×8, adding the Archbishop [bishop+knight] and Chancellor [rook+knight]) combined with Crazyhouse's hand-and-drop system. Capturing an enemy piece converts it to your own color, ready to be dropped onto any empty square on a later turn.</p>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<div class="other-games">
+  <div class="other-games-box">
+    <h3><span class="lang-ja">他のゲームも見てみる</span><span class="lang-en">Looking for something else?</span></h3>
+    <p class="lang-ja">変則将棋や世界各地の伝統ゲーム、その他のオリジナル作品も公開しています。</p>
+    <p class="lang-en">Shogi variants, traditional games from around the world, and other original projects are all part of the same collection.</p>
+    <div class="other-games-links">
+      <a href="shogi-variants.html">変則将棋 / Shogi Variants</a>
+      <a href="world-games.html">世界のゲーム / World Games</a>
+      <a href="index.html" class="home"><span class="lang-ja">すべてのゲームを見る</span><span class="lang-en">See all games</span></a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Mossgreen — <span class="lang-ja">個人開発のブラウザゲーム集</span><span class="lang-en">a solo developer's collection of browser games</span>
+</footer>
+
+<style>
+  .lang-en:not(body){display:none;}
+  body.lang-en .lang-ja{display:none;}
+  body.lang-en .lang-en{display:block;}
+  body.lang-en .nav-links a{display:inline-block;}
+  body.lang-en .stat .l{display:block;}
+</style>
+<script>
+  document.getElementById('langBtn').addEventListener('click', ()=>{
+    document.body.classList.toggle('lang-en');
+  });
+</script>
+</body>
+</html>
