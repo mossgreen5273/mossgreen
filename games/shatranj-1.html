@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shatranj | シャトランジ</title>
+<style>
+  :root{
+    --bg:#14181a; --panel:#1b2320; --moss:#6f9a76; --moss-dim:#3c4f40;
+    --brass:#c69a5a; --ember:#d9714a; --ink:#e8e6df; --ink-dim:#9aa39c;
+    --cell-a:#22302a; --cell-b:#2c3c34;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background: radial-gradient(circle at 50% -10%, #2a2f22 0%, transparent 55%), var(--bg);
+    color:var(--ink); font-family:'Iowan Old Style','Georgia',serif;
+    display:flex; flex-direction:column; align-items:center; padding:28px 14px 60px;
+  }
+  h1{font-weight:400; letter-spacing:0.04em; font-size:clamp(20px,5vw,28px); margin:0 0 2px; text-align:center;}
+  .subtitle{color:var(--brass); font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:18px; text-align:center;}
+  .controls{display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-bottom:14px; font-size:13px;}
+  .status{
+    background:var(--panel); border:1px solid var(--moss-dim); border-radius:6px;
+    padding:10px 22px; margin-bottom:14px; font-size:14px; min-width:280px; text-align:center;
+  }
+  .status b{color:var(--ember);}
+  #board{
+    display:grid; grid-template-columns:repeat(8,min(9vw,50px)); grid-template-rows:repeat(8,min(9vw,50px));
+    border:3px solid var(--brass); box-shadow:0 0 40px rgba(0,0,0,0.5);
+  }
+  .cell{display:flex;align-items:center;justify-content:center; font-size:min(6vw,32px); cursor:pointer; position:relative; user-select:none;}
+  .cell.a{background:var(--cell-a);} .cell.b{background:var(--cell-b);}
+  .cell.movable::before{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(111,154,118,0.55);}
+  .cell.capturable::before{content:"";position:absolute;inset:3px;border-radius:50%;border:2px solid var(--ember); background:none;}
+  .cell.selected{outline:2px solid var(--ember); outline-offset:-2px;}
+  .piece-w{color:#f4efe2; text-shadow:0 0 6px rgba(244,239,226,0.5);}
+  .piece-b{color:#2b2b2b; text-shadow:0 0 4px rgba(0,0,0,0.6); -webkit-text-stroke:0.5px #7d9c85;}
+  .legend{margin-top:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:6px 18px; font-size:12px; color:var(--ink-dim); max-width:440px;}
+  .legend b{color:var(--moss);}
+  button{margin-top:20px; background:transparent; border:1px solid var(--brass); color:var(--brass); padding:8px 20px; border-radius:4px; font-family:inherit; font-size:13px; letter-spacing:0.08em; cursor:pointer;}
+  button:hover{background:rgba(198,154,90,0.12);}
+  select{background:var(--panel); color:var(--ink); border:1px solid var(--moss-dim); border-radius:4px; padding:2px 6px; font-family:inherit;}
+  .rules{max-width:520px; margin-top:24px; font-size:12.5px; line-height:1.75; color:var(--ink-dim); border-top:1px solid var(--moss-dim); padding-top:16px;}
+  .rules b{color:var(--moss);}
+  .en-only{ display:none; }
+  body.lang-en .ja-only{ display:none; }
+  body.lang-en .en-only{ display:inline; }
+  .rules.ja-only, .rules.en-only{ display:block; }
+  .rules.en-only{ display:none; }
+  body.lang-en .rules.ja-only{ display:none; }
+  body.lang-en .rules.en-only{ display:block; }
+  .legend.ja-only, .legend.en-only{ display:grid; }
+  .legend.en-only{ display:none; }
+  body.lang-en .legend.ja-only{ display:none; }
+  body.lang-en .legend.en-only{ display:grid; }
+  #langToggle, #themeToggle{ margin-top:0; padding:6px 14px; font-size:12px; }
+  body.light-mode{
+    --bg:#f5f1e8; --panel:#ffffff; --moss:#4f7255; --moss-dim:#c9d4c0;
+    --brass:#93732f; --ember:#b8492e; --ink:#2b2f2a; --ink-dim:#6f766a;
+    --cell-a:#eae5d6; --cell-b:#dcd5c2;
+    background: var(--bg) !important;
+  }
+  body.light-mode .piece-w{ color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,0.35); -webkit-text-stroke:0.6px #2b2f2a; }
+  body.light-mode .piece-b{ color:#1a1a1a; text-shadow:none; -webkit-text-stroke:0.5px #4f7255; }
+</style>
+</head>
+<body>
+
+<h1>Shatranj</h1>
+<div class="subtitle">
+  <span class="ja-only">シャトランジ &mdash; チェスの祖先、ペルシアの古典</span>
+  <span class="en-only">Shatranj &mdash; the Persian ancestor of modern chess</span>
+</div>
+<button id="langToggle" type="button">EN</button>
+<button id="themeToggle" type="button">&#9728;</button>
+
+<div class="controls">
+  <span>
+    <label><input type="radio" name="humanSide" value="W" checked>
+      <span class="ja-only">白として戦う</span><span class="en-only">Play White</span>
+    </label>
+    <label><input type="radio" name="humanSide" value="B">
+      <span class="ja-only">黒として戦う</span><span class="en-only">Play Black</span>
+    </label>
+  </span>
+  <span>
+    <span class="ja-only">AIの強さ:</span><span class="en-only">AI strength:</span>
+    <select id="aiLevel">
+      <option value="l1" id="optL1">最弱</option>
+      <option value="l2" id="optL2">弱い</option>
+      <option value="l3" id="optL3" selected>普通</option>
+      <option value="l4" id="optL4">強い</option>
+      <option value="l5" id="optL5">最強</option>
+    </select>
+  </span>
+</div>
+
+<div class="status" id="status">白の番です</div>
+<div id="board"></div>
+
+<div class="legend ja-only">
+  <span><b>王</b> Shah &mdash; 隣接1マス</span>
+  <span><b>将</b> Ferz &mdash; 斜め1マスのみ</span>
+  <span><b>象</b> Elephant(Fil) &mdash; 斜め2マス跳躍</span>
+  <span><b>馬</b> Knight(Faras) &mdash; 通常のナイト</span>
+  <span><b>車</b> Rook(Rukh) &mdash; 通常のルーク</span>
+  <span><b>兵</b> Pawn(Baidaq) &mdash; 1マス前進のみ、昇格先はフェルスのみ</span>
+</div>
+<div class="legend en-only">
+  <span><b>王</b> Shah &mdash; 1 adjacent square</span>
+  <span><b>将</b> Ferz &mdash; 1 diagonal square only</span>
+  <span><b>象</b> Elephant (Fil) &mdash; 2-square diagonal leap</span>
+  <span><b>馬</b> Knight (Faras) &mdash; ordinary knight</span>
+  <span><b>車</b> Rook (Rukh) &mdash; ordinary rook</span>
+  <span><b>兵</b> Pawn (Baidaq) &mdash; 1 square only, promotes to Ferz alone</span>
+</div>
+
+<button id="reset"><span class="ja-only">やり直す</span><span class="en-only">Reset</span></button>
+
+<div class="rules ja-only">
+  現代チェスの直接の祖先にあたる、6〜7世紀ごろペルシアで確立した古典的ゲーム。駒はシャー(王)・フェルス(将、斜め1マス)・フィル(象、斜め2マスジャンプ)・ファラス(馬、通常のナイト)・ルフ(車、通常のルーク)・バイダク(兵)。兵は初手から2マス前進できず、最終列に到達しても<b>フェルスにしか昇格できません</b>(強力なクイーンは存在しない)。<br><br>
+  簡易化: 「裸の王(丸裸のシャー1体のみになった側は、次の手番で相手の王も丸裸にできなければ敗北)」という古典ルールは省略し、<b>王を直接捕獲した時点で即決着</b>とします。チェック・チェックメイトの厳密な判定も省略しています。
+</div>
+<div class="rules en-only">
+  The direct ancestor of modern chess, codified in Persia around the 6th–7th century. The army is the Shah (king), Ferz (general, one diagonal step), Fil (elephant, a two-square diagonal leap), Faras (knight, the ordinary knight), Rukh (rook, the ordinary rook), and Baidaq (pawn). Pawns never get a double-step, and upon reaching the last rank <b>may only promote to a Ferz</b> &mdash; there is no powerful Queen in this game.<br><br>
+  Simplification: the classical "bare king" rule (a player reduced to a lone king loses unless they can bare the opponent's king on their very next move) is omitted &mdash; <b>capturing the king directly ends the game</b> instead. Formal check and checkmate detection are also not enforced.
+</div>
+
+<script>
+const SIZE=8;
+const ORTHO=[[-1,0],[1,0],[0,-1],[0,1]];
+const DIAG=[[-1,-1],[-1,1],[1,-1],[1,1]];
+const ALL8=ORTHO.concat(DIAG);
+const NOFF=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const PVAL={K:1000,F:2,E:2,N:3,R:5,P:1};
+const GLYPH={K:'♚',F:'♛',E:'♝',N:'♞',R:'♜',P:'♟'};
+
+let board, turn, selected, gameOver, humanSide='W', lang='ja', aiLevel='l3';
+let statusState={type:'turn', side:'W'};
+
+function inB(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
+function cloneBd(bd){ return bd.map(row=>row.map(c=>c?{...c}:null)); }
+
+function setup(){
+  board = Array.from({length:8},()=>Array(8).fill(null));
+  const back=['R','N','E','F','K','E','N','R'];
+  for(let c=0;c<8;c++){
+    board[0][c]={t:back[c], s:'B'};
+    board[1][c]={t:'P', s:'B'};
+    board[6][c]={t:'P', s:'W'};
+    board[7][c]={t:back[c], s:'W'};
+  }
+  turn='W'; selected=null; gameOver=false;
+  statusState={type:'turn', side:'W'};
+}
+setup();
+
+function labelOf(s){ return lang==='ja' ? (s==='W'?'白':'黒') : (s==='W'?'White':'Black'); }
+function statusText(){
+  const s=statusState;
+  if(s.type==='turn') return s.side===humanSide ? (lang==='ja'?`${labelOf(s.side)}の番です`:`${labelOf(s.side)}'s turn`) : (lang==='ja'?`${labelOf(s.side)}(AI)が考え中…`:`${labelOf(s.side)} (AI) is thinking…`);
+  if(s.type==='winKing') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — 王を捕獲しました` : `<b>${labelOf(s.winner)} wins</b> — the king was captured`;
+  if(s.type==='winNoMoves') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — ${labelOf(s.loser)}に合法手がありません` : `<b>${labelOf(s.winner)} wins</b> — ${labelOf(s.loser)} has no legal moves`;
+  return '';
+}
+
+function pieceMoves(bd,r,c){
+  const p=bd[r][c], side=p.s, out=[];
+  if(p.t==='P'){
+    const dr = side==='W' ? -1 : 1;
+    if(inB(r+dr,c) && !bd[r+dr][c]) out.push([r+dr,c]);
+    for(const dc of [-1,1]){
+      const nr=r+dr, nc=c+dc;
+      if(inB(nr,nc) && bd[nr][nc] && bd[nr][nc].s!==side) out.push([nr,nc]);
+    }
+  } else if(p.t==='F'){
+    for(const [dr,dc] of DIAG){
+      const nr=r+dr,nc=c+dc;
+      if(inB(nr,nc) && (!bd[nr][nc] || bd[nr][nc].s!==side)) out.push([nr,nc]);
+    }
+  } else if(p.t==='K'){
+    for(const [dr,dc] of ALL8){
+      const nr=r+dr,nc=c+dc;
+      if(inB(nr,nc) && (!bd[nr][nc] || bd[nr][nc].s!==side)) out.push([nr,nc]);
+    }
+  } else if(p.t==='E'){
+    for(const [dr,dc] of DIAG){
+      const nr=r+2*dr,nc=c+2*dc;
+      if(inB(nr,nc) && (!bd[nr][nc] || bd[nr][nc].s!==side)) out.push([nr,nc]);
+    }
+  } else if(p.t==='N'){
+    for(const [dr,dc] of NOFF){
+      const nr=r+dr,nc=c+dc;
+      if(inB(nr,nc) && (!bd[nr][nc] || bd[nr][nc].s!==side)) out.push([nr,nc]);
+    }
+  } else if(p.t==='R'){
+    for(const [dr,dc] of ORTHO){
+      let nr=r+dr,nc=c+dc;
+      while(inB(nr,nc)){
+        if(!bd[nr][nc]){ out.push([nr,nc]); }
+        else { if(bd[nr][nc].s!==side) out.push([nr,nc]); break; }
+        nr+=dr; nc+=dc;
+      }
+    }
+  }
+  return out;
+}
+
+function piecesOf(bd, side){
+  const list=[];
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(bd[r][c] && bd[r][c].s===side && pieceMoves(bd,r,c).length>0) list.push([r,c]);
+  }
+  return list;
+}
+
+const boardEl=document.getElementById('board');
+const statusEl=document.getElementById('status');
+
+function render(){
+  boardEl.innerHTML='';
+  let targets=[];
+  if(selected) targets=pieceMoves(board, selected[0], selected[1]);
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const cell=document.createElement('div');
+      cell.className='cell '+(((r+c)%2===0)?'a':'b');
+      const p=board[r][c];
+      if(p){
+        cell.textContent=GLYPH[p.t];
+        cell.classList.add(p.s==='W'?'piece-w':'piece-b');
+      }
+      if(selected && selected[0]===r && selected[1]===c) cell.classList.add('selected');
+      if(targets.some(([rr,cc])=>rr===r&&cc===c)) cell.classList.add(board[r][c]?'capturable':'movable');
+      cell.addEventListener('click', ()=>onClick(r,c));
+      boardEl.appendChild(cell);
+    }
+  }
+  statusEl.innerHTML = statusText();
+}
+
+function onClick(r,c){
+  if(gameOver || turn!==humanSide) return;
+  const p = board[r][c];
+  if(selected){
+    const targets = pieceMoves(board, selected[0], selected[1]);
+    if(targets.some(([rr,cc])=>rr===r&&cc===c)){
+      const mv=selected; selected=null;
+      doMove(mv,[r,c]);
+      return;
+    }
+    if(p && p.s===turn && pieceMoves(board,r,c).length>0){ selected=[r,c]; render(); return; }
+    selected=null; render(); return;
+  }
+  if(p && p.s===turn && pieceMoves(board,r,c).length>0){ selected=[r,c]; render(); }
+}
+
+function doMove(from,to){
+  const [fr,fc]=from, [tr,tc]=to;
+  const mover=board[fr][fc];
+  const captured=board[tr][tc];
+  board[tr][tc]=mover; board[fr][fc]=null;
+  if(mover.t==='P' && (tr===0||tr===7)) mover.t='F';
+
+  if(captured && captured.t==='K'){
+    gameOver=true;
+    statusState={type:'winKing', winner:mover.s};
+    render();
+    return;
+  }
+  const opp = mover.s==='W' ? 'B' : 'W';
+  if(piecesOf(board, opp).length===0){
+    gameOver=true;
+    statusState={type:'winNoMoves', winner:mover.s, loser:opp};
+    turn=opp;
+    render();
+    return;
+  }
+  turn=opp;
+  statusState={type:'turn', side:opp};
+  render();
+  if(turn!==humanSide) setTimeout(aiTurn, 500);
+}
+
+function aiTurnEasy(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  const [r,c]=pcs[Math.floor(Math.random()*pcs.length)];
+  const dests=pieceMoves(board,r,c);
+  const [tr,tc]=dests[Math.floor(Math.random()*dests.length)];
+  doMove([r,c],[tr,tc]);
+}
+function aiTurnL2(){
+  if(Math.random()<0.65){ aiTurnEasy(); } else { aiTurnNormal(); }
+}
+function aiTurnNormal(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const [tr,tc] of pieceMoves(board,r,c)){
+      const t=board[tr][tc];
+      const score = (t?(PVAL[t.t]||1):0) + Math.random()*0.3;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],to:[tr,tc]}]; }
+      else if(Math.abs(score-bestScore)<0.05){ bestMoves.push({from:[r,c],to:[tr,tc]}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.to);
+}
+function simulateMove(bd, from, to){
+  const nb=cloneBd(bd);
+  const mover={...nb[from[0]][from[1]]};
+  nb[to[0]][to[1]]=mover; nb[from[0]][from[1]]=null;
+  if(mover.t==='P' && (to[0]===0||to[0]===7)) mover.t='F';
+  return nb;
+}
+function opponentBestCaptureValue(nb, opp){
+  let best=0;
+  for(const [r,c] of piecesOf(nb, opp)){
+    for(const [tr,tc] of pieceMoves(nb,r,c)){
+      const t=nb[tr][tc];
+      if(t){ const v=PVAL[t.t]||1; if(v>best) best=v; }
+    }
+  }
+  return best;
+}
+function aiTurnHard(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const [tr,tc] of pieceMoves(board,r,c)){
+      const t=board[tr][tc];
+      if(t && t.t==='K'){ bestMoves=[{from:[r,c],to:[tr,tc]}]; bestScore=1e6; continue; }
+      const captureVal = t?(PVAL[t.t]||1):0;
+      const nb = simulateMove(board,[r,c],[tr,tc]);
+      const oppBest = opponentBestCaptureValue(nb, opp);
+      const score = captureVal - oppBest*0.8;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],to:[tr,tc]}]; }
+      else if(Math.abs(score-bestScore)<0.01){ bestMoves.push({from:[r,c],to:[tr,tc]}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.to);
+}
+function aiTurnL5(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const [tr,tc] of pieceMoves(board,r,c)){
+      const t=board[tr][tc];
+      if(t && t.t==='K'){ bestMoves=[{from:[r,c],to:[tr,tc]}]; bestScore=1e6; continue; }
+      const captureVal = t?(PVAL[t.t]||1):0;
+      const nb = simulateMove(board,[r,c],[tr,tc]);
+      const oppBest = opponentBestCaptureValue(nb, opp);
+      const score = captureVal - oppBest*1.1;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],to:[tr,tc]}]; }
+    }
+  }
+  const mv=bestMoves[0];
+  doMove(mv.from,mv.to);
+}
+
+function aiTurn(){
+  if(gameOver) return;
+  if(aiLevel==='l1') aiTurnEasy();
+  else if(aiLevel==='l2') aiTurnL2();
+  else if(aiLevel==='l4') aiTurnHard();
+  else if(aiLevel==='l5') aiTurnL5();
+  else aiTurnNormal();
+}
+
+function applyLangTexts(){
+  document.getElementById('optL1').textContent = lang==='ja' ? '最弱' : 'Weakest';
+  document.getElementById('optL2').textContent = lang==='ja' ? '弱い' : 'Easy';
+  document.getElementById('optL3').textContent = lang==='ja' ? '普通' : 'Normal';
+  document.getElementById('optL4').textContent = lang==='ja' ? '強い' : 'Hard';
+  document.getElementById('optL5').textContent = lang==='ja' ? '最強' : 'Strongest';
+  document.getElementById('langToggle').textContent = lang==='ja' ? 'EN' : '日本語';
+  document.title = lang==='ja' ? 'Shatranj | シャトランジ' : 'Shatranj';
+}
+document.getElementById('langToggle').addEventListener('click', ()=>{
+  lang = lang==='ja' ? 'en' : 'ja';
+  document.body.classList.toggle('lang-en', lang==='en');
+  applyLangTexts();
+  render();
+});
+let theme='dark';
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  theme = theme==='dark' ? 'light' : 'dark';
+  document.body.classList.toggle('light-mode', theme==='light');
+  document.getElementById('themeToggle').textContent = theme==='dark' ? '\u2600' : '\u{1F319}';
+});
+
+document.getElementById('aiLevel').addEventListener('change', e=>{ aiLevel=e.target.value; });
+document.querySelectorAll('input[name="humanSide"]').forEach(radio=>{
+  radio.addEventListener('change', e=>{
+    humanSide=e.target.value;
+    setup(); render();
+    if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+  });
+});
+document.getElementById('reset').addEventListener('click', ()=>{
+  setup(); render();
+  if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+});
+
+applyLangTexts();
+render();
+</script>
+</body>
+</html>

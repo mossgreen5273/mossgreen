@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semedo | セメド(推測的再構成)</title>
+<style>
+  :root{
+    --bg:#14181a; --panel:#1b2320; --moss:#6f9a76; --moss-dim:#3c4f40;
+    --brass:#c69a5a; --ember:#d9714a; --ink:#e8e6df; --ink-dim:#9aa39c;
+    --cell-a:#22302a; --cell-b:#2c3c34;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background: radial-gradient(circle at 50% -10%, #2a2f22 0%, transparent 55%), var(--bg);
+    color:var(--ink); font-family:'Iowan Old Style','Georgia',serif;
+    display:flex; flex-direction:column; align-items:center; padding:28px 14px 60px;
+  }
+  h1{font-weight:400; letter-spacing:0.04em; font-size:clamp(20px,5vw,28px); margin:0 0 2px; text-align:center;}
+  .subtitle{color:var(--brass); font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:6px; text-align:center;}
+  .caveat{ color:var(--ember); font-size:11.5px; text-align:center; max-width:420px; margin-bottom:16px; line-height:1.6; }
+  .controls{display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-bottom:14px; font-size:13px;}
+  .status{
+    background:var(--panel); border:1px solid var(--moss-dim); border-radius:6px;
+    padding:10px 22px; margin-bottom:14px; font-size:14px; min-width:280px; text-align:center;
+  }
+  .status b{color:var(--ember);}
+  #board{
+    display:grid; grid-template-columns:repeat(7,min(11vw,54px)); grid-template-rows:repeat(8,min(11vw,54px));
+    border:3px solid var(--brass); box-shadow:0 0 40px rgba(0,0,0,0.5);
+  }
+  .cell{display:flex;align-items:center;justify-content:center; font-size:min(7vw,32px); cursor:pointer; position:relative; user-select:none;}
+  .cell.a{background:var(--cell-a);} .cell.b{background:var(--cell-b);}
+  .cell.movable::before{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(111,154,118,0.55);}
+  .cell.capturable::before{content:"";position:absolute;inset:3px;border-radius:50%;border:2px solid var(--ember); background:none;}
+  .cell.selected{outline:2px solid var(--ember); outline-offset:-2px;}
+  .piece-w{color:#f4efe2; text-shadow:0 0 6px rgba(244,239,226,0.5);}
+  .piece-b{color:#2b2b2b; text-shadow:0 0 4px rgba(0,0,0,0.6); -webkit-text-stroke:0.5px #7d9c85;}
+  .legend{margin-top:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:6px 18px; font-size:12px; color:var(--ink-dim); max-width:440px;}
+  .legend b{color:var(--moss);}
+  button{margin-top:20px; background:transparent; border:1px solid var(--brass); color:var(--brass); padding:8px 20px; border-radius:4px; font-family:inherit; font-size:13px; letter-spacing:0.08em; cursor:pointer;}
+  button:hover{background:rgba(198,154,90,0.12);}
+  select{background:var(--panel); color:var(--ink); border:1px solid var(--moss-dim); border-radius:4px; padding:2px 6px; font-family:inherit;}
+  .rules{max-width:520px; margin-top:24px; font-size:12.5px; line-height:1.75; color:var(--ink-dim); border-top:1px solid var(--moss-dim); padding-top:16px;}
+  .rules b{color:var(--moss);}
+  .en-only{ display:none; }
+  body.lang-en .ja-only{ display:none; }
+  body.lang-en .en-only{ display:inline; }
+  .rules.ja-only, .rules.en-only{ display:block; }
+  .rules.en-only{ display:none; }
+  body.lang-en .rules.ja-only{ display:none; }
+  body.lang-en .rules.en-only{ display:block; }
+  .legend.ja-only, .legend.en-only{ display:grid; }
+  .legend.en-only{ display:none; }
+  body.lang-en .legend.ja-only{ display:none; }
+  body.lang-en .legend.en-only{ display:grid; }
+  #langToggle, #themeToggle{ margin-top:0; padding:6px 14px; font-size:12px; }
+  body.light-mode{
+    --bg:#f5f1e8; --panel:#ffffff; --moss:#4f7255; --moss-dim:#c9d4c0;
+    --brass:#93732f; --ember:#b8492e; --ink:#2b2f2a; --ink-dim:#6f766a;
+    --cell-a:#eae5d6; --cell-b:#dcd5c2;
+    background: var(--bg) !important;
+  }
+  body.light-mode .piece-w{ color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,0.35); -webkit-text-stroke:0.6px #2b2f2a; }
+  body.light-mode .piece-b{ color:#1a1a1a; text-shadow:none; -webkit-text-stroke:0.5px #4f7255; }
+</style>
+</head>
+<body>
+
+<h1>Semedo</h1>
+<div class="subtitle">
+  <span class="ja-only">1694年イギリスの文献に記された「中国のチェス」</span>
+  <span class="en-only">A "Chinese chess" recorded in a 1694 English publication</span>
+</div>
+<div class="caveat ja-only">史料が極めて乏しく、駒の動きの多くは「おそらく」としか分かっていません。この実装は現存する断片的な記述を基にした<b>推測による再構成</b>です。</div>
+<div class="caveat en-only">Sources are extremely thin, and most piece movements are only guessed at. This implementation is a <b>speculative reconstruction</b> built from the surviving fragmentary descriptions.</div>
+
+<button id="langToggle" type="button">EN</button>
+<button id="themeToggle" type="button">&#9728;</button>
+
+<div class="controls">
+  <span>
+    <label><input type="radio" name="humanSide" value="W" checked>
+      <span class="ja-only">白として戦う</span><span class="en-only">Play White</span>
+    </label>
+    <label><input type="radio" name="humanSide" value="B">
+      <span class="ja-only">黒として戦う</span><span class="en-only">Play Black</span>
+    </label>
+  </span>
+  <span>
+    <span class="ja-only">AIの強さ:</span><span class="en-only">AI strength:</span>
+    <select id="aiLevel">
+      <option value="l1" id="optL1">最弱</option>
+      <option value="l2" id="optL2">弱い</option>
+      <option value="l3" id="optL3" selected>普通</option>
+      <option value="l4" id="optL4">強い</option>
+      <option value="l5" id="optL5">最強</option>
+    </select>
+  </span>
+</div>
+
+<div class="status" id="status">白の番です</div>
+<div id="board"></div>
+
+<div class="legend ja-only">
+  <span><b>王</b> King &mdash; 隣接の空きマスへのみ移動(捕獲不可)</span>
+  <span><b>学</b> Scientist &mdash; 斜め1マスのみ</span>
+  <span><b>砲</b> Rocket &mdash; ルークのように滑るが、捕獲時は駒を1つだけ飛び越える</span>
+  <span><b>馬</b> Knight &mdash; 通常のナイト</span>
+  <span><b>兵</b> Pawn &mdash; 1マス前進のみ</span>
+</div>
+<div class="legend en-only">
+  <span><b>王</b> King &mdash; moves to an adjacent empty square only (cannot capture)</span>
+  <span><b>学</b> Scientist &mdash; 1 diagonal square only</span>
+  <span><b>砲</b> Rocket &mdash; slides like a rook, but captures by jumping exactly one piece</span>
+  <span><b>馬</b> Knight &mdash; ordinary knight</span>
+  <span><b>兵</b> Pawn &mdash; 1 square only</span>
+</div>
+
+<button id="reset"><span class="ja-only">やり直す</span><span class="en-only">Reset</span></button>
+
+<div class="rules ja-only">
+  17世紀、中国に渡ったイエズス会宣教師アルヴァロ・セメドにちなむとされる「セメド」。この将棋のようなゲームの記述は1694年イギリスで出版されたトマス・ハイドの著作に残っていますが、記述自体が不十分で、そもそもこのゲームが実在したかどうかを疑う研究者もいます。伝わっている数少ない特徴は、<b>王は攻撃できない(移動はできるが捕獲はしない、あるいはそもそも動けない)</b>こと、「ロケット」という駒(シャンチーの砲を思わせる、1つだけ飛び越えて捕獲する駒)、「学者」という助言役の駒があったらしいことです。<br><br>
+  推測による補完: 駒の正確な動きや盤の大きさは記録されていないため、シャンチーの駒(砲・士)と西洋チェスの駒(ナイト・ポーン)を組み合わせた独自の推測配置にしています。王は隣接する空きマスにしか移動できず、捕獲はできません(史料の「王は攻撃できない」という記述の解釈)。チェック・チェックメイトの概念は省略し、<b>王を直接捕獲した時点で即決着</b>とします。
+</div>
+<div class="rules en-only">
+  "Semedo" is said to be named for Álvaro Semedo, a Jesuit missionary in 17th-century China. The only surviving description of this shogi-like game appears in a 1694 English publication by Thomas Hyde, and it's so sparse that some historians doubt the game existed in the form described at all. The few features that do survive: <b>the king cannot attack</b> (it may move but not capture, or perhaps cannot move at all), a "Rocket" piece reminiscent of the cannon in Xiangqi (captures by jumping exactly one piece), and a "Scientist" advisor-type piece.<br><br>
+  Speculative reconstruction: since exact piece movements and board size aren't recorded, this blends Xiangqi-style pieces (the Rocket and Scientist) with Western ones (Knight, Pawn) into an original best guess. The king may only move to an adjacent empty square and can never capture (interpreting the "cannot attack" note). Check and checkmate aren't enforced &mdash; <b>capturing the king directly ends the game</b>.
+</div>
+
+<script>
+const ROWS=8, COLS=7;
+const ORTHO=[[-1,0],[1,0],[0,-1],[0,1]];
+const DIAG=[[-1,-1],[-1,1],[1,-1],[1,1]];
+const NOFF=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const PVAL={K:1000,S:2,Rk:5,N:3,P:1};
+const GLYPH={K:'♚',S:'♛',Rk:'♜',N:'♞',P:'♟'};
+
+let board, turn, selected, gameOver, humanSide='W', lang='ja', aiLevel='l3';
+let statusState={type:'turn', side:'W'};
+
+function inB(r,c){ return r>=0&&r<ROWS && c>=0&&c<COLS; }
+function cloneBd(bd){ return bd.map(row=>row.map(c=>c?{...c}:null)); }
+
+function setup(){
+  board = Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  const back=['Rk','N','S','K','S','N','Rk'];
+  for(let c=0;c<COLS;c++){
+    board[0][c]={t:back[c], s:'B'};
+    board[1][c]={t:'P', s:'B'};
+    board[ROWS-2][c]={t:'P', s:'W'};
+    board[ROWS-1][c]={t:back[c], s:'W'};
+  }
+  turn='W'; selected=null; gameOver=false;
+  statusState={type:'turn', side:'W'};
+}
+setup();
+
+function labelOf(s){ return lang==='ja' ? (s==='W'?'白':'黒') : (s==='W'?'White':'Black'); }
+function statusText(){
+  const s=statusState;
+  if(s.type==='turn') return s.side===humanSide ? (lang==='ja'?`${labelOf(s.side)}の番です`:`${labelOf(s.side)}'s turn`) : (lang==='ja'?`${labelOf(s.side)}(AI)が考え中…`:`${labelOf(s.side)} (AI) is thinking…`);
+  if(s.type==='winKing') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — 王を捕獲しました` : `<b>${labelOf(s.winner)} wins</b> — the king was captured`;
+  if(s.type==='winNoMoves') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — ${labelOf(s.loser)}に合法手がありません` : `<b>${labelOf(s.winner)} wins</b> — ${labelOf(s.loser)} has no legal moves`;
+  return '';
+}
+
+function pieceMoves(bd,r,c){
+  const p=bd[r][c], side=p.s, out=[];
+  if(p.t==='P'){
+    const dr = side==='W' ? -1 : 1;
+    if(inB(r+dr,c) && !bd[r+dr][c]) out.push([r+dr,c]);
+    for(const dc of [-1,1]){
+      const nr=r+dr, nc=c+dc;
+      if(inB(nr,nc) && bd[nr][nc] && bd[nr][nc].s!==side) out.push([nr,nc]);
+    }
+  } else if(p.t==='K'){
+    for(const [dr,dc] of ORTHO.concat(DIAG)){
+      const nr=r+dr,nc=c+dc;
+      if(inB(nr,nc) && !bd[nr][nc]) out.push([nr,nc]); // king never captures
+    }
+  } else if(p.t==='S'){
+    for(const [dr,dc] of DIAG){
+      const nr=r+dr,nc=c+dc;
+      if(inB(nr,nc) && (!bd[nr][nc] || bd[nr][nc].s!==side)) out.push([nr,nc]);
+    }
+  } else if(p.t==='N'){
+    for(const [dr,dc] of NOFF){
+      const nr=r+dr,nc=c+dc;
+      if(inB(nr,nc) && (!bd[nr][nc] || bd[nr][nc].s!==side)) out.push([nr,nc]);
+    }
+  } else if(p.t==='Rk'){
+    for(const [dr,dc] of ORTHO){
+      let nr=r+dr,nc=c+dc;
+      while(inB(nr,nc) && !bd[nr][nc]){ out.push([nr,nc]); nr+=dr; nc+=dc; }
+      if(inB(nr,nc)){
+        // jump exactly one piece (the screen), then look for a capturable enemy beyond
+        let jr=nr+dr, jc=nc+dc;
+        while(inB(jr,jc) && !bd[jr][jc]){ jr+=dr; jc+=dc; }
+        if(inB(jr,jc) && bd[jr][jc].s!==side) out.push([jr,jc]);
+      }
+    }
+  }
+  return out;
+}
+
+function piecesOf(bd, side){
+  const list=[];
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(bd[r][c] && bd[r][c].s===side && pieceMoves(bd,r,c).length>0) list.push([r,c]);
+  }
+  return list;
+}
+
+const boardEl=document.getElementById('board');
+const statusEl=document.getElementById('status');
+
+function render(){
+  boardEl.innerHTML='';
+  let targets=[];
+  if(selected) targets=pieceMoves(board, selected[0], selected[1]);
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const cell=document.createElement('div');
+      cell.className='cell '+(((r+c)%2===0)?'a':'b');
+      const p=board[r][c];
+      if(p){
+        cell.textContent=GLYPH[p.t];
+        cell.classList.add(p.s==='W'?'piece-w':'piece-b');
+      }
+      if(selected && selected[0]===r && selected[1]===c) cell.classList.add('selected');
+      if(targets.some(([rr,cc])=>rr===r&&cc===c)) cell.classList.add(board[r][c]?'capturable':'movable');
+      cell.addEventListener('click', ()=>onClick(r,c));
+      boardEl.appendChild(cell);
+    }
+  }
+  statusEl.innerHTML = statusText();
+}
+
+function onClick(r,c){
+  if(gameOver || turn!==humanSide) return;
+  const p = board[r][c];
+  if(selected){
+    const targets = pieceMoves(board, selected[0], selected[1]);
+    if(targets.some(([rr,cc])=>rr===r&&cc===c)){
+      const mv=selected; selected=null;
+      doMove(mv,[r,c]);
+      return;
+    }
+    if(p && p.s===turn && pieceMoves(board,r,c).length>0){ selected=[r,c]; render(); return; }
+    selected=null; render(); return;
+  }
+  if(p && p.s===turn && pieceMoves(board,r,c).length>0){ selected=[r,c]; render(); }
+}
+
+function doMove(from,to){
+  const [fr,fc]=from, [tr,tc]=to;
+  const mover=board[fr][fc];
+  const captured=board[tr][tc];
+  board[tr][tc]=mover; board[fr][fc]=null;
+  if(mover.t==='P' && (tr===0||tr===ROWS-1)) mover.t='S';
+
+  if(captured && captured.t==='K'){
+    gameOver=true;
+    statusState={type:'winKing', winner:mover.s};
+    render();
+    return;
+  }
+  const opp = mover.s==='W' ? 'B' : 'W';
+  if(piecesOf(board, opp).length===0){
+    gameOver=true;
+    statusState={type:'winNoMoves', winner:mover.s, loser:opp};
+    turn=opp;
+    render();
+    return;
+  }
+  turn=opp;
+  statusState={type:'turn', side:opp};
+  render();
+  if(turn!==humanSide) setTimeout(aiTurn, 500);
+}
+
+function aiTurnEasy(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  const [r,c]=pcs[Math.floor(Math.random()*pcs.length)];
+  const dests=pieceMoves(board,r,c);
+  const [tr,tc]=dests[Math.floor(Math.random()*dests.length)];
+  doMove([r,c],[tr,tc]);
+}
+function aiTurnL2(){
+  if(Math.random()<0.65){ aiTurnEasy(); } else { aiTurnNormal(); }
+}
+function aiTurnNormal(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const [tr,tc] of pieceMoves(board,r,c)){
+      const t=board[tr][tc];
+      const score = (t?(PVAL[t.t]||1):0) + Math.random()*0.3;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],to:[tr,tc]}]; }
+      else if(Math.abs(score-bestScore)<0.05){ bestMoves.push({from:[r,c],to:[tr,tc]}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.to);
+}
+function simulateMove(bd, from, to){
+  const nb=cloneBd(bd);
+  const mover={...nb[from[0]][from[1]]};
+  nb[to[0]][to[1]]=mover; nb[from[0]][from[1]]=null;
+  if(mover.t==='P' && (to[0]===0||to[0]===ROWS-1)) mover.t='S';
+  return nb;
+}
+function opponentBestCaptureValue(nb, opp){
+  let best=0;
+  for(const [r,c] of piecesOf(nb, opp)){
+    for(const [tr,tc] of pieceMoves(nb,r,c)){
+      const t=nb[tr][tc];
+      if(t){ const v=PVAL[t.t]||1; if(v>best) best=v; }
+    }
+  }
+  return best;
+}
+function aiTurnHard(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const [tr,tc] of pieceMoves(board,r,c)){
+      const t=board[tr][tc];
+      if(t && t.t==='K'){ bestMoves=[{from:[r,c],to:[tr,tc]}]; bestScore=1e6; continue; }
+      const captureVal = t?(PVAL[t.t]||1):0;
+      const nb = simulateMove(board,[r,c],[tr,tc]);
+      const oppBest = opponentBestCaptureValue(nb, opp);
+      const score = captureVal - oppBest*0.8;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],to:[tr,tc]}]; }
+      else if(Math.abs(score-bestScore)<0.01){ bestMoves.push({from:[r,c],to:[tr,tc]}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.to);
+}
+function aiTurnL5(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const [tr,tc] of pieceMoves(board,r,c)){
+      const t=board[tr][tc];
+      if(t && t.t==='K'){ bestMoves=[{from:[r,c],to:[tr,tc]}]; bestScore=1e6; continue; }
+      const captureVal = t?(PVAL[t.t]||1):0;
+      const nb = simulateMove(board,[r,c],[tr,tc]);
+      const oppBest = opponentBestCaptureValue(nb, opp);
+      const score = captureVal - oppBest*1.1;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],to:[tr,tc]}]; }
+    }
+  }
+  const mv=bestMoves[0];
+  doMove(mv.from,mv.to);
+}
+
+function aiTurn(){
+  if(gameOver) return;
+  if(aiLevel==='l1') aiTurnEasy();
+  else if(aiLevel==='l2') aiTurnL2();
+  else if(aiLevel==='l4') aiTurnHard();
+  else if(aiLevel==='l5') aiTurnL5();
+  else aiTurnNormal();
+}
+
+function applyLangTexts(){
+  document.getElementById('optL1').textContent = lang==='ja' ? '最弱' : 'Weakest';
+  document.getElementById('optL2').textContent = lang==='ja' ? '弱い' : 'Easy';
+  document.getElementById('optL3').textContent = lang==='ja' ? '普通' : 'Normal';
+  document.getElementById('optL4').textContent = lang==='ja' ? '強い' : 'Hard';
+  document.getElementById('optL5').textContent = lang==='ja' ? '最強' : 'Strongest';
+  document.getElementById('langToggle').textContent = lang==='ja' ? 'EN' : '日本語';
+  document.title = lang==='ja' ? 'Semedo | セメド(推測的再構成)' : 'Semedo (Speculative Reconstruction)';
+}
+document.getElementById('langToggle').addEventListener('click', ()=>{
+  lang = lang==='ja' ? 'en' : 'ja';
+  document.body.classList.toggle('lang-en', lang==='en');
+  applyLangTexts();
+  render();
+});
+let theme='dark';
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  theme = theme==='dark' ? 'light' : 'dark';
+  document.body.classList.toggle('light-mode', theme==='light');
+  document.getElementById('themeToggle').textContent = theme==='dark' ? '\u2600' : '\u{1F319}';
+});
+
+document.getElementById('aiLevel').addEventListener('change', e=>{ aiLevel=e.target.value; });
+document.querySelectorAll('input[name="humanSide"]').forEach(radio=>{
+  radio.addEventListener('change', e=>{
+    humanSide=e.target.value;
+    setup(); render();
+    if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+  });
+});
+document.getElementById('reset').addEventListener('click', ()=>{
+  setup(); render();
+  if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+});
+
+applyLangTexts();
+render();
+</script>
+</body>
+</html>

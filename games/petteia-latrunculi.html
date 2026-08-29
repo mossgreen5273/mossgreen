@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Petteia &amp; Latrunculi | 古代の挟撃戦</title>
+<style>
+  :root{
+    --bg:#14181a; --panel:#1b2320; --moss:#6f9a76; --moss-dim:#3c4f40;
+    --brass:#c69a5a; --ember:#d9714a; --ink:#e8e6df; --ink-dim:#9aa39c;
+    --cell-a:#22302a; --cell-b:#2c3c34;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background: radial-gradient(circle at 50% -10%, #2a2f22 0%, transparent 55%), var(--bg);
+    color:var(--ink); font-family:'Iowan Old Style','Georgia',serif;
+    display:flex; flex-direction:column; align-items:center; padding:28px 14px 60px;
+  }
+  h1{font-weight:400; letter-spacing:0.04em; font-size:clamp(20px,5vw,28px); margin:0 0 2px; text-align:center;}
+  .subtitle{color:var(--brass); font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:18px; text-align:center;}
+  .controls{display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-bottom:14px; font-size:13px;}
+  .status{
+    background:var(--panel); border:1px solid var(--moss-dim); border-radius:6px;
+    padding:10px 22px; margin-bottom:14px; font-size:14px; min-width:280px; text-align:center;
+  }
+  .status b{color:var(--ember);}
+  #board{
+    display:grid; grid-template-columns:repeat(8,min(9vw,50px)); grid-template-rows:repeat(8,min(9vw,50px));
+    border:3px solid var(--brass); box-shadow:0 0 40px rgba(0,0,0,0.5);
+  }
+  .cell{display:flex;align-items:center;justify-content:center; font-size:min(6vw,32px); cursor:pointer; position:relative; user-select:none;}
+  .cell.a{background:var(--cell-a);} .cell.b{background:var(--cell-b);}
+  .cell.movable::before{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(111,154,118,0.55);}
+  .cell.capturable::before{content:"";position:absolute;inset:3px;border-radius:50%;border:2px solid var(--ember); background:none;}
+  .cell.selected{outline:2px solid var(--ember); outline-offset:-2px;}
+  .piece-w{color:#f4efe2; text-shadow:0 0 6px rgba(244,239,226,0.5);}
+  .piece-b{color:#2b2b2b; text-shadow:0 0 4px rgba(0,0,0,0.6); -webkit-text-stroke:0.5px #7d9c85;}
+  .legend{margin-top:16px; font-size:12.5px; color:var(--ink-dim); text-align:center; max-width:440px;}
+  button{margin-top:20px; background:transparent; border:1px solid var(--brass); color:var(--brass); padding:8px 20px; border-radius:4px; font-family:inherit; font-size:13px; letter-spacing:0.08em; cursor:pointer;}
+  button:hover{background:rgba(198,154,90,0.12);}
+  select{background:var(--panel); color:var(--ink); border:1px solid var(--moss-dim); border-radius:4px; padding:2px 6px; font-family:inherit;}
+  .rules{max-width:520px; margin-top:24px; font-size:12.5px; line-height:1.75; color:var(--ink-dim); border-top:1px solid var(--moss-dim); padding-top:16px;}
+  .rules b{color:var(--moss);}
+  .en-only{ display:none; }
+  body.lang-en .ja-only{ display:none; }
+  body.lang-en .en-only{ display:inline; }
+  .rules.ja-only, .rules.en-only{ display:block; }
+  .rules.en-only{ display:none; }
+  body.lang-en .rules.ja-only{ display:none; }
+  body.lang-en .rules.en-only{ display:block; }
+  #langToggle, #themeToggle{ margin-top:0; padding:6px 14px; font-size:12px; }
+  body.light-mode{
+    --bg:#f5f1e8; --panel:#ffffff; --moss:#4f7255; --moss-dim:#c9d4c0;
+    --brass:#93732f; --ember:#b8492e; --ink:#2b2f2a; --ink-dim:#6f766a;
+    --cell-a:#eae5d6; --cell-b:#dcd5c2;
+    background: var(--bg) !important;
+  }
+  body.light-mode .piece-w{ color:#ffffff; text-shadow:0 1px 2px rgba(0,0,0,0.35); -webkit-text-stroke:0.6px #2b2f2a; }
+  body.light-mode .piece-b{ color:#1a1a1a; text-shadow:none; -webkit-text-stroke:0.5px #4f7255; }
+</style>
+</head>
+<body>
+
+<h1>Petteia &amp; Latrunculi</h1>
+<div class="subtitle">
+  <span class="ja-only">古代の挟撃戦 &mdash; ギリシャのペッテイアとローマのラトルンクリ</span>
+  <span class="en-only">Greek Petteia and Roman Latrunculi, the ancestors of draughts</span>
+</div>
+<button id="langToggle" type="button">EN</button>
+<button id="themeToggle" type="button">&#9728;</button>
+
+<div class="controls">
+  <span>
+    <span class="ja-only">モード:</span><span class="en-only">Mode:</span>
+    <select id="gameMode">
+      <option value="latrunculi" selected>Latrunculi (with Dux)</option>
+      <option value="petteia">Petteia (soldiers only)</option>
+    </select>
+  </span>
+  <span>
+    <label><input type="radio" name="humanSide" value="W" checked>
+      <span class="ja-only">白として戦う</span><span class="en-only">Play White</span>
+    </label>
+    <label><input type="radio" name="humanSide" value="B">
+      <span class="ja-only">黒として戦う</span><span class="en-only">Play Black</span>
+    </label>
+  </span>
+  <span>
+    <span class="ja-only">AIの強さ:</span><span class="en-only">AI strength:</span>
+    <select id="aiLevel">
+      <option value="l1" id="optL1">最弱</option>
+      <option value="l2" id="optL2">弱い</option>
+      <option value="l3" id="optL3" selected>普通</option>
+      <option value="l4" id="optL4">強い</option>
+      <option value="l5" id="optL5">最強</option>
+    </select>
+  </span>
+</div>
+
+<div class="status" id="status">白の番です</div>
+<div id="board"></div>
+
+<div class="legend ja-only">駒はルークのように直交方向へ何マスでも進める(飛び越えは不可)。敵の駒を、自分の駒2つで直線に挟んだ瞬間にその駒を捕獲する(挟み撃ち)。</div>
+<div class="legend en-only">Every piece slides like a rook, any distance orthogonally, blocked by other pieces. An enemy piece is captured the instant it becomes sandwiched between two of your pieces in a straight line.</div>
+
+<button id="reset"><span class="ja-only">やり直す</span><span class="en-only">Reset</span></button>
+
+<div class="rules ja-only">
+  古代ギリシャの<b>ペッテイア</b>と、それを受け継いだローマの<b>ラトルンクリ(ludus latrunculorum、「小さな兵隊のゲーム」)</b>を1つにまとめました。どちらも全ての駒がルークのように直交方向へ滑るように動き、敵の駒を自分の駒2つで直線上に挟んだ瞬間に捕獲する「挟撃」が唯一の捕獲方式です。ペッテイアは兵士だけの純粋な殲滅戦、ラトルンクリはそこに「ドゥクス(指揮官)」を加え、ドゥクスが身動きできなくなる(合法手なし)か捕獲されると敗北します。<br><br>
+  簡易化: 21世紀に再構築された「Latrunculi XXI」にある押し出し・側面・密集陣形といった追加戦術や、盤の角を使った捕獲は再現せず、<b>挟撃のみのクラシックなルール</b>に絞っています。
+</div>
+<div class="rules en-only">
+  This combines the ancient Greek game of <b>Petteia</b> with its Roman descendant <b>Latrunculi (ludus latrunculorum, "the game of little soldiers")</b>. In both, every piece slides like a rook along straight orthogonal lines, and the only way to capture is by sandwiching an enemy piece between two of your own pieces in a line. Petteia is pure annihilation between soldiers; Latrunculi adds a "Dux" (commander) whose immobilization or capture ends the game.<br><br>
+  Simplification: the additional 21st-century tactics from "Latrunculi XXI" (push-and-crush, flank, and phalanx attacks) and corner-based captures are not reproduced here &mdash; this is the <b>classical custodial-capture-only</b> ruleset.
+</div>
+
+<script>
+const SIZE=8;
+const ORTHO=[[-1,0],[1,0],[0,-1],[0,1]];
+const PVAL={D:1000,S:1};
+const GLYPH={D:'♚',S:'●'};
+
+let board, turn, selected, gameOver, humanSide='W', lang='ja', aiLevel='l3', gameMode='latrunculi';
+let statusState={type:'turn', side:'W'};
+
+function inB(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
+function cloneBd(bd){ return bd.map(row=>row.map(c=>c?{...c}:null)); }
+
+function setup(){
+  board = Array.from({length:8},()=>Array(8).fill(null));
+  for(let c=0;c<8;c++){
+    board[1][c]={t:'S', s:'B'};
+    board[6][c]={t:'S', s:'W'};
+  }
+  if(gameMode==='latrunculi'){
+    board[1][4]={t:'D', s:'B'};
+    board[6][4]={t:'D', s:'W'};
+  }
+  turn='W'; selected=null; gameOver=false;
+  statusState={type:'turn', side:'W'};
+}
+setup();
+
+function labelOf(s){ return lang==='ja' ? (s==='W'?'白':'黒') : (s==='W'?'White':'Black'); }
+function statusText(){
+  const s=statusState;
+  if(s.type==='turn') return s.side===humanSide ? (lang==='ja'?`${labelOf(s.side)}の番です`:`${labelOf(s.side)}'s turn`) : (lang==='ja'?`${labelOf(s.side)}(AI)が考え中…`:`${labelOf(s.side)} (AI) is thinking…`);
+  if(s.type==='winDux') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — ドゥクスを捕獲しました` : `<b>${labelOf(s.winner)} wins</b> — the Dux was captured`;
+  if(s.type==='winNoMoves') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — ${labelOf(s.loser)}に合法手がありません` : `<b>${labelOf(s.winner)} wins</b> — ${labelOf(s.loser)} has no legal moves`;
+  if(s.type==='winAnnihilate') return lang==='ja' ? `<b>${labelOf(s.winner)}の勝利</b> — ${labelOf(s.loser)}の兵を全滅させました` : `<b>${labelOf(s.winner)} wins</b> — ${labelOf(s.loser)}'s army is annihilated`;
+  return '';
+}
+
+function slideMoves(bd,r,c,side){
+  const out=[];
+  for(const [dr,dc] of ORTHO){
+    let nr=r+dr,nc=c+dc;
+    while(inB(nr,nc) && !bd[nr][nc]){
+      out.push([nr,nc]);
+      nr+=dr; nc+=dc;
+    }
+  }
+  return out;
+}
+
+function custodialCaptures(bd,nr,nc,side){
+  const caps=[];
+  for(const [dr,dc] of ORTHO){
+    const er=nr+dr, ec=nc+dc, fr=nr+2*dr, fc=nc+2*dc;
+    if(inB(er,ec) && bd[er][ec] && bd[er][ec].s!==side && inB(fr,fc) && bd[fr][fc] && bd[fr][fc].s===side){
+      caps.push([er,ec]);
+    }
+  }
+  return caps;
+}
+
+function pieceMoves(bd,r,c){
+  const p=bd[r][c], side=p.s, out=[];
+  for(const [nr,nc] of slideMoves(bd,r,c,side)){
+    out.push({to:[nr,nc]});
+  }
+  return out.map(m=>m.to);
+}
+function moveWithCaptures(bd,r,c){
+  const side=bd[r][c].s;
+  return slideMoves(bd,r,c,side).map(([nr,nc])=>{
+    const nb=cloneBd(bd); nb[nr][nc]=nb[r][c]; nb[r][c]=null;
+    return {to:[nr,nc], captures:custodialCaptures(nb,nr,nc,side)};
+  });
+}
+
+function piecesOf(bd, side){
+  const list=[];
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    if(bd[r][c] && bd[r][c].s===side && pieceMoves(bd,r,c).length>0) list.push([r,c]);
+  }
+  return list;
+}
+function countPieces(bd, side){
+  let n=0;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(bd[r][c] && bd[r][c].s===side) n++;
+  return n;
+}
+
+const boardEl=document.getElementById('board');
+const statusEl=document.getElementById('status');
+
+function render(){
+  boardEl.innerHTML='';
+  let targets=[];
+  if(selected) targets=moveWithCaptures(board, selected[0], selected[1]);
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const cell=document.createElement('div');
+      cell.className='cell '+(((r+c)%2===0)?'a':'b');
+      const p=board[r][c];
+      if(p){
+        cell.textContent=GLYPH[p.t];
+        cell.classList.add(p.s==='W'?'piece-w':'piece-b');
+      }
+      if(selected && selected[0]===r && selected[1]===c) cell.classList.add('selected');
+      const hit = targets.find(m=>m.to[0]===r&&m.to[1]===c);
+      if(hit) cell.classList.add(hit.captures.length>0 ? 'capturable' : 'movable');
+      cell.addEventListener('click', ()=>onClick(r,c));
+      boardEl.appendChild(cell);
+    }
+  }
+  statusEl.innerHTML = statusText();
+}
+
+function onClick(r,c){
+  if(gameOver || turn!==humanSide) return;
+  const p = board[r][c];
+  if(selected){
+    const targets = moveWithCaptures(board, selected[0], selected[1]);
+    const hit = targets.find(m=>m.to[0]===r&&m.to[1]===c);
+    if(hit){
+      const mv=selected; selected=null;
+      doMove(mv, hit);
+      return;
+    }
+    if(p && p.s===turn && pieceMoves(board,r,c).length>0){ selected=[r,c]; render(); return; }
+    selected=null; render(); return;
+  }
+  if(p && p.s===turn && pieceMoves(board,r,c).length>0){ selected=[r,c]; render(); }
+}
+
+function doMove(from, hit){
+  const [fr,fc]=from, [tr,tc]=hit.to;
+  const mover=board[fr][fc];
+  board[tr][tc]=mover; board[fr][fc]=null;
+  for(const [cr,cc] of hit.captures) board[cr][cc]=null;
+
+  const opp = mover.s==='W' ? 'B' : 'W';
+  if(gameMode==='latrunculi'){
+    let oppHasDux=false;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c] && board[r][c].s===opp && board[r][c].t==='D') oppHasDux=true;
+    if(!oppHasDux){
+      gameOver=true;
+      statusState={type:'winDux', winner:mover.s};
+      render();
+      return;
+    }
+  } else {
+    if(countPieces(board, opp)===0){
+      gameOver=true;
+      statusState={type:'winAnnihilate', winner:mover.s, loser:opp};
+      render();
+      return;
+    }
+  }
+  if(piecesOf(board, opp).length===0){
+    gameOver=true;
+    statusState={type:'winNoMoves', winner:mover.s, loser:opp};
+    turn=opp;
+    render();
+    return;
+  }
+  turn=opp;
+  statusState={type:'turn', side:opp};
+  render();
+  if(turn!==humanSide) setTimeout(aiTurn, 500);
+}
+
+function moveScore(bd, hit){
+  return hit.captures.reduce((s,[r,c])=>{
+    const v = bd[r][c] ? (PVAL[bd[r][c].t]||1) : 0;
+    return s+v;
+  },0);
+}
+
+function aiTurnEasy(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  const [r,c]=pcs[Math.floor(Math.random()*pcs.length)];
+  const dests=moveWithCaptures(board,r,c);
+  const hit=dests[Math.floor(Math.random()*dests.length)];
+  doMove([r,c],hit);
+}
+function aiTurnL2(){
+  if(Math.random()<0.65){ aiTurnEasy(); } else { aiTurnNormal(); }
+}
+function aiTurnNormal(){
+  const side=turn;
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const hit of moveWithCaptures(board,r,c)){
+      const score = moveScore(board,hit) + Math.random()*0.3;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],hit}]; }
+      else if(Math.abs(score-bestScore)<0.05){ bestMoves.push({from:[r,c],hit}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.hit);
+}
+function simulateHit(bd, from, hit){
+  const nb=cloneBd(bd);
+  nb[hit.to[0]][hit.to[1]]=nb[from[0]][from[1]];
+  nb[from[0]][from[1]]=null;
+  for(const [cr,cc] of hit.captures) nb[cr][cc]=null;
+  return nb;
+}
+function opponentBestCaptureValue(nb, opp){
+  let best=0;
+  for(const [r,c] of piecesOf(nb, opp)){
+    for(const hit of moveWithCaptures(nb,r,c)){
+      const v=moveScore(nb,hit);
+      if(v>best) best=v;
+    }
+  }
+  return best;
+}
+function aiTurnHard(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const hit of moveWithCaptures(board,r,c)){
+      const captureVal = moveScore(board,hit);
+      const nb = simulateHit(board,[r,c],hit);
+      const oppBest = opponentBestCaptureValue(nb, opp);
+      const score = captureVal - oppBest*0.8;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],hit}]; }
+      else if(Math.abs(score-bestScore)<0.01){ bestMoves.push({from:[r,c],hit}); }
+    }
+  }
+  const mv=bestMoves[Math.floor(Math.random()*bestMoves.length)];
+  doMove(mv.from,mv.hit);
+}
+function aiTurnL5(){
+  const side=turn, opp=side==='W'?'B':'W';
+  const pcs=piecesOf(board, side);
+  if(pcs.length===0) return;
+  let bestScore=-Infinity, bestMoves=[];
+  for(const [r,c] of pcs){
+    for(const hit of moveWithCaptures(board,r,c)){
+      const captureVal = moveScore(board,hit);
+      const nb = simulateHit(board,[r,c],hit);
+      const oppBest = opponentBestCaptureValue(nb, opp);
+      const score = captureVal - oppBest*1.1;
+      if(score>bestScore){ bestScore=score; bestMoves=[{from:[r,c],hit}]; }
+    }
+  }
+  const mv=bestMoves[0];
+  doMove(mv.from,mv.hit);
+}
+
+function aiTurn(){
+  if(gameOver) return;
+  if(aiLevel==='l1') aiTurnEasy();
+  else if(aiLevel==='l2') aiTurnL2();
+  else if(aiLevel==='l4') aiTurnHard();
+  else if(aiLevel==='l5') aiTurnL5();
+  else aiTurnNormal();
+}
+
+function applyLangTexts(){
+  document.getElementById('optL1').textContent = lang==='ja' ? '最弱' : 'Weakest';
+  document.getElementById('optL2').textContent = lang==='ja' ? '弱い' : 'Easy';
+  document.getElementById('optL3').textContent = lang==='ja' ? '普通' : 'Normal';
+  document.getElementById('optL4').textContent = lang==='ja' ? '強い' : 'Hard';
+  document.getElementById('optL5').textContent = lang==='ja' ? '最強' : 'Strongest';
+  document.getElementById('langToggle').textContent = lang==='ja' ? 'EN' : '日本語';
+  document.title = lang==='ja' ? 'Petteia & Latrunculi | 古代の挟撃戦' : 'Petteia & Latrunculi';
+}
+document.getElementById('langToggle').addEventListener('click', ()=>{
+  lang = lang==='ja' ? 'en' : 'ja';
+  document.body.classList.toggle('lang-en', lang==='en');
+  applyLangTexts();
+  render();
+});
+let theme='dark';
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  theme = theme==='dark' ? 'light' : 'dark';
+  document.body.classList.toggle('light-mode', theme==='light');
+  document.getElementById('themeToggle').textContent = theme==='dark' ? '\u2600' : '\u{1F319}';
+});
+
+document.getElementById('gameMode').addEventListener('change', e=>{
+  gameMode = e.target.value;
+  setup(); render();
+  if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+});
+document.getElementById('aiLevel').addEventListener('change', e=>{ aiLevel=e.target.value; });
+document.querySelectorAll('input[name="humanSide"]').forEach(radio=>{
+  radio.addEventListener('change', e=>{
+    humanSide=e.target.value;
+    setup(); render();
+    if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+  });
+});
+document.getElementById('reset').addEventListener('click', ()=>{
+  setup(); render();
+  if(!gameOver && turn!==humanSide) setTimeout(aiTurn, 500);
+});
+
+applyLangTexts();
+render();
+</script>
+</body>
+</html>
