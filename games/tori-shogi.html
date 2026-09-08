@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>とり将棋 | Tori Shogi</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Noto+Sans+JP:wght@300;400;500;700&family=Shippori+Mincho:wght@500;700&display=swap');
+  :root{
+    --bg-0:#10190f; --bg-1:#17241a; --bg-2:#1e2e21;
+    --line:#3c5240; --brass:#c9a35f; --brass-dim:#8a7247;
+    --ivory:#e9e4d6; --ivory-dim:#a9b0a3;
+    --sente:#e4c98a; --gote:#9fb9a6; --danger:#c4674f;
+    --board-light:#233a29; --board-dark:#1a2c1f;
+  }
+  :root[data-theme="light"]{
+    --bg-0:#f4f1e6; --bg-1:#ece6d2; --bg-2:#e2dbc4;
+    --line:#c9c0a0; --brass:#8a6d35; --brass-dim:#a68a52;
+    --ivory:#2b3328; --ivory-dim:#5c6b57;
+    --sente:#9c6f1e; --gote:#3f6b52; --danger:#a23b28;
+    --board-light:#dce6d5; --board-dark:#cddcc4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    transition:background .25s, color .25s;
+    background:radial-gradient(ellipse at 50% -10%, var(--bg-2), var(--bg-0) 70%);
+    color:var(--ivory);
+    font-family:'Noto Sans JP', 'Hiragino Sans', sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:20px 14px 60px;
+  }
+  h1{ font-family:'Fraunces','Shippori Mincho',serif; font-weight:600; font-size:1.35rem; letter-spacing:.03em; margin:2px 0; color:var(--brass); text-align:center;}
+  .sub{ font-family:'Shippori Mincho',serif; font-size:.74rem; color:var(--ivory-dim); margin-bottom:14px; letter-spacing:.04em; text-align:center;}
+  .topbar{ display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; justify-content:center;}
+  button{
+    font-family:'Noto Sans JP',sans-serif; background:var(--bg-2); border:1px solid var(--line); color:var(--ivory);
+    padding:7px 14px; border-radius:3px; font-size:.75rem; letter-spacing:.03em; cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  button:hover{ border-color:var(--brass); color:var(--brass); }
+  button.active{ border-color:var(--brass); color:var(--brass); background:#22301f;}
+  :root[data-theme="light"] button.active{ background:#d8cfae; }
+  .diff-label{ font-size:.72rem; color:var(--ivory-dim); letter-spacing:.03em; align-self:center; margin-right:2px;}
+  #difficulty-bar{ margin-top:-6px; }
+  .status{ font-size:.8rem; color:var(--brass); min-height:1.4em; margin-bottom:10px; text-align:center; letter-spacing:.03em;}
+  .layout{ display:flex; flex-direction:column; align-items:center; gap:6px; width:100%; max-width:420px;}
+  .hand{ display:flex; gap:5px; min-height:42px; align-items:center; justify-content:center; flex-wrap:wrap; width:100%; padding:4px;}
+  .hand-label{ font-size:.62rem; color:var(--ivory-dim); letter-spacing:.07em; text-align:center; margin-bottom:2px;}
+  .hpiece{
+    width:36px; height:36px; border:1.5px solid var(--line); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-family:'Shippori Mincho',serif;
+    font-size:.95rem; background:var(--bg-1); cursor:pointer; position:relative;
+  }
+  .hpiece .count{ position:absolute; bottom:-2px; right:-2px; font-size:.55rem; background:var(--brass); color:#10190f; border-radius:8px; padding:0 4px; font-family:sans-serif;}
+  .hpiece.selected{ border-color:var(--brass); box-shadow:0 0 0 2px rgba(201,163,95,.35);}
+  .hpiece.sente-piece{ background:rgba(228,201,138,.16); box-shadow:inset 0 0 0 1.5px var(--sente); }
+  .hpiece.gote-piece{ background:rgba(159,185,166,.16); box-shadow:inset 0 0 0 1.5px var(--gote); }
+  #board{
+    display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); grid-template-rows:repeat(7, minmax(0,1fr));
+    width:min(88vw, 360px); height:min(88vw, 360px);
+    border:2px solid var(--brass-dim); background:var(--bg-0); gap:1.5px; padding:2px;
+  }
+  .sq{ background:var(--board-light); display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer;}
+  .sq:nth-child(odd){ background:var(--board-dark); }
+  .sq.zone-top{ box-shadow:inset 0 3px 0 0 rgba(159,185,166,.35); }
+  .sq.zone-bottom{ box-shadow:inset 0 -3px 0 0 rgba(228,201,138,.35); }
+  .sq.selectable::after{ content:''; position:absolute; width:26%; height:26%; border-radius:50%; background:rgba(201,163,95,.55);}
+  .sq.selected{ outline:2px solid var(--brass); outline-offset:-2px; }
+  .sq.last-move{ background:#2c3f2a; }
+  .sq.in-check{ box-shadow:inset 0 0 0 2px var(--danger); }
+  .piece{ font-family:'Shippori Mincho',serif; font-weight:700; font-size:1.2rem; line-height:1; user-select:none; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:50%; width:84%; height:84%; position:relative;}
+  .piece.sente-piece{ background:rgba(228,201,138,.14); border:1.3px solid var(--sente); }
+  .piece.gote-piece{ background:rgba(159,185,166,.14); border:1.3px solid var(--gote); transform:rotate(180deg);}
+  .piece.promoted{ box-shadow:0 0 0 2px var(--danger); }
+  .piece .side-mark{ position:absolute; bottom:1px; right:2px; font-size:.5rem; opacity:.75;}
+  .footer-controls{ display:flex; gap:10px; margin-top:16px; }
+  .legend{ margin-top:20px; font-size:.66rem; color:var(--ivory-dim); max-width:360px; text-align:center; line-height:1.7;}
+  .legend b{ color:var(--brass); }
+  dialog{ background:var(--bg-1); color:var(--ivory); border:1px solid var(--brass-dim); border-radius:6px; padding:20px; font-family:'Noto Sans JP',sans-serif; text-align:center;}
+  dialog::backdrop{ background:rgba(0,0,0,.6); }
+  dialog h2{ font-family:'Fraunces',serif; color:var(--brass); margin-top:0;}
+</style>
+</head>
+<body>
+
+<h1 data-ja="とり将棋" data-en="Tori Shogi">とり将棋</h1>
+<div class="sub" data-ja="禽将棋・7×7マス・成りは強制" data-en="Kin Shogi — 7×7 board, promotion is mandatory">禽将棋・7×7マス・成りは強制</div>
+
+<div class="topbar">
+  <button id="lang-ja" class="active">日本語</button>
+  <button id="lang-en">English</button>
+  <button id="newgame" data-ja="新しい対局" data-en="New Game">新しい対局</button>
+  <button id="theme-toggle" title="Toggle theme">🌙</button>
+</div>
+
+<div class="topbar" id="difficulty-bar">
+  <span class="diff-label" data-ja="AIの強さ:" data-en="AI level:">AIの強さ:</span>
+  <button class="diff-btn" data-level="beginner" data-ja="入門" data-en="Beginner">入門</button>
+  <button class="diff-btn" data-level="easy" data-ja="初級" data-en="Easy">初級</button>
+  <button class="diff-btn active" data-level="normal" data-ja="中級" data-en="Normal">中級</button>
+  <button class="diff-btn" data-level="hard" data-ja="上級" data-en="Hard">上級</button>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="layout">
+  <div>
+    <div class="hand-label" data-ja="後手の持ち駒" data-en="Gote's hand">後手の持ち駒</div>
+    <div class="hand" id="hand-gote"></div>
+  </div>
+  <div id="board"></div>
+  <div>
+    <div class="hand-label" data-ja="先手の持ち駒" data-en="Sente's hand">先手の持ち駒</div>
+    <div class="hand" id="hand-sente"></div>
+  </div>
+</div>
+
+<div class="legend">
+  <div><b data-ja="鵬" data-en="Phoenix">鵬(ほう)</b><span data-ja="＝玉相当。捕られたら負け" data-en="= the King. Capture it to win"> ＝玉相当。捕られたら負け</span> ｜ <b data-ja="鷹" data-en="Falcon">鷹</b><span data-ja="＝敵陣で鵰に強制成り" data-en="= forced promotion to Eagle in enemy territory"> ＝敵陣で鵰に強制成り</span></div>
+  <div><b data-ja="鶴" data-en="Crane">鶴</b><span data-ja="＝斜め4方向＋前後" data-en="= 4 diagonals + straight fwd/back"> ＝斜め4方向＋前後</span> ｜ <b data-ja="雉" data-en="Pheasant">雉</b><span data-ja="＝前に2マス跳躍＋斜め後退" data-en="= leaps 2 forward, steps diagonal-back"> ＝前に2マス跳躍＋斜め後退</span></div>
+  <div><b data-ja="鶉" data-en="Quail">鶉（左右非対称）</b><span data-ja="＝前に直進＋斜め後方の一方は無限、他方は1マス" data-en="= slides forward; one diagonal-back slides freely, the other only 1 step (mirrored L/R)"> ＝前に直進＋斜め後方の一方は無限、他方は1マス</span></div>
+  <div><b data-ja="燕" data-en="Swallow">燕</b><span data-ja="＝前1マスのみ。敵陣で鴈に強制成り（2マス跳躍3方向）" data-en="= 1 step forward only. Forced promotion to Goose (a 2-square jumper) in enemy territory"> ＝前1マスのみ。敵陣で鴈に強制成り（2マス跳躍3方向）</span></div>
+  <div data-ja="燕は同じ筋に2枚まで置けます（三燕は禁止）。打ち燕詰めは禁じ手。トライルールはなく、本将棋同様、鵬を詰ませたら勝ちです。" data-en="Up to two Swallows are allowed on the same file (a third is forbidden). Mating with a dropped Swallow is illegal. No Try rule — win by checkmating the Phoenix, exactly as in standard Shogi.">燕は同じ筋に2枚まで置けます（三燕は禁止）。打ち燕詰めは禁じ手。トライルールはなく、本将棋同様、鵬を詰ませたら勝ちです。</div>
+</div>
+
+<div class="footer-controls">
+  <button id="vsAiBtn" class="active" data-ja="AI対戦: ON" data-en="vs AI: ON">AI対戦: ON</button>
+</div>
+
+<dialog id="result">
+  <h2 id="result-title"></h2>
+  <p id="result-body"></p>
+  <button id="result-close" data-ja="閉じる" data-en="Close">閉じる</button>
+</dialog>
+
+<script>
+(function(){
+"use strict";
+
+let LANG='ja';
+function applyLang(){
+  document.querySelectorAll('[data-ja]').forEach(el=>{ el.textContent = LANG==='ja'?el.dataset.ja:el.dataset.en; });
+  document.getElementById('lang-ja').classList.toggle('active', LANG==='ja');
+  document.getElementById('lang-en').classList.toggle('active', LANG==='en');
+  render();
+}
+document.getElementById('lang-ja').onclick=()=>{LANG='ja';applyLang();};
+document.getElementById('lang-en').onclick=()=>{LANG='en';applyLang();};
+
+const W=7, H=7;
+const NAMES = {
+  phoenix:{ja:'鵬',en:'Ph'}, phoenixG:{ja:'鵬',en:'Ph'},
+  falcon:{ja:'鷹',en:'Fa'}, eagle:{ja:'鵰',en:'Eg'},
+  crane:{ja:'鶴',en:'Cr'},
+  pheasant:{ja:'雉',en:'Pt'},
+  leftquail:{ja:'鶉',en:'LQ'}, rightquail:{ja:'鶉',en:'RQ'},
+  swallow:{ja:'燕',en:'Sw'}, goose:{ja:'鴈',en:'Gs'}
+};
+const SIDEMARK = { leftquail:'左', rightquail:'右' };
+
+// direction unit vectors expressed as (forward, left) pairs, from the piece's own point of view
+const DV = { F:[1,0], B:[-1,0], SL:[0,1], SR:[0,-1], DFL:[1,1], DFR:[1,-1], DBL:[-1,1], DBR:[-1,-1] };
+function ownerSign(owner){ return owner==='S' ? -1 : 1; }
+function toAbs(fl, owner){ const s = ownerSign(owner); return [fl[0]*s, fl[1]*s]; }
+
+const PIECE_DEFS = {
+  phoenix:  {kind:'step', dirs:['F','B','SL','SR','DFL','DFR','DBL','DBR']},
+  falcon:   {kind:'step', dirs:['F','SL','SR','DFL','DFR','DBL','DBR']},
+  eagle:    {kind:'mixed', slideDirs:['DFL','DFR','B'], slideLimited:{DBL:2,DBR:2}, stepDirs:['F','SL','SR']},
+  crane:    {kind:'step', dirs:['DFL','DFR','DBL','DBR','F','B']},
+  pheasant: {kind:'special_pheasant'},
+  leftquail:{kind:'mixed', slideDirs:['F','DBR'], stepDirs:['DBL']},
+  rightquail:{kind:'mixed', slideDirs:['F','DBL'], stepDirs:['DBR']},
+  swallow:  {kind:'step', dirs:['F']},
+  goose:    {kind:'special_goose'}
+};
+const PROMOTE_TO = { falcon:'eagle', swallow:'goose' };
+const DEMOTE = { eagle:'falcon', goose:'swallow' };
+const CAN_PROMOTE = new Set(['falcon','swallow']);
+
+function promoZone(owner){ return owner==='S' ? [0,1] : [H-2,H-1]; }
+function farRow(owner){ return owner==='S' ? 0 : H-1; }
+
+let board, hands, turn, gameOver, selected, selHandType, lastMove, aiOn;
+
+function idx(r,c){ return r*W+c; }
+function inBounds(r,c){ return r>=0&&r<H&&c>=0&&c<W; }
+function kingTypeFor(owner){ return owner==='S' ? 'phoenix' : 'phoenixG'; }
+function pieceKind(type){ return type==='phoenixG' ? 'phoenix' : type; }
+function isKingType(type){ return type==='phoenix' || type==='phoenixG'; }
+
+function initGame(){
+  board = new Array(W*H).fill(null);
+  function place(r,c,type,owner){ board[idx(r,c)] = {type, owner}; }
+  const setup = [
+    [6,0,'rightquail'],[6,1,'pheasant'],[6,2,'crane'],[6,3,'phoenix'],[6,4,'crane'],[6,5,'pheasant'],[6,6,'leftquail'],
+    [5,3,'falcon'],
+    [4,0,'swallow'],[4,1,'swallow'],[4,2,'swallow'],[4,3,'swallow'],[4,4,'swallow'],[4,5,'swallow'],[4,6,'swallow'],
+    [3,4,'swallow']
+  ];
+  for(const [r,c,type] of setup){
+    place(r,c,type,'S');
+    const gType = type==='phoenix' ? 'phoenixG' : type;
+    place(6-r,6-c,gType,'G');
+  }
+  hands = {S:{}, G:{}};
+  turn='S'; gameOver=false; selected=null; selHandType=null; lastMove=null;
+  render();
+}
+
+function cloneBoard(b){ return b.map(p=>p?{...p}:null); }
+function cloneHands(h){ return {S:{...h.S}, G:{...h.G}}; }
+function findKing(bd, owner){
+  const want = kingTypeFor(owner);
+  for(let i=0;i<bd.length;i++) if(bd[i] && bd[i].type===want) return i;
+  return -1;
+}
+
+function slideLine(bd, r0, c0, dr, dc, maxSteps, targets){
+  let r=r0, c=c0, steps=0;
+  while(steps<maxSteps){
+    const nr=r+dr, nc=c+dc;
+    if(!inBounds(nr,nc)) break;
+    targets.push(idx(nr,nc));
+    if(bd[idx(nr,nc)]) break;
+    r=nr; c=nc; steps++;
+  }
+}
+
+function pieceTargets(bd, i, piece){
+  const kind = pieceKind(piece.type);
+  const def = PIECE_DEFS[kind];
+  const r0=Math.floor(i/W), c0=i%W;
+  const targets=[];
+
+  if(kind==='pheasant'){
+    const [dr,dc] = toAbs([2,0], piece.owner);
+    const nr=r0+dr, nc=c0+dc;
+    if(inBounds(nr,nc)) targets.push(idx(nr,nc)); // jump: ignores intervening piece
+    for(const d of ['DBL','DBR']){
+      const [sdr,sdc] = toAbs(DV[d], piece.owner);
+      const nr2=r0+sdr, nc2=c0+sdc;
+      if(inBounds(nr2,nc2)) targets.push(idx(nr2,nc2));
+    }
+    return targets;
+  }
+  if(kind==='goose'){
+    for(const fl of [[2,2],[2,-2],[-2,0]]){
+      const [dr,dc] = toAbs(fl, piece.owner);
+      const nr=r0+dr, nc=c0+dc;
+      if(inBounds(nr,nc)) targets.push(idx(nr,nc)); // jump: ignores intervening piece
+    }
+    return targets;
+  }
+  if(def.kind==='step'){
+    for(const d of def.dirs){
+      const [dr,dc] = toAbs(DV[d], piece.owner);
+      const nr=r0+dr, nc=c0+dc;
+      if(inBounds(nr,nc)) targets.push(idx(nr,nc));
+    }
+  } else if(def.kind==='mixed'){
+    if(def.slideDirs) for(const d of def.slideDirs){
+      const [dr,dc] = toAbs(DV[d], piece.owner);
+      slideLine(bd, r0, c0, dr, dc, W+H, targets);
+    }
+    if(def.slideLimited) for(const d in def.slideLimited){
+      const [dr,dc] = toAbs(DV[d], piece.owner);
+      slideLine(bd, r0, c0, dr, dc, def.slideLimited[d], targets);
+    }
+    if(def.stepDirs) for(const d of def.stepDirs){
+      const [dr,dc] = toAbs(DV[d], piece.owner);
+      const nr=r0+dr, nc=c0+dc;
+      if(inBounds(nr,nc)) targets.push(idx(nr,nc));
+    }
+  }
+  return targets;
+}
+
+function isSquareAttacked(bd, r, c, byOwner){
+  const target = idx(r,c);
+  for(let i=0;i<bd.length;i++){
+    const p = bd[i];
+    if(!p || p.owner!==byOwner) continue;
+    if(pieceTargets(bd, i, p).includes(target)) return true;
+  }
+  return false;
+}
+function fileHasNSwallows(bd, col, owner){
+  let n=0;
+  for(let r=0;r<H;r++){ const p=bd[idx(r,col)]; if(p && p.owner===owner && p.type==='swallow') n++; }
+  return n;
+}
+
+function genPseudoMoves(bd, hd, owner){
+  const moves=[];
+  for(let i=0;i<bd.length;i++){
+    const p = bd[i];
+    if(!p || p.owner!==owner) continue;
+    const targets = pieceTargets(bd, i, p);
+    const r0 = Math.floor(i/W);
+    for(const to of targets){
+      const occ = bd[to];
+      if(occ && occ.owner===owner) continue;
+      const kind = pieceKind(p.type);
+      if(CAN_PROMOTE.has(kind)){
+        const toR = Math.floor(to/W);
+        const zone = promoZone(owner);
+        const touches = zone.includes(r0) || zone.includes(toR);
+        moves.push({from:i, dropType:null, to, promote:touches}); // mandatory promotion: no non-promoting option when eligible
+      } else {
+        moves.push({from:i, dropType:null, to, promote:false});
+      }
+    }
+  }
+  const owned = hd[owner];
+  for(const type in owned){
+    if(owned[type]<=0) continue;
+    for(let r=0;r<H;r++) for(let c=0;c<W;c++){
+      const to = idx(r,c);
+      if(bd[to]) continue;
+      if(type==='swallow'){
+        if(r===farRow(owner)) continue;
+        if(fileHasNSwallows(bd, c, owner) >= 2) continue;
+      }
+      moves.push({from:null, dropType:type, to, promote:false});
+    }
+  }
+  return moves;
+}
+
+function applyMove(bd, hd, owner, move){
+  const nbd = cloneBoard(bd);
+  const nhd = cloneHands(hd);
+  if(move.from!==null){
+    const p = {...nbd[move.from]};
+    const captured = nbd[move.to];
+    if(captured){
+      const baseType = isKingType(captured.type) ? null : (DEMOTE[captured.type] || captured.type);
+      if(baseType) nhd[owner][baseType] = (nhd[owner][baseType]||0)+1;
+    }
+    nbd[move.from]=null;
+    if(move.promote && PROMOTE_TO[pieceKind(p.type)]) p.type = PROMOTE_TO[pieceKind(p.type)];
+    nbd[move.to]=p;
+  } else {
+    nhd[owner][move.dropType]-=1;
+    nbd[move.to]={type:move.dropType, owner};
+  }
+  return {bd:nbd, hd:nhd};
+}
+
+function genLegalMoves(bd, hd, owner){
+  const pseudo = genPseudoMoves(bd, hd, owner);
+  const legal=[];
+  const opp = owner==='S'?'G':'S';
+  for(const m of pseudo){
+    const {bd:nbd, hd:nhd} = applyMove(bd, hd, owner, m);
+    const kingPos = findKing(nbd, owner);
+    if(kingPos===-1) continue;
+    const kr=Math.floor(kingPos/W), kc=kingPos%W;
+    if(isSquareAttacked(nbd, kr, kc, opp)) continue;
+    if(m.dropType==='swallow'){
+      const oppKing = findKing(nbd, opp);
+      const okr=Math.floor(oppKing/W), okc=oppKing%W;
+      if(isSquareAttacked(nbd, okr, okc, owner)){
+        const oppMoves = genLegalMoves(nbd, nhd, opp);
+        if(oppMoves.length===0) continue;
+      }
+    }
+    legal.push(m);
+  }
+  return legal;
+}
+function isInCheck(bd, owner){
+  const kp = findKing(bd, owner);
+  if(kp===-1) return false;
+  const opp = owner==='S'?'G':'S';
+  return isSquareAttacked(bd, Math.floor(kp/W), kp%W, opp);
+}
+
+function tryMove(move){
+  if(gameOver) return false;
+  const legal = genLegalMoves(board, hands, turn);
+  const match = legal.find(m => m.from===move.from && m.dropType===move.dropType && m.to===move.to);
+  if(!match) return false;
+  return finalizeMove(match);
+}
+function finalizeMove(match){
+  const capturedKing = board[match.to] && isKingType(board[match.to].type);
+  const {bd, hd} = applyMove(board, hands, turn, match);
+  lastMove = {from:match.from, to:match.to};
+  board = bd; hands = hd;
+  if(capturedKing){ gameOver=true; showResult(turn,'catch'); render(); return true; }
+  const prevTurn = turn;
+  turn = turn==='S'?'G':'S';
+  selected=null; selHandType=null;
+  render();
+  const nextLegal = genLegalMoves(board, hands, turn);
+  if(nextLegal.length===0){
+    gameOver=true;
+    const reason = isInCheck(board, turn) ? 'checkmate' : 'nomoves';
+    showResult(prevTurn, reason);
+    render();
+    return true;
+  }
+  if(aiOn && turn==='G' && !gameOver){ setTimeout(aiMove, 350); }
+  return true;
+}
+
+const VALUE = { phoenix:9999, phoenixG:9999, falcon:6, eagle:10, crane:7, pheasant:4,
+  leftquail:5, rightquail:5, swallow:1, goose:3.5 };
+const LEVELS = {
+  beginner:{maxDepth:1, time:300, noise:2.0},
+  easy:    {maxDepth:2, time:500, noise:0.8},
+  normal:  {maxDepth:3, time:1000, noise:0},
+  hard:    {maxDepth:4, time:1800, noise:0}
+};
+let aiLevel = 'normal';
+let currentNoise = 0;
+function evaluate(bd, hd, owner){
+  let score=0;
+  for(const p of bd){ if(!p) continue; const v=VALUE[p.type]||0; score += (p.owner===owner? v : -v); }
+  for(const type in hd[owner]) score += (VALUE[type]||1)*hd[owner][type]*0.85;
+  const opp = owner==='S'?'G':'S';
+  for(const type in hd[opp]) score -= (VALUE[type]||1)*hd[opp][type]*0.85;
+  if(currentNoise>0) score += (Math.random()-0.5)*currentNoise;
+  return score;
+}
+function negamax(bd, hd, owner, depth, alpha, beta, deadline){
+  const opp = owner==='S'?'G':'S';
+  const kMe = findKing(bd, owner), kOpp = findKing(bd, opp);
+  if(kOpp===-1) return 100000 - (8-depth);
+  if(kMe===-1) return -100000 + (8-depth);
+  if(depth===0 || performance.now()>deadline) return evaluate(bd, hd, owner);
+  const moves = genLegalMoves(bd, hd, owner);
+  if(moves.length===0) return isInCheck(bd, owner) ? -99000+(8-depth) : 0;
+  moves.sort((a,b)=>{ const ca=bd[a.to]?1:0, cb=bd[b.to]?1:0; return cb-ca; });
+  let best=-Infinity;
+  for(const m of moves){
+    const {bd:nbd, hd:nhd} = applyMove(bd, hd, owner, m);
+    const val = -negamax(nbd, nhd, opp, depth-1, -beta, -alpha, deadline);
+    if(val>best) best=val;
+    if(best>alpha) alpha=best;
+    if(alpha>=beta) break;
+    if(performance.now()>deadline) break;
+  }
+  return best;
+}
+function aiMove(){
+  if(gameOver) return;
+  const lvl = LEVELS[aiLevel] || LEVELS.normal;
+  currentNoise = lvl.noise;
+  const deadline = performance.now()+lvl.time;
+  const moves = genLegalMoves(board, hands, turn);
+  if(moves.length===0) return;
+  let bestMove=null, depth=1;
+  while(performance.now()<deadline && depth<=lvl.maxDepth){
+    let curBest=null, curScore=-Infinity;
+    const opp = turn==='S'?'G':'S';
+    for(const m of moves){
+      const {bd:nbd, hd:nhd} = applyMove(board, hands, turn, m);
+      const val = -negamax(nbd, nhd, opp, depth-1, -Infinity, Infinity, deadline);
+      if(val>curScore){ curScore=val; curBest=m; }
+      if(performance.now()>deadline) break;
+    }
+    if(curBest) bestMove=curBest;
+    depth++;
+  }
+  if(bestMove) finalizeMove(bestMove);
+}
+
+function render(){
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML='';
+  const legal = !gameOver ? genLegalMoves(board, hands, turn) : [];
+  let targets=[];
+  if(selected!==null) targets = legal.filter(m=>m.from===selected).map(m=>m.to);
+  else if(selHandType) targets = legal.filter(m=>m.dropType===selHandType).map(m=>m.to);
+  const checkOwner = ['S','G'].find(o=>isInCheck(board,o));
+  const checkPos = checkOwner!==undefined ? findKing(board, checkOwner) : -1;
+
+  for(let r=0;r<H;r++) for(let c=0;c<W;c++){
+    const i = idx(r,c);
+    const sq = document.createElement('div');
+    sq.className='sq';
+    if(r<=1) sq.classList.add('zone-top');
+    if(r>=H-2) sq.classList.add('zone-bottom');
+    if(lastMove && (lastMove.from===i||lastMove.to===i)) sq.classList.add('last-move');
+    if(targets.includes(i)) sq.classList.add('selectable');
+    if(selected===i) sq.classList.add('selected');
+    if(i===checkPos) sq.classList.add('in-check');
+    const p = board[i];
+    if(p){
+      const pd = document.createElement('div');
+      pd.className='piece '+(p.owner==='S'?'sente-piece':'gote-piece')+(DEMOTE[p.type]?' promoted':'');
+      const mark = SIDEMARK[p.type] ? `<span class="side-mark">${SIDEMARK[p.type]}</span>` : '';
+      pd.innerHTML = (LANG==='ja'?NAMES[p.type].ja:NAMES[p.type].en) + mark;
+      sq.appendChild(pd);
+    }
+    sq.addEventListener('click', ()=>onSquareClick(i));
+    boardEl.appendChild(sq);
+  }
+  renderHand('S'); renderHand('G'); renderStatus();
+}
+function renderHand(owner){
+  const el = document.getElementById(owner==='S'?'hand-sente':'hand-gote');
+  el.innerHTML='';
+  const h = hands[owner];
+  Object.keys(h).forEach(type=>{
+    if(h[type]<=0) return;
+    const d = document.createElement('div');
+    d.className='hpiece '+(owner==='S'?'sente-piece':'gote-piece');
+    if(selHandType===type && turn===owner) d.classList.add('selected');
+    d.innerHTML = (LANG==='ja'?NAMES[type].ja:NAMES[type].en)+`<span class="count">${h[type]}</span>`;
+    d.addEventListener('click', ()=>onHandClick(owner, type));
+    el.appendChild(d);
+  });
+}
+function renderStatus(){
+  const el = document.getElementById('status');
+  if(gameOver){ el.textContent = LANG==='ja'?'対局終了':'Game over'; return; }
+  const who = turn==='S' ? (LANG==='ja'?'先手（あなた）':'Sente (you)') : (LANG==='ja'?'後手（AI）':'Gote (AI)');
+  let txt = (LANG==='ja'?'手番: ':'Turn: ') + who;
+  if(isInCheck(board, turn)) txt += LANG==='ja' ? '（王手）':' (check)';
+  el.textContent = txt;
+}
+function onSquareClick(i){
+  if(gameOver) return;
+  if(aiOn && turn==='G') return;
+  const p = board[i];
+  if(selected!==null){
+    if(tryMove({from:selected, dropType:null, to:i})) return;
+    selected=null; selHandType=null;
+    if(p && p.owner===turn) selected=i;
+    render();
+    return;
+  }
+  if(selHandType){
+    if(tryMove({from:null, dropType:selHandType, to:i})) return;
+    selHandType=null; render();
+    return;
+  }
+  if(p && p.owner===turn){ selected=i; render(); }
+}
+function onHandClick(owner, type){
+  if(gameOver) return;
+  if(owner!==turn) return;
+  if(aiOn && turn==='G') return;
+  selected=null;
+  selHandType = (selHandType===type) ? null : type;
+  render();
+}
+function showResult(winner, reason){
+  const dlg = document.getElementById('result');
+  const title = document.getElementById('result-title');
+  const body = document.getElementById('result-body');
+  const winnerName = winner==='S' ? (LANG==='ja'?'先手':'Sente') : (LANG==='ja'?'後手':'Gote');
+  title.textContent = LANG==='ja' ? `${winnerName}の勝ち` : `${winnerName} wins`;
+  const reasonText = {
+    catch: LANG==='ja'?'鵬を捕獲':'Phoenix captured',
+    checkmate: LANG==='ja'?'詰み':'Checkmate',
+    nomoves: LANG==='ja'?'相手に合法手がありません':'Opponent has no legal moves'
+  };
+  body.textContent = reasonText[reason]||'';
+  dlg.showModal();
+}
+document.getElementById('result-close').onclick=()=>document.getElementById('result').close();
+document.getElementById('newgame').onclick = initGame;
+
+aiOn = true;
+document.getElementById('vsAiBtn').onclick = function(){
+  aiOn = !aiOn;
+  this.classList.toggle('active', aiOn);
+  this.dataset.ja = aiOn ? 'AI対戦: ON' : 'AI対戦: OFF';
+  this.dataset.en = aiOn ? 'vs AI: ON' : 'vs AI: OFF';
+  applyLang();
+};
+document.querySelectorAll('.diff-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    aiLevel = btn.dataset.level;
+    document.querySelectorAll('.diff-btn').forEach(b=>b.classList.toggle('active', b===btn));
+  });
+});
+
+let theme = 'dark';
+try{ const saved = localStorage.getItem('mossgreen-theme'); if(saved) theme = saved; }catch(e){}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-toggle').textContent = theme==='dark' ? '🌙' : '☀️';
+  try{ localStorage.setItem('mossgreen-theme', theme); }catch(e){}
+}
+document.getElementById('theme-toggle').onclick = ()=>{
+  theme = theme==='dark' ? 'light' : 'dark';
+  applyTheme();
+};
+applyTheme();
+
+initGame();
+applyLang();
+})();
+</script>
+</body>
+</html>
